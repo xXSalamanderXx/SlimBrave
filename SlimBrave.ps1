@@ -24,9 +24,10 @@ function Set-DnsMode {
 }
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "SlimBrave"
+$form.Text = "SlimBrave - 2026 Edition"
 $form.ForeColor = [System.Drawing.Color]::White
-$form.Size = New-Object System.Drawing.Size(755, 670)
+# Increased form height from 670 to 740 to fit new features
+$form.Size = New-Object System.Drawing.Size(755, 740) 
 $form.StartPosition = "CenterScreen"
 $form.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $form.MaximizeBox = $false
@@ -36,7 +37,8 @@ $allFeatures = @()
 
 $leftPanel = New-Object System.Windows.Forms.Panel
 $leftPanel.Location = New-Object System.Drawing.Point(20, 20)
-$leftPanel.Size = New-Object System.Drawing.Size(340,500)
+# Increased panel height from 500 to 560
+$leftPanel.Size = New-Object System.Drawing.Size(340,560) 
 $leftPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $leftPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
 $form.Controls.Add($leftPanel)
@@ -49,11 +51,15 @@ $telemetryLabel.Size = New-Object System.Drawing.Size(300, 20)
 $telemetryLabel.ForeColor = [System.Drawing.Color]::LightSalmon
 $leftPanel.Controls.Add($telemetryLabel)
 
+# UPDATED: Added new 2026 telemetry policies
 $telemetryFeatures = @(
     @{ Name = "Disable Metrics Reporting"; Key = "MetricsReportingEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Safe Browsing Reporting"; Key = "SafeBrowsingExtendedReportingEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable URL Data Collection"; Key = "UrlKeyedAnonymizedDataCollectionEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Feedback Surveys"; Key = "FeedbackSurveysEnabled"; Value = 0; Type = "DWord" }
+    @{ Name = "Disable Feedback Surveys"; Key = "FeedbackSurveysEnabled"; Value = 0; Type = "DWord" },
+    @{ Name = "Disable P3A Telemetry"; Key = "BraveP3AEnabled"; Value = "Disabled"; Type = "String" },
+    @{ Name = "Disable Daily Stats Ping"; Key = "BraveStatsPingEnabled"; Value = 0; Type = "DWord" },
+    @{ Name = "Disable Web Discovery"; Key = "BraveWebDiscoveryEnabled"; Value = 0; Type = "DWord" }
 )
 
 $y = 35
@@ -80,8 +86,9 @@ $privacyLabel.ForeColor = [System.Drawing.Color]::LightSalmon
 $leftPanel.Controls.Add($privacyLabel)
 $y += 25
 
+# UPDATED: Fixed safe browsing value and removed conflicting duplicate incognito key
 $privacyFeatures = @(
-    @{ Name = "Disable Safe Browsing"; Key = "SafeBrowsingProtectionLevel"; Value = 0; Type = "DWord" },
+    @{ Name = "Enable Safe Browsing (Standard)"; Key = "SafeBrowsingProtectionLevel"; Value = 1; Type = "DWord" },
     @{ Name = "Disable Autofill (Addresses)"; Key = "AutofillAddressEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Autofill (Credit Cards)"; Key = "AutofillCreditCardEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Password Manager"; Key = "PasswordManagerEnabled"; Value = 0; Type = "DWord" },
@@ -92,7 +99,6 @@ $privacyFeatures = @(
     @{ Name = "Enable Do Not Track"; Key = "EnableDoNotTrack"; Value = 1; Type = "DWord" },
     @{ Name = "Force Google SafeSearch"; Key = "ForceGoogleSafeSearch"; Value = 1; Type = "DWord" },
     @{ Name = "Disable IPFS"; Key = "IPFSEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 1; Type = "DWord" },
     @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord" }
 )
 
@@ -110,7 +116,8 @@ foreach ($feature in $privacyFeatures) {
 
 $rightPanel = New-Object System.Windows.Forms.Panel
 $rightPanel.Location = New-Object System.Drawing.Point(380, 20)
-$rightPanel.Size = New-Object System.Drawing.Size(340, 540)
+# Increased panel height from 540 to 560
+$rightPanel.Size = New-Object System.Drawing.Size(340, 560) 
 $rightPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $rightPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
 $form.Controls.Add($rightPanel)
@@ -126,15 +133,16 @@ $braveLabel.ForeColor = [System.Drawing.Color]::LightSalmon
 $rightPanel.Controls.Add($braveLabel)
 $y += 25
 
+# UPDATED: Removed Brave Shields vulnerability, added News & Talk disable flags
 $braveFeatures = @(
     @{ Name = "Disable Brave Rewards"; Key = "BraveRewardsDisabled"; Value = 1; Type = "DWord" },
     @{ Name = "Disable Brave Wallet"; Key = "BraveWalletDisabled"; Value = 1; Type = "DWord" },
     @{ Name = "Disable Brave VPN"; Key = "BraveVPNDisabled"; Value = 1; Type = "DWord" },
     @{ Name = "Disable Brave AI Chat"; Key = "BraveAIChatEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Brave Shields"; Key = "BraveShieldsDisabledForUrls"; Value = '["https://*", "http://*"]'; Type = "String" },
     @{ Name = "Disable Tor"; Key = "TorDisabled"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable Sync"; Key = "SyncDisabled"; Value = 1; Type = "DWord" }
-    
+    @{ Name = "Disable Sync"; Key = "SyncDisabled"; Value = 1; Type = "DWord" },
+    @{ Name = "Disable Brave News"; Key = "BraveNewsDisabled"; Value = 1; Type = "DWord" },
+    @{ Name = "Disable Brave Talk"; Key = "BraveTalkDisabled"; Value = "Disabled"; Type = "String" }
 )
 
 foreach ($feature in $braveFeatures) {
@@ -160,6 +168,7 @@ $perfLabel.ForeColor = [System.Drawing.Color]::LightSalmon
 $rightPanel.Controls.Add($perfLabel)
 $y += 25
 
+# UPDATED: Added disable Playlist policy
 $perfFeatures = @(
     @{ Name = "Disable Background Mode"; Key = "BackgroundModeEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Media Recommendations"; Key = "MediaRecommendationsEnabled"; Value = 0; Type = "DWord" },
@@ -171,7 +180,8 @@ $perfFeatures = @(
     @{ Name = "Disable Search Suggestions"; Key = "SearchSuggestEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Printing"; Key = "PrintingEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Default Browser Prompt"; Key = "DefaultBrowserSettingEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Developer Tools"; Key = "DeveloperToolsDisabled"; Value = 1; Type = "DWord" }
+    @{ Name = "Disable Developer Tools"; Key = "DeveloperToolsDisabled"; Value = 1; Type = "DWord" },
+    @{ Name = "Disable Brave Playlist"; Key = "BravePlaylistEnabled"; Value = 0; Type = "DWord" }
 )
 
 foreach ($feature in $perfFeatures) {
@@ -186,27 +196,25 @@ foreach ($feature in $perfFeatures) {
     $y += 25
 }
 
-$y = 780
-
+# UPDATED: Dead code removed here, and Y-coordinates adjusted downwards for bottom elements
 $dnsLabel = New-Object System.Windows.Forms.Label
 $dnsLabel.Text = "DNS Over HTTPS Mode:"
-$dnsLabel.Location = New-Object System.Drawing.Point(35, 535)
+$dnsLabel.Location = New-Object System.Drawing.Point(35, 605)
 $dnsLabel.Size = New-Object System.Drawing.Size(140, 20)
 $form.Controls.Add($dnsLabel)
 
 $dnsDropdown = New-Object System.Windows.Forms.ComboBox
-$dnsDropdown.Location = New-Object System.Drawing.Point(180,530)
+$dnsDropdown.Location = New-Object System.Drawing.Point(180, 600)
 $dnsDropdown.Size = New-Object System.Drawing.Size(150, 20)
 $dnsDropdown.Items.AddRange(@("automatic", "off", "custom"))
 $dnsDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $dnsDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $dnsDropdown.ForeColor = [System.Drawing.Color]::White
 $form.Controls.Add($dnsDropdown)
-$y += 40
 
 $exportButton = New-Object System.Windows.Forms.Button
 $exportButton.Text = "Export Settings"
-$exportButton.Location = New-Object System.Drawing.Point(50, 580)
+$exportButton.Location = New-Object System.Drawing.Point(50, 640)
 $exportButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($exportButton)
 $exportButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -217,7 +225,7 @@ $exportButton.ForeColor = [System.Drawing.Color]::LightSalmon
 
 $importButton = New-Object System.Windows.Forms.Button
 $importButton.Text = "Import Settings"
-$importButton.Location = New-Object System.Drawing.Point(210, 580)
+$importButton.Location = New-Object System.Drawing.Point(210, 640)
 $importButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($importButton)
 $importButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -228,7 +236,7 @@ $importButton.ForeColor = [System.Drawing.Color]::LightSkyBlue
 
 $saveButton = New-Object System.Windows.Forms.Button
 $saveButton.Text = "Apply Settings"
-$saveButton.Location = New-Object System.Drawing.Point(410,580)
+$saveButton.Location = New-Object System.Drawing.Point(410, 640)
 $saveButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($saveButton)
 $saveButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -293,7 +301,7 @@ function Reset-AllSettings {
 
 $resetButton = New-Object System.Windows.Forms.Button
 $resetButton.Text = "Reset All Settings"
-$resetButton.Location = New-Object System.Drawing.Point(570,580)
+$resetButton.Location = New-Object System.Drawing.Point(570, 640)
 $resetButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($resetButton)
 $resetButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -301,7 +309,6 @@ $resetButton.FlatAppearance.BorderSize = 1
 $resetButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(120, 120, 120)
 $resetButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $resetButton.ForeColor = [System.Drawing.Color]::LightCoral
-$y += 40
 
 $resetButton.Add_Click({
     if (Reset-AllSettings) {
