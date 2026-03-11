@@ -1,16 +1,19 @@
 {
-    "Features": [
-        "MetricsReportingEnabled",
-        "FeedbackSurveysEnabled",
-        "BraveRewardsDisabled",
-        "BraveWalletDisabled",
-        "BraveVPNDisabled",
-        "BraveAIChatEnabled",
-        "BackgroundModeEnabled",
-        "MediaRecommendationsEnabled",
-        "ShoppingListEnabled",
-        "PromotionsEnabled",
-        "DefaultBrowserSettingEnabled"
-    ],
-    "DnsMode": "automatic"
+  "Features": [
+    "MetricsReportingEnabled",
+    "BraveStatsPingEnabled",
+    "BraveRewardsDisabled",
+    "BraveWalletDisabled",
+    "BraveVPNDisabled",
+    "BraveAIChatEnabled",
+    "BraveNewsDisabled",
+    "BraveTalkDisabled",
+    "BackgroundModeEnabled",
+    "MediaRecommendationsEnabled",
+    "ShoppingListEnabled",
+    "PromotionsEnabled",
+    "DeveloperToolsDisabled",
+    "BravePlaylistEnabled"
+  ],
+  "DnsMode": "automatic"
 }
