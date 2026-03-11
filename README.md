@@ -1,147 +1,44 @@
 <div align="center">
 
-# SlimBrave - Revived!
-<img src="https://github.com/user-attachments/assets/3e90a996-a74a-4ca1-bea6-0869275bab58" width="200" height="300">
+# SlimBrave - Revived
+
+  <img src="https://i.postimg.cc/QCyWVFGN/SlimBrave.png" alt="SlimBrave Lion Logo" width="200"/>
+  
+A lightweight, GUI-driven PowerShell utility designed to give you ultimate control over your Brave Browser. Lock down telemetry, enforce strict privacy standards, and strip away built-in browser bloatware—all from a single, clean interface.
 </div>
 
-[![Release](https://img.shields.io/github/v/release/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave/releases) [![Top language](https://img.shields.io/github/languages/top/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave) [![License](https://img.shields.io/github/license/xXSalamanderXx/SlimBrave?style=for-the-badge)](./LICENSE)
-
----
-
-## Brave Browser Fast Debloater
-
-SlimBrave is a powerful PowerShell script designed for Windows users to streamline their Brave Browser experience by toggling and configuring unwanted features. With SlimBrave, you can easily disable or enable various Brave functionalities, customize settings, and improve privacy.
-
-### Features:
+<br>
 
 <details>
-<summary> Click here to view </summary>
+<summary> Preset Details </summary>
 
-- **Disable Brave Rewards**  
-   Brave's reward system.
+- **Maximum Privacy Preset**
+   - Privacy: Disables password manager, address autofill, WebRTC IP leaking, and QUIC to prevent local data extraction and tracking.
+   - Telemetry: Aggressively blocks all usage reporting, safe browsing checks, and daily pings.
+   - Brave Features: Disables Rewards, Wallet, VPN, AI Chat, and all news/media features.
+   - DNS: Forces DNS over HTTPS to "off" to prevent specific provider logging if you use a system-wide VPN.
+   - Best for: Journalists, activists, and highly privacy-conscious users who rely on external tools (like third-party password managers).
 
-- **Disable Brave Wallet**  
-   Brave's Wallet feature for managing cryptocurrencies.
-
-- **Disable Brave VPN**  
-   Brave's VPN feature for "enhanced" privacy.
-
-- **Disable Brave AI Chat**  
-   Brave's integrated AI Chat feature.
-
-- **Disable Password Manager**  
-   Brave's built-in password manager for website login credentials.
-
-- **Disable Tor**  
-   Tor functionality for "anonymous" browsing.
-
-- **Set DNS Over HTTPS Mode**  
-   Set the DNS Over HTTPS mode (options include automatic or off) to ensure private browsing with secure DNS queries.
-
-- **Disable Sync**  
-   Sync functionality that synchronizes your data across devices.
-
-- **Telemetry & Reporting Controls**  
-   Disable metrics reporting, safe browsing reporting, and data collection.
-
-- **Privacy & Security Options**  
-   Manage autofill, WebRTC, QUIC protocol, and more.
-
-- **Performance Optimization**  
-   Disable background processes and unnecessary features.
-
-- **Enable Do Not Track**  
-   Forces Do Not Track header for all browsing.
-
-- **Force Google SafeSearch**  
-   Enforces SafeSearch across Google searches.
-
-- **Disable IPFS**  
-   Disables InterPlanetary File System support.
-
-- **Disable Spellcheck**  
-   Disables browser spellcheck functionality.
-
-- **Disable Browser Sign-in**  
-   Prevents browser account sign-in.
-
-- **Disable Printing**  
-   Disables web page printing capability.
-
-- **Disable Incognito Mode**  
-   Blocks private browsing/incognito mode.
-
-- **Disable Default Browser Prompt**  
-   Stops Brave from asking to be default browser.
-
-- **Disable Developer Tools**  
-   Blocks access to developer tools.
-
-- **Always Open PDF Externally**  
-   Forces PDFs to open in external applications.
-
-- **Disable Brave Shields**  
-   Turns off Brave's built-in Shields protection.
-</details>
-
----
-
-# How to Run
-
-### Run the command below in PowerShell:
-
-```ps1
-iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
-```
-
----
-
-## Extras:
-
-<details>
-<summary> Presets </summary>
-
-
-- **Maximum Privacy Preset**  
-   - Telemetry: Blocks all reporting (metrics, safe browsing, URL collection, feedback).
-   - Privacy: Disables autofill, password manager, sign-in, WebRTC leaks, QUIC, and forces Do Not Track.
-   - Brave Features: Kills Rewards, Wallet, VPN, AI Chat, Tor, and Sync.
-   - Performance: Disables background processes, recommendations, and bloat.
-   - DNS: Uses plain DNS (no HTTPS) to prevent potential logging by DoH providers.
-   - Best for: Paranoid users, journalists, activists, or anyone who wants Brave as private as possible.
-
-- **Balanced Privacy Preset**  
-   - Telemetry: Blocks all tracking but keeps basic safe browsing.
-   - Privacy: Blocks third-party cookies, enables Do Not Track, but allows password manager and autofill for addresses.
-   - Brave Features: Disables Rewards, Wallet, VPN, and AI features.
-   - Performance: Turns off background services and ads.
-   - DNS: Uses automatic DoH (lets Brave choose the fastest secure DNS).
-   - Best for: Most users who want privacy but still need convenience features.
-
-- **Performance Focused Preset**  
-   - Telemetry: Only blocks metrics and feedback surveys (keeps some safe browsing).
+- **Balanced / Performance Preset**
    - Brave Features: Disables Rewards, Wallet, VPN, and AI to declutter the browser.
    - Performance: Kills background processes, shopping features, and promotions.
    - DNS: Automatic DoH for a balance of speed and security.
    - Best for: Users who want a faster, cleaner Brave without extreme privacy tweaks.
 
-- **Developer Preset**  
+- **Developer Preset**
    - Telemetry: Blocks all reporting.
    - Brave Features: Disables Rewards, Wallet, and VPN but keeps developer tools.
    - Performance: Turns off background services and ads.
    - DNS: Automatic DoH (default secure DNS).
    - Best for: Developers who need dev tools but still want telemetry and ads disabled.
 
-- **Strict Parental Controls Preset**  
+- **Strict Parental Controls Preset**
    - Privacy: Blocks incognito mode, forces Google SafeSearch, and disables sign-in.
    - Brave Features: Disables Rewards, Wallet, VPN, Tor, and dev tools.
    - DNS: Uses custom DoH (can be set to a family-friendly DNS like Cloudflare for Families).
    - Best for: Parents, schools, or workplaces that need restricted browsing.
 
-
 </details>
-
-
 
 <details>
 <summary> Requirements </summary>
@@ -149,21 +46,37 @@ iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave.p
 - Windows 10/11
 - PowerShell
 - Administrator privileges
+
 </details>
 
 <details>
-<summary>Error "Running Scripts is Disabled on this System"</summary>
+<summary> Error "Running Scripts is Disabled on this System"</summary>
 
 ### Run this command in PowerShell:
 
 ```ps1
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 ```
-</details>
-<div align="center">
-  
----
 
+</details>
+
+## 🚀 How to Use
+
+1. Download the `SlimBrave.ps1` script from the [Releases](https://github.com/xXSalamanderXx/SlimBrave/releases) page.
+2. Right-click the file and select **Run with PowerShell**.
+3. Accept the UAC prompt (Administrator privileges are required to modify registry policies).
+4. Check the boxes for the features you wish to disable/enable.
+5. Click **Apply Settings** and restart your Brave Browser.
+
+## 📂 How to Use Presets
+
+Instead of manually checking boxes, you can instantly load a pre-configured setup:
+1. Download your desired preset `.json` file from the `Presets` folder in this repository.
+2. Run `SlimBrave.ps1`.
+3. Click the **Import Settings** button at the bottom of the window.
+4. Select the downloaded `.json` file. The script will automatically check the correct boxes for that specific setup.
+5. Click **Apply Settings**.
+  
 ### Why SlimBrave Matters
 
 In an era of increasingly bloated browsers, SlimBrave puts **you** back in control:
@@ -175,7 +88,6 @@ In an era of increasingly bloated browsers, SlimBrave puts **you** back in contr
 ⚙️ **Transparent customization** without hidden settings
 
 ---
-
 
 <p align="center">
   <b>⭐ Star the repo • ☕ Support development • 🚀 Explore more projects</b>
@@ -227,6 +139,3 @@ The author and contributors are not liable for any claims, damages, or other iss
 
 Licensed under the **GPL-3.0** license.  
 See the full license here: [GPL-3.0 License](https://github.com/xXSalamanderXx/SlimBrave/blob/main/LICENSE)
-
-
-
