@@ -1,12 +1,14 @@
 <div align="center">
 
-# SlimBrave
+# SlimBrave - Revived!
 <img src="https://github.com/user-attachments/assets/3e90a996-a74a-4ca1-bea6-0869275bab58" width="200" height="300">
 </div>
 
+[![Release](https://img.shields.io/github/v/release/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave/releases) [![Top language](https://img.shields.io/github/languages/top/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave) [![License](https://img.shields.io/github/license/xXSalamanderXx/SlimBrave?style=for-the-badge)](./LICENSE)
+
 ---
 
-## Brave Browser Debloater
+## Brave Browser Fast Debloater
 
 SlimBrave is a powerful PowerShell script designed for Windows users to streamline their Brave Browser experience by toggling and configuring unwanted features. With SlimBrave, you can easily disable or enable various Brave functionalities, customize settings, and improve privacy.
 
@@ -89,7 +91,7 @@ SlimBrave is a powerful PowerShell script designed for Windows users to streamli
 ### Run the command below in PowerShell:
 
 ```ps1
-iwr "https://raw.githubusercontent.com/ltx0101/SlimBrave/main/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
+iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
 ```
 
 ---
@@ -162,34 +164,69 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
   
 ---
 
-🌟 **Like this project? Give it a star!** 🌟  
-💻  **Want to contribute? PRs are welcome!** 💻 
-
-</div>
-
 ### Why SlimBrave Matters
 
 In an era of increasingly bloated browsers, SlimBrave puts **you** back in control:
-- 🚀 **Faster browsing** by removing unnecessary features
-- 🛡️ **Enhanced privacy** through granular controls
-- ⚙️ **Transparent customization** without hidden settings
+
+🚀 **Faster browsing** by removing unnecessary features
+
+🛡️ **Enhanced privacy** through granular controls
+
+⚙️ **Transparent customization** without hidden settings
 
 ---
 
-### Future Roadmap
-- [x] Add preset configurations (Privacy, Performance, etc.)
-- [x] Create backup/restore functionality
-- [ ] Add support for Linux/Mac (WIP)
+
+<p align="center">
+  <b>⭐ Star the repo • ☕ Support development • 🚀 Explore more projects</b>
+</p>
+
+## ⭐ Show Your Support
+
+If this repo has helped you, please consider giving it a **star** on GitHub!  
+It really helps show support, motivates future updates, and encourages continued development. 🚀
+
+Every ⭐ makes a difference and means a lot. Thanks for helping this project grow! 🙌
+
+## ☕ Support Development
+
+If you'd like to support my work even more, you can **buy me a coffee** here:  
+[☕ buymeacoffee.com/SinZZzz](https://buymeacoffee.com/SinZZzz)
+
+Your support helps keep development active and appreciated. 💙
+
+## 🔍 Check Out My Other Repos
+
+You might also like these projects:
+
+[🔎 RLSBB-Search-Plus](https://github.com/xXSalamanderXx/RLSBB-Search-Plus)
+
+[🎬 HDEncode-Search-Plus](https://github.com/xXSalamanderXx/HDEncode-Search-Plus)
+
+[🦎 salamander-trackers](https://github.com/xXSalamanderXx/salamander-trackers)
 
 ---
-<div align="center">
-   
-[![PayPal Donate](https://img.shields.io/badge/PayPal_Donate-s?style=for-the-badge&logo=paypal&logoColor=black)](https://paypal.me/AggelosMeta)
 
-</div>
+## 🙌 Credit
 
-<div align="center">
-  
-Made with ❤️ and PowerShell  
+Acknowledgment and thanks goes to the original creator:
 
-</div>
+[ltx0101/SlimBrave](https://github.com/ltx0101/SlimBrave)
+
+---
+
+## Disclaimer
+
+This project is provided as-is, with no guarantees or warranties of any kind.
+
+You are responsible for how you use the contents of this repository and for making sure your usage complies with any applicable laws, rules, or policies.
+
+The author and contributors are not liable for any claims, damages, or other issues arising from the use of this project.
+
+## License 📄
+
+Licensed under the **GPL-3.0** license.  
+See the full license here: [GPL-3.0 License](https://github.com/xXSalamanderXx/SlimBrave/blob/main/LICENSE)
+
+
+
