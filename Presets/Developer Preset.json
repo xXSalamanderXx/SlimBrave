@@ -1,18 +1,23 @@
 {
-    "Features": [
-        "MetricsReportingEnabled",
-        "SafeBrowsingExtendedReportingEnabled",
-        "UrlKeyedAnonymizedDataCollectionEnabled",
-        "FeedbackSurveysEnabled",
-        "BraveRewardsDisabled",
-        "BraveWalletDisabled",
-        "BraveVPNDisabled",
-        "BraveAIChatEnabled",
-        "BackgroundModeEnabled",
-        "MediaRecommendationsEnabled",
-        "ShoppingListEnabled",
-        "PromotionsEnabled",
-        "DefaultBrowserSettingEnabled"
-    ],
-    "DnsMode": "automatic"
+  "Features": [
+    "MetricsReportingEnabled",
+    "UrlKeyedAnonymizedDataCollectionEnabled",
+    "FeedbackSurveysEnabled",
+    "BraveP3AEnabled",
+    "BraveStatsPingEnabled",
+    "BlockThirdPartyCookies",
+    "EnableDoNotTrack",
+    "BraveRewardsDisabled",
+    "BraveWalletDisabled",
+    "BraveVPNDisabled",
+    "BraveNewsDisabled",
+    "BraveTalkDisabled",
+    "BackgroundModeEnabled",
+    "ShoppingListEnabled",
+    "AlwaysOpenPdfExternally",
+    "PromotionsEnabled",
+    "DefaultBrowserSettingEnabled",
+    "BravePlaylistEnabled"
+  ],
+  "DnsMode": "automatic"
 }
