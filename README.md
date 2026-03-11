@@ -62,6 +62,14 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 
 ## 🚀 How to Use
 
+## Run the command below in PowerShell:
+*Tip: Better if you run Powershell as Administrator*
+```ps1
+iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
+```
+
+## or
+
 1. Download the `SlimBrave.ps1` script from the [Releases](https://github.com/xXSalamanderXx/SlimBrave/releases) page.
 2. Right-click the file and select **Run with PowerShell**.
 3. Accept the UAC prompt (Administrator privileges are required to modify registry policies).
