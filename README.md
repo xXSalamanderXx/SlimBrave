@@ -11,6 +11,8 @@ A lightweight, GUI-driven PowerShell utility designed to give you ultimate contr
 
 [![Release](https://img.shields.io/github/v/release/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave/releases) [![Top language](https://img.shields.io/github/languages/top/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave) [![License](https://img.shields.io/github/license/xXSalamanderXx/SlimBrave?style=for-the-badge)](./LICENSE)
 
+[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://buymeacoffee.com/SinZZzz)
+
 <details>
 <summary> Preset Details </summary>
 
@@ -126,6 +128,8 @@ You might also like these projects:
 [🎬 HDEncode-Search-Plus](https://github.com/xXSalamanderXx/HDEncode-Search-Plus)
 
 [🦎 salamander-trackers](https://github.com/xXSalamanderXx/salamander-trackers)
+
+[📷️ Caesium Image Compressor - Linux](https://github.com/xXSalamanderXx/caesium-image-compressor-linux)
 
 ---
 
