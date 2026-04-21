@@ -7,40 +7,62 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $registryPath = "HKLM:\SOFTWARE\Policies\BraveSoftware\Brave"
+$logFile = Join-Path $PSScriptRoot "SlimBrave.log"
+
+function Write-Log ($message) {
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$timestamp - $message" | Out-File -FilePath $logFile -Append
+}
 
 if (-not (Test-Path -Path $registryPath)) {
-    New-Item -Path $registryPath -Force
+    New-Item -Path $registryPath -Force | Out-Null
+    Write-Log "Created new Brave Policy registry key."
 }
 
 Clear-Host
 
-function Set-DnsMode {
-    param (
-        [string] $dnsMode
-    )
-    $regKey = "HKLM:\\Software\\Policies\\BraveSoftware\\Brave"
-    Set-ItemProperty -Path $regKey -Name "DnsOverHttpsMode" -Value $dnsMode -Type String -Force
-    [System.Windows.Forms.MessageBox]::Show("DNS Over HTTPS Mode has been set to $dnsMode.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
-}
-
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "SlimBrave - 2026 Edition"
+$form.Text = "SlimBrave - Revived"
 $form.ForeColor = [System.Drawing.Color]::White
-# Increased form height from 670 to 740 to fit new features
-$form.Size = New-Object System.Drawing.Size(755, 740) 
+
+$form.Size = New-Object System.Drawing.Size(755, 680) 
 $form.StartPosition = "CenterScreen"
 $form.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $form.MaximizeBox = $false
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 
 $allFeatures = @()
+$toolTip = New-Object System.Windows.Forms.ToolTip
+
+$statusBar = New-Object System.Windows.Forms.Label
+$statusBar.Height = 25
+$statusBar.Dock = [System.Windows.Forms.DockStyle]::Bottom
+$statusBar.BackColor = [System.Drawing.Color]::FromArgb(255, 20, 20, 20)
+$statusBar.ForeColor = [System.Drawing.Color]::DarkGray
+$statusBar.Font = New-Object System.Drawing.Font("Consolas", 9, [System.Drawing.FontStyle]::Regular)
+$statusBar.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$statusBar.Text = "Ready. Hover over options for details."
+$form.Controls.Add($statusBar)
+
+function Update-Status ($text) {
+    $statusBar.Text = $text
+    $form.Refresh()
+    Write-Log $text
+}
+
+function Set-DnsMode {
+    param ([string] $dnsMode)
+    $regKey = "HKLM:\\Software\\Policies\\BraveSoftware\\Brave"
+    Set-ItemProperty -Path $regKey -Name "DnsOverHttpsMode" -Value $dnsMode -Type String -Force
+    Update-Status "DNS Over HTTPS Mode set to $dnsMode"
+}
 
 $leftPanel = New-Object System.Windows.Forms.Panel
 $leftPanel.Location = New-Object System.Drawing.Point(20, 20)
-# Increased panel height from 500 to 560
-$leftPanel.Size = New-Object System.Drawing.Size(340,560) 
+$leftPanel.Size = New-Object System.Drawing.Size(340, 500) 
 $leftPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $leftPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+$leftPanel.AutoScroll = $true
 $form.Controls.Add($leftPanel)
 
 $telemetryLabel = New-Object System.Windows.Forms.Label
@@ -51,15 +73,14 @@ $telemetryLabel.Size = New-Object System.Drawing.Size(300, 20)
 $telemetryLabel.ForeColor = [System.Drawing.Color]::LightSalmon
 $leftPanel.Controls.Add($telemetryLabel)
 
-# UPDATED: Added new 2026 telemetry policies
 $telemetryFeatures = @(
-    @{ Name = "Disable Metrics Reporting"; Key = "MetricsReportingEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Safe Browsing Reporting"; Key = "SafeBrowsingExtendedReportingEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable URL Data Collection"; Key = "UrlKeyedAnonymizedDataCollectionEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Feedback Surveys"; Key = "FeedbackSurveysEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable P3A Telemetry"; Key = "BraveP3AEnabled"; Value = "Disabled"; Type = "String" },
-    @{ Name = "Disable Daily Stats Ping"; Key = "BraveStatsPingEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Web Discovery"; Key = "BraveWebDiscoveryEnabled"; Value = 0; Type = "DWord" }
+    @{ Name = "Disable Metrics Reporting"; Key = "MetricsReportingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from sending anonymous usage and crash reports." },
+    @{ Name = "Disable Safe Browsing Reporting"; Key = "SafeBrowsingExtendedReportingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from sending extended Safe Browsing data back to servers." },
+    @{ Name = "Disable URL Data Collection"; Key = "UrlKeyedAnonymizedDataCollectionEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops sending anonymized URLs to help improve the browser." },
+    @{ Name = "Disable Feedback Surveys"; Key = "FeedbackSurveysEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables proactive feedback survey prompts." },
+    @{ Name = "Disable P3A Telemetry"; Key = "BraveP3AEnabled"; Value = "Disabled"; Type = "String"; ToolTip = "Disables Privacy-Preserving Product Analytics completely." },
+    @{ Name = "Disable Daily Stats Ping"; Key = "BraveStatsPingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops the daily active user ping." },
+    @{ Name = "Disable Web Discovery"; Key = "BraveWebDiscoveryEnabled"; Value = 0; Type = "DWord"; ToolTip = "Prevents anonymous search/browsing data from being sent to Brave Search." }
 )
 
 $y = 35
@@ -68,8 +89,9 @@ foreach ($feature in $telemetryFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(300, 20)
+    $checkbox.Size = New-Object System.Drawing.Size(280, 20) # Shrunk width slightly to prevent horizontal scrollbar collision
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $leftPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
     $y += 25
@@ -86,20 +108,21 @@ $privacyLabel.ForeColor = [System.Drawing.Color]::LightSalmon
 $leftPanel.Controls.Add($privacyLabel)
 $y += 25
 
-# UPDATED: Fixed safe browsing value and removed conflicting duplicate incognito key
 $privacyFeatures = @(
-    @{ Name = "Enable Safe Browsing (Standard)"; Key = "SafeBrowsingProtectionLevel"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable Autofill (Addresses)"; Key = "AutofillAddressEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Autofill (Credit Cards)"; Key = "AutofillCreditCardEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Password Manager"; Key = "PasswordManagerEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Browser Sign-in"; Key = "BrowserSignin"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable WebRTC IP Leak"; Key = "WebRtcIPHandling"; Value = "disable_non_proxied_udp"; Type = "String" },
-    @{ Name = "Disable QUIC Protocol"; Key = "QuicAllowed"; Value = 0; Type = "DWord" },
-    @{ Name = "Block Third Party Cookies"; Key = "BlockThirdPartyCookies"; Value = 1; Type = "DWord" },
-    @{ Name = "Enable Do Not Track"; Key = "EnableDoNotTrack"; Value = 1; Type = "DWord" },
-    @{ Name = "Force Google SafeSearch"; Key = "ForceGoogleSafeSearch"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable IPFS"; Key = "IPFSEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord" }
+    @{ Name = "Enable Safe Browsing (Standard)"; Key = "SafeBrowsingProtectionLevel"; Value = 1; Type = "DWord"; ToolTip = "Enables standard protection against malware and phishing (Recommended)." },
+    @{ Name = "Disable Autofill (Addresses)"; Key = "AutofillAddressEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables saving and autofilling addresses." },
+    @{ Name = "Disable Autofill (Credit Cards)"; Key = "AutofillCreditCardEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables saving and autofilling credit cards." },
+    @{ Name = "Disable Password Manager"; Key = "PasswordManagerEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the built-in password manager." },
+    @{ Name = "Disable Browser Sign-in"; Key = "BrowserSignin"; Value = 0; Type = "DWord"; ToolTip = "Prevents signing into the browser profile." },
+    @{ Name = "Disable WebRTC IP Leak"; Key = "WebRtcIPHandling"; Value = "disable_non_proxied_udp"; Type = "String"; ToolTip = "Prevents your real IP address from leaking when using a VPN." },
+    @{ Name = "Disable QUIC Protocol"; Key = "QuicAllowed"; Value = 0; Type = "DWord"; ToolTip = "Disables the QUIC protocol, forcing standard TCP (useful for strict firewalls)." },
+    @{ Name = "Block Third Party Cookies"; Key = "BlockThirdPartyCookies"; Value = 1; Type = "DWord"; ToolTip = "Blocks all third-party tracking cookies." },
+    @{ Name = "Enable Do Not Track"; Key = "EnableDoNotTrack"; Value = 1; Type = "DWord"; ToolTip = "Sends a Do Not Track request with your browsing traffic." },
+    @{ Name = "Force Google SafeSearch"; Key = "ForceGoogleSafeSearch"; Value = 1; Type = "DWord"; ToolTip = "Forces Google SafeSearch for all web queries." },
+    @{ Name = "Disable IPFS"; Key = "IPFSEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the built-in IPFS node/support." },
+    @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord"; ToolTip = "Forces the browser to always open in Incognito Mode." },
+    @{ Name = "Force Download Prompts"; Key = "PromptForDownloadLocation"; Value = 1; Type = "DWord"; ToolTip = "Forces Brave to ask where to save a file before downloading, preventing background drive-by downloads." },
+    @{ Name = "Clear Data on Exit (Cookies/History)"; Key = "ClearBrowsingDataOnExitList"; Value = @("browsing_history", "download_history", "cookies_and_other_site_data", "cached_images_and_files", "password_signin", "autofill", "site_settings", "hosted_app_data"); Type = "List"; ToolTip = "Wipes all cookies, cache, and browsing history the moment the browser closes." }
 )
 
 foreach ($feature in $privacyFeatures) {
@@ -107,8 +130,9 @@ foreach ($feature in $privacyFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(300, 20)
+    $checkbox.Size = New-Object System.Drawing.Size(280, 20)
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $leftPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
     $y += 25
@@ -116,10 +140,10 @@ foreach ($feature in $privacyFeatures) {
 
 $rightPanel = New-Object System.Windows.Forms.Panel
 $rightPanel.Location = New-Object System.Drawing.Point(380, 20)
-# Increased panel height from 540 to 560
-$rightPanel.Size = New-Object System.Drawing.Size(340, 560) 
+$rightPanel.Size = New-Object System.Drawing.Size(340, 500) 
 $rightPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $rightPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+$rightPanel.AutoScroll = $true
 $form.Controls.Add($rightPanel)
 
 $y = 5
@@ -133,16 +157,15 @@ $braveLabel.ForeColor = [System.Drawing.Color]::LightSalmon
 $rightPanel.Controls.Add($braveLabel)
 $y += 25
 
-# UPDATED: Removed Brave Shields vulnerability, added News & Talk disable flags
 $braveFeatures = @(
-    @{ Name = "Disable Brave Rewards"; Key = "BraveRewardsDisabled"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable Brave Wallet"; Key = "BraveWalletDisabled"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable Brave VPN"; Key = "BraveVPNDisabled"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable Brave AI Chat"; Key = "BraveAIChatEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Tor"; Key = "TorDisabled"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable Sync"; Key = "SyncDisabled"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable Brave News"; Key = "BraveNewsDisabled"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable Brave Talk"; Key = "BraveTalkDisabled"; Value = "Disabled"; Type = "String" }
+    @{ Name = "Disable Brave Rewards"; Key = "BraveRewardsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Completely disables the Brave Crypto Rewards system." },
+    @{ Name = "Disable Brave Wallet"; Key = "BraveWalletDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables the built-in Brave Crypto Wallet." },
+    @{ Name = "Disable Brave VPN"; Key = "BraveVPNDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the Brave VPN integration and prompts." },
+    @{ Name = "Disable Brave AI Chat"; Key = "BraveAIChatEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Brave Leo (AI Chat) integration." },
+    @{ Name = "Disable Tor"; Key = "TorDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables built-in Tor window support." },
+    @{ Name = "Disable Sync"; Key = "SyncDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables Brave Sync functionality across devices." },
+    @{ Name = "Disable Brave News"; Key = "BraveNewsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the Brave News feed bloat from the New Tab page." },
+    @{ Name = "Disable Brave Talk"; Key = "BraveTalkDisabled"; Value = "Disabled"; Type = "String"; ToolTip = "Removes the built-in video calling integration." }
 )
 
 foreach ($feature in $braveFeatures) {
@@ -150,8 +173,9 @@ foreach ($feature in $braveFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(300, 20)
+    $checkbox.Size = New-Object System.Drawing.Size(280, 20)
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $rightPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
     $y += 25
@@ -168,20 +192,19 @@ $perfLabel.ForeColor = [System.Drawing.Color]::LightSalmon
 $rightPanel.Controls.Add($perfLabel)
 $y += 25
 
-# UPDATED: Added disable Playlist policy
 $perfFeatures = @(
-    @{ Name = "Disable Background Mode"; Key = "BackgroundModeEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Media Recommendations"; Key = "MediaRecommendationsEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Shopping List"; Key = "ShoppingListEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Always Open PDF Externally"; Key = "AlwaysOpenPdfExternally"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable Translate"; Key = "TranslateEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Spellcheck"; Key = "SpellcheckEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Promotions"; Key = "PromotionsEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Search Suggestions"; Key = "SearchSuggestEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Printing"; Key = "PrintingEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Default Browser Prompt"; Key = "DefaultBrowserSettingEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Developer Tools"; Key = "DeveloperToolsDisabled"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable Brave Playlist"; Key = "BravePlaylistEnabled"; Value = 0; Type = "DWord" }
+    @{ Name = "Disable Background Mode"; Key = "BackgroundModeEnabled"; Value = 0; Type = "DWord"; ToolTip = "Prevents extensions/apps from running after the browser is closed." },
+    @{ Name = "Disable Media Recommendations"; Key = "MediaRecommendationsEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables media recommendations to save memory." },
+    @{ Name = "Disable Shopping List"; Key = "ShoppingListEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the shopping list feature." },
+    @{ Name = "Always Open PDF Externally"; Key = "AlwaysOpenPdfExternally"; Value = 1; Type = "DWord"; ToolTip = "Forces PDFs to download and open in your default system viewer instead of the browser." },
+    @{ Name = "Disable Translate"; Key = "TranslateEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables automatic translation prompts." },
+    @{ Name = "Disable Spellcheck"; Key = "SpellcheckEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the built-in spellchecker to save CPU cycles." },
+    @{ Name = "Disable Promotions"; Key = "PromotionsEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Brave promotional notifications." },
+    @{ Name = "Disable Search Suggestions"; Key = "SearchSuggestEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables predictive search suggestions in the URL bar." },
+    @{ Name = "Disable Printing"; Key = "PrintingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the browser print function." },
+    @{ Name = "Disable Default Browser Prompt"; Key = "DefaultBrowserSettingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from asking to be the default browser." },
+    @{ Name = "Disable Developer Tools"; Key = "DeveloperToolsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables F12 / Inspect Element." },
+    @{ Name = "Disable Brave Playlist"; Key = "BravePlaylistEnabled"; Value = 0; Type = "DWord"; ToolTip = "Removes the Brave Playlist media feature." }
 )
 
 foreach ($feature in $perfFeatures) {
@@ -189,22 +212,22 @@ foreach ($feature in $perfFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(300, 20)
+    $checkbox.Size = New-Object System.Drawing.Size(280, 20)
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $rightPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
     $y += 25
 }
 
-# UPDATED: Dead code removed here, and Y-coordinates adjusted downwards for bottom elements
 $dnsLabel = New-Object System.Windows.Forms.Label
 $dnsLabel.Text = "DNS Over HTTPS Mode:"
-$dnsLabel.Location = New-Object System.Drawing.Point(35, 605)
+$dnsLabel.Location = New-Object System.Drawing.Point(35, 545)
 $dnsLabel.Size = New-Object System.Drawing.Size(140, 20)
 $form.Controls.Add($dnsLabel)
 
 $dnsDropdown = New-Object System.Windows.Forms.ComboBox
-$dnsDropdown.Location = New-Object System.Drawing.Point(180, 600)
+$dnsDropdown.Location = New-Object System.Drawing.Point(180, 540)
 $dnsDropdown.Size = New-Object System.Drawing.Size(150, 20)
 $dnsDropdown.Items.AddRange(@("automatic", "off", "custom"))
 $dnsDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -214,7 +237,7 @@ $form.Controls.Add($dnsDropdown)
 
 $exportButton = New-Object System.Windows.Forms.Button
 $exportButton.Text = "Export Settings"
-$exportButton.Location = New-Object System.Drawing.Point(50, 640)
+$exportButton.Location = New-Object System.Drawing.Point(50, 580)
 $exportButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($exportButton)
 $exportButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -225,7 +248,7 @@ $exportButton.ForeColor = [System.Drawing.Color]::LightSalmon
 
 $importButton = New-Object System.Windows.Forms.Button
 $importButton.Text = "Import Settings"
-$importButton.Location = New-Object System.Drawing.Point(210, 640)
+$importButton.Location = New-Object System.Drawing.Point(210, 580)
 $importButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($importButton)
 $importButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -236,7 +259,7 @@ $importButton.ForeColor = [System.Drawing.Color]::LightSkyBlue
 
 $saveButton = New-Object System.Windows.Forms.Button
 $saveButton.Text = "Apply Settings"
-$saveButton.Location = New-Object System.Drawing.Point(410, 640)
+$saveButton.Location = New-Object System.Drawing.Point(410, 580)
 $saveButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($saveButton)
 $saveButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -246,14 +269,41 @@ $saveButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $saveButton.ForeColor = [System.Drawing.Color]::LightGreen
 
 $saveButton.Add_Click({
+    $restorePrompt = [System.Windows.Forms.MessageBox]::Show("Would you like to create a System Restore point before applying these changes? (Recommended)", "System Restore", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
+    
+    if ($restorePrompt -eq "Yes") {
+        $form.Cursor = [System.Windows.Forms.Cursors]::WaitCursor
+        Update-Status "Creating System Restore point (This may take a moment)..."
+        try {
+            Enable-ComputerRestore -Drive "C:\" -ErrorAction SilentlyContinue
+            Checkpoint-Computer -Description "SlimBrave Pre-Apply Backup" -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop
+            Write-Log "System Restore point created successfully."
+        } catch {
+            Write-Log "Failed to create System Restore point: $_"
+            [System.Windows.Forms.MessageBox]::Show("Failed to create System Restore point. This can happen if System Protection is fully disabled or if Windows is rate-limiting checkpoints (1 per 24 hours).`n`nContinuing with settings application...", "Restore Point Notice", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+        }
+        $form.Cursor = [System.Windows.Forms.Cursors]::Default
+    }
+
+    Update-Status "Applying settings to registry..."
     foreach ($checkbox in $allFeatures) {
         if ($checkbox.Checked) {
             $feature = $checkbox.Tag
             try {
-                Set-ItemProperty -Path $registryPath -Name $feature.Key -Value $feature.Value -Type $feature.Type -Force
-                Write-Host "Set $($feature.Key) to $($feature.Value)"
+                if ($feature.Type -eq "List") {
+                    $listPath = Join-Path $registryPath $feature.Key
+                    if (-not (Test-Path $listPath)) { New-Item -Path $listPath -Force | Out-Null }
+                    $i = 1
+                    foreach ($item in $feature.Value) {
+                        Set-ItemProperty -Path $listPath -Name $i.ToString() -Value $item -Type String -Force | Out-Null
+                        $i++
+                    }
+                } else {
+                    Set-ItemProperty -Path $registryPath -Name $feature.Key -Value $feature.Value -Type $feature.Type -Force
+                }
+                Write-Log "Successfully applied policy: $($feature.Key)"
             } catch {
-                Write-Host "Failed to set $($feature.Key): $_"
+                Write-Log "Failed to apply policy $($feature.Key): $_"
             }
         }
     }
@@ -262,7 +312,27 @@ $saveButton.Add_Click({
         Set-DnsMode -dnsMode $dnsDropdown.SelectedItem
     }
 
-    [System.Windows.Forms.MessageBox]::Show("Settings applied successfully! Restart Brave to see changes.", "SlimBrave", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    Update-Status "Settings applied successfully!"
+
+    $braveProcess = Get-Process brave -ErrorAction SilentlyContinue
+    if ($braveProcess) {
+        $restartPrompt = [System.Windows.Forms.MessageBox]::Show("Settings applied successfully! Brave is currently running. Would you like SlimBrave to automatically close and restart it to apply these changes?", "Restart Brave", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
+        if ($restartPrompt -eq "Yes") {
+            Update-Status "Restarting Brave..."
+            try {
+                Stop-Process -Name brave -Force
+                Start-Sleep -Seconds 2
+                Start-Process "brave"
+                Update-Status "Brave restarted successfully."
+                Write-Log "Brave browser restarted successfully by user prompt."
+            } catch {
+                Update-Status "Failed to restart Brave automatically."
+                Write-Log "Failed to restart Brave automatically: $_"
+            }
+        }
+    } else {
+        [System.Windows.Forms.MessageBox]::Show("Settings applied successfully! Open Brave to see changes.", "SlimBrave", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    }
 })
 
 function Reset-AllSettings {
@@ -274,34 +344,38 @@ function Reset-AllSettings {
     )
     
     if ($confirm -eq "Yes") {
+        Update-Status "Resetting all settings to default..."
         try {
             Remove-Item -Path $registryPath -Recurse -Force
             New-Item -Path $registryPath -Force | Out-Null
-
+            Write-Log "All settings successfully wiped from registry."
+            
             [System.Windows.Forms.MessageBox]::Show(
                 "All Brave policy settings have been successfully reset to their default values.", 
                 "Reset Successful", 
                 [System.Windows.Forms.MessageBoxButtons]::OK, 
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
+            Update-Status "Reset successful."
             return $true
         } catch {
+            Write-Log "Failed to reset settings: $_"
             [System.Windows.Forms.MessageBox]::Show(
                 "An error occurred while resetting the settings: $_", 
                 "Reset Failed", 
                 [System.Windows.Forms.MessageBoxButtons]::OK, 
                 [System.Windows.Forms.MessageBoxIcon]::Error
             )
+            Update-Status "Reset failed."
             return $false
         }
     }
-
     return $false
 }
 
 $resetButton = New-Object System.Windows.Forms.Button
 $resetButton.Text = "Reset All Settings"
-$resetButton.Location = New-Object System.Drawing.Point(570, 640)
+$resetButton.Location = New-Object System.Drawing.Point(570, 580)
 $resetButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($resetButton)
 $resetButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -339,8 +413,11 @@ $exportButton.Add_Click({
         
         try {
             $settingsToExport | ConvertTo-Json | Out-File -FilePath $saveFileDialog.FileName -Force
+            Update-Status "Settings exported successfully."
+            Write-Log "Settings exported to $($saveFileDialog.FileName)"
             [System.Windows.Forms.MessageBox]::Show("Settings exported successfully to:`n$($saveFileDialog.FileName)", "Export Successful", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         } catch {
+            Write-Log "Export Failed: $_"
             [System.Windows.Forms.MessageBox]::Show("Failed to export settings: $_", "Export Failed", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
         }
     }
@@ -373,11 +450,15 @@ $importButton.Add_Click({
                 $dnsDropdown.SelectedItem = $importedSettings.DnsMode
             }
             
+            Update-Status "Settings imported successfully."
+            Write-Log "Settings imported from $($openFileDialog.FileName)"
             [System.Windows.Forms.MessageBox]::Show("Settings imported successfully from:`n$($openFileDialog.FileName)", "Import Successful", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         } catch {
+            Write-Log "Import Failed: $_"
             [System.Windows.Forms.MessageBox]::Show("Failed to import settings: $_", "Import Failed", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
         }
     }
 })
 
+Write-Log "SlimBrave UI Loaded successfully."
 [void] $form.ShowDialog()
