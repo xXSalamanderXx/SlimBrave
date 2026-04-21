@@ -3,17 +3,21 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     exit
 }
 
-# --- SHARPNESS / HIGH-DPI FIX ---
-Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-public class DPI {
-    [DllImport("user32.dll")]
-    public static extern bool SetProcessDPIAware();
-}
+# --- SHARPNESS / HIGH-DPI FIX (With Error Suppression for re-runs) ---
+if (-not ("DPI" -as [type])) {
+    try {
+        Add-Type -TypeDefinition @"
+        using System;
+        using System.Runtime.InteropServices;
+        public class DPI {
+            [DllImport("user32.dll")]
+            public static extern bool SetProcessDPIAware();
+        }
 "@
-[DPI]::SetProcessDPIAware() | Out-Null
-[System.Windows.Forms.Application]::EnableVisualStyles()
+        [DPI]::SetProcessDPIAware() | Out-Null
+        [System.Windows.Forms.Application]::EnableVisualStyles()
+    } catch { }
+}
 # --------------------------------
 
 Add-Type -AssemblyName System.Windows.Forms
@@ -40,8 +44,8 @@ $form.ForeColor = [System.Drawing.Color]::White
 $form.Size = New-Object System.Drawing.Size(765, 720) 
 $form.StartPosition = "CenterScreen"
 $form.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
-$form.MaximizeBox = $true # Enabled maximizing
-$form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable # Made window resizable
+$form.MaximizeBox = $true
+$form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable # Fully resizable
 
 $allFeatures = @()
 $toolTip = New-Object System.Windows.Forms.ToolTip
@@ -70,7 +74,7 @@ function Set-DnsMode {
     Update-Status "DNS Over HTTPS Mode set to $dnsMode"
 }
 
-# Left Panel
+# Left Panel (Anchored to grow vertically)
 $leftPanel = New-Object System.Windows.Forms.Panel
 $leftPanel.Location = New-Object System.Drawing.Point(20, 20)
 $leftPanel.Size = New-Object System.Drawing.Size(340, 500) 
@@ -152,14 +156,14 @@ foreach ($feature in $privacyFeatures) {
     $y += 25
 }
 
-# Right Panel
+# Right Panel (Anchored to grow vertically and stretch horizontally if widened)
 $rightPanel = New-Object System.Windows.Forms.Panel
 $rightPanel.Location = New-Object System.Drawing.Point(380, 20)
 $rightPanel.Size = New-Object System.Drawing.Size(340, 500) 
 $rightPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $rightPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
 $rightPanel.AutoScroll = $true 
-$rightPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
+$rightPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
 $form.Controls.Add($rightPanel)
 
 $y = 5
@@ -274,11 +278,11 @@ $dnsDropdown.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.W
 $toolTip.SetToolTip($dnsDropdown, "Forces encrypted DNS lookups.")
 $form.Controls.Add($dnsDropdown)
 
-# Buttons (Widened to 140px and Anchored Bottom)
+# Buttons (Widened to 160px so text fits perfectly on High-DPI displays)
 $exportButton = New-Object System.Windows.Forms.Button
 $exportButton.Text = "Export Settings"
-$exportButton.Location = New-Object System.Drawing.Point(35, 615)
-$exportButton.Size = New-Object System.Drawing.Size(140, 30)
+$exportButton.Location = New-Object System.Drawing.Point(25, 615)
+$exportButton.Size = New-Object System.Drawing.Size(160, 30)
 $exportButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
 $form.Controls.Add($exportButton)
 $exportButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -289,8 +293,8 @@ $exportButton.ForeColor = [System.Drawing.Color]::LightSalmon
 
 $importButton = New-Object System.Windows.Forms.Button
 $importButton.Text = "Import Settings"
-$importButton.Location = New-Object System.Drawing.Point(205, 615)
-$importButton.Size = New-Object System.Drawing.Size(140, 30)
+$importButton.Location = New-Object System.Drawing.Point(200, 615)
+$importButton.Size = New-Object System.Drawing.Size(160, 30)
 $importButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
 $form.Controls.Add($importButton)
 $importButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -301,8 +305,8 @@ $importButton.ForeColor = [System.Drawing.Color]::LightSkyBlue
 
 $saveButton = New-Object System.Windows.Forms.Button
 $saveButton.Text = "Apply Settings"
-$saveButton.Location = New-Object System.Drawing.Point(400, 615)
-$saveButton.Size = New-Object System.Drawing.Size(140, 30)
+$saveButton.Location = New-Object System.Drawing.Point(375, 615)
+$saveButton.Size = New-Object System.Drawing.Size(160, 30)
 $saveButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
 $form.Controls.Add($saveButton)
 $saveButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -310,6 +314,18 @@ $saveButton.FlatAppearance.BorderSize = 1
 $saveButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(120, 120, 120)
 $saveButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $saveButton.ForeColor = [System.Drawing.Color]::LightGreen
+
+$resetButton = New-Object System.Windows.Forms.Button
+$resetButton.Text = "Reset All Settings"
+$resetButton.Location = New-Object System.Drawing.Point(550, 615)
+$resetButton.Size = New-Object System.Drawing.Size(160, 30)
+$resetButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
+$form.Controls.Add($resetButton)
+$resetButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$resetButton.FlatAppearance.BorderSize = 1
+$resetButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(120, 120, 120)
+$resetButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
+$resetButton.ForeColor = [System.Drawing.Color]::LightCoral
 
 $saveButton.Add_Click({
     $restorePrompt = [System.Windows.Forms.MessageBox]::Show("Would you like to create a System Restore point before applying these changes? (Recommended)", "System Restore", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
@@ -427,18 +443,6 @@ function Reset-AllSettings {
     }
     return $false
 }
-
-$resetButton = New-Object System.Windows.Forms.Button
-$resetButton.Text = "Reset All Settings"
-$resetButton.Location = New-Object System.Drawing.Point(570, 615)
-$resetButton.Size = New-Object System.Drawing.Size(140, 30)
-$resetButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
-$form.Controls.Add($resetButton)
-$resetButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$resetButton.FlatAppearance.BorderSize = 1
-$resetButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(120, 120, 120)
-$resetButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
-$resetButton.ForeColor = [System.Drawing.Color]::LightCoral
 
 $resetButton.Add_Click({
     if (Reset-AllSettings) {
