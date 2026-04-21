@@ -3,6 +3,19 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     exit
 }
 
+# --- SHARPNESS / HIGH-DPI FIX ---
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class DPI {
+    [DllImport("user32.dll")]
+    public static extern bool SetProcessDPIAware();
+}
+"@
+[DPI]::SetProcessDPIAware() | Out-Null
+[System.Windows.Forms.Application]::EnableVisualStyles()
+# --------------------------------
+
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
@@ -24,8 +37,8 @@ Clear-Host
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "SlimBrave - Revived"
 $form.ForeColor = [System.Drawing.Color]::White
-
-$form.Size = New-Object System.Drawing.Size(755, 680) 
+# Adjusted height to fit new dropdowns
+$form.Size = New-Object System.Drawing.Size(755, 720) 
 $form.StartPosition = "CenterScreen"
 $form.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $form.MaximizeBox = $false
@@ -34,6 +47,7 @@ $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $allFeatures = @()
 $toolTip = New-Object System.Windows.Forms.ToolTip
 
+# Status Bar Helper
 $statusBar = New-Object System.Windows.Forms.Label
 $statusBar.Height = 25
 $statusBar.Dock = [System.Windows.Forms.DockStyle]::Bottom
@@ -57,12 +71,13 @@ function Set-DnsMode {
     Update-Status "DNS Over HTTPS Mode set to $dnsMode"
 }
 
+# Left Panel
 $leftPanel = New-Object System.Windows.Forms.Panel
 $leftPanel.Location = New-Object System.Drawing.Point(20, 20)
 $leftPanel.Size = New-Object System.Drawing.Size(340, 500) 
 $leftPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $leftPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
-$leftPanel.AutoScroll = $true
+$leftPanel.AutoScroll = $true 
 $form.Controls.Add($leftPanel)
 
 $telemetryLabel = New-Object System.Windows.Forms.Label
@@ -89,7 +104,7 @@ foreach ($feature in $telemetryFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(280, 20) # Shrunk width slightly to prevent horizontal scrollbar collision
+    $checkbox.Size = New-Object System.Drawing.Size(280, 20) 
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $leftPanel.Controls.Add($checkbox)
@@ -108,8 +123,8 @@ $privacyLabel.ForeColor = [System.Drawing.Color]::LightSalmon
 $leftPanel.Controls.Add($privacyLabel)
 $y += 25
 
+# Removed SafeBrowsing from here to give it a dedicated Dropdown
 $privacyFeatures = @(
-    @{ Name = "Enable Safe Browsing (Standard)"; Key = "SafeBrowsingProtectionLevel"; Value = 1; Type = "DWord"; ToolTip = "Enables standard protection against malware and phishing (Recommended)." },
     @{ Name = "Disable Autofill (Addresses)"; Key = "AutofillAddressEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables saving and autofilling addresses." },
     @{ Name = "Disable Autofill (Credit Cards)"; Key = "AutofillCreditCardEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables saving and autofilling credit cards." },
     @{ Name = "Disable Password Manager"; Key = "PasswordManagerEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the built-in password manager." },
@@ -138,12 +153,13 @@ foreach ($feature in $privacyFeatures) {
     $y += 25
 }
 
+# Right Panel
 $rightPanel = New-Object System.Windows.Forms.Panel
 $rightPanel.Location = New-Object System.Drawing.Point(380, 20)
 $rightPanel.Size = New-Object System.Drawing.Size(340, 500) 
 $rightPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $rightPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
-$rightPanel.AutoScroll = $true
+$rightPanel.AutoScroll = $true 
 $form.Controls.Add($rightPanel)
 
 $y = 5
@@ -220,24 +236,44 @@ foreach ($feature in $perfFeatures) {
     $y += 25
 }
 
+# --- Safe Browsing Dropdown ---
+$sbLabel = New-Object System.Windows.Forms.Label
+$sbLabel.Text = "Safe Browsing:"
+$sbLabel.Location = New-Object System.Drawing.Point(35, 540)
+$sbLabel.Size = New-Object System.Drawing.Size(140, 20)
+$form.Controls.Add($sbLabel)
+
+$sbDropdown = New-Object System.Windows.Forms.ComboBox
+$sbDropdown.Location = New-Object System.Drawing.Point(180, 535)
+$sbDropdown.Size = New-Object System.Drawing.Size(150, 20)
+$sbDropdown.Items.AddRange(@("On", "Off"))
+$sbDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$sbDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
+$sbDropdown.ForeColor = [System.Drawing.Color]::White
+$toolTip.SetToolTip($sbDropdown, "On = Standard Safe Browsing. Off = Disabled entirely.")
+$form.Controls.Add($sbDropdown)
+
+# --- UPDATED: DNS Dropdown ---
 $dnsLabel = New-Object System.Windows.Forms.Label
-$dnsLabel.Text = "DNS Over HTTPS Mode:"
-$dnsLabel.Location = New-Object System.Drawing.Point(35, 545)
+$dnsLabel.Text = "DNS Over HTTPS:"
+$dnsLabel.Location = New-Object System.Drawing.Point(35, 575)
 $dnsLabel.Size = New-Object System.Drawing.Size(140, 20)
 $form.Controls.Add($dnsLabel)
 
 $dnsDropdown = New-Object System.Windows.Forms.ComboBox
-$dnsDropdown.Location = New-Object System.Drawing.Point(180, 540)
+$dnsDropdown.Location = New-Object System.Drawing.Point(180, 570)
 $dnsDropdown.Size = New-Object System.Drawing.Size(150, 20)
-$dnsDropdown.Items.AddRange(@("automatic", "off", "custom"))
+$dnsDropdown.Items.AddRange(@("On", "Off"))
 $dnsDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $dnsDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $dnsDropdown.ForeColor = [System.Drawing.Color]::White
+$toolTip.SetToolTip($dnsDropdown, "Forces encrypted DNS lookups.")
 $form.Controls.Add($dnsDropdown)
 
+# Buttons
 $exportButton = New-Object System.Windows.Forms.Button
 $exportButton.Text = "Export Settings"
-$exportButton.Location = New-Object System.Drawing.Point(50, 580)
+$exportButton.Location = New-Object System.Drawing.Point(50, 615)
 $exportButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($exportButton)
 $exportButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -248,7 +284,7 @@ $exportButton.ForeColor = [System.Drawing.Color]::LightSalmon
 
 $importButton = New-Object System.Windows.Forms.Button
 $importButton.Text = "Import Settings"
-$importButton.Location = New-Object System.Drawing.Point(210, 580)
+$importButton.Location = New-Object System.Drawing.Point(210, 615)
 $importButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($importButton)
 $importButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -259,7 +295,7 @@ $importButton.ForeColor = [System.Drawing.Color]::LightSkyBlue
 
 $saveButton = New-Object System.Windows.Forms.Button
 $saveButton.Text = "Apply Settings"
-$saveButton.Location = New-Object System.Drawing.Point(410, 580)
+$saveButton.Location = New-Object System.Drawing.Point(410, 615)
 $saveButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($saveButton)
 $saveButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -286,6 +322,8 @@ $saveButton.Add_Click({
     }
 
     Update-Status "Applying settings to registry..."
+    
+    # Process regular checkboxes
     foreach ($checkbox in $allFeatures) {
         if ($checkbox.Checked) {
             $feature = $checkbox.Tag
@@ -308,8 +346,21 @@ $saveButton.Add_Click({
         }
     }
     
+    # Process Safe Browsing Dropdown
+    if ($sbDropdown.SelectedItem) {
+        if ($sbDropdown.SelectedItem -eq "On") {
+            Set-ItemProperty -Path $registryPath -Name "SafeBrowsingProtectionLevel" -Value 1 -Type DWord -Force
+            Write-Log "Set SafeBrowsingProtectionLevel to 1 (On)"
+        } elseif ($sbDropdown.SelectedItem -eq "Off") {
+            Set-ItemProperty -Path $registryPath -Name "SafeBrowsingProtectionLevel" -Value 0 -Type DWord -Force
+            Write-Log "Set SafeBrowsingProtectionLevel to 0 (Off)"
+        }
+    }
+
+    # Process DNS Dropdown
     if ($dnsDropdown.SelectedItem) {
-        Set-DnsMode -dnsMode $dnsDropdown.SelectedItem
+        if ($dnsDropdown.SelectedItem -eq "On") { Set-DnsMode "automatic" }
+        if ($dnsDropdown.SelectedItem -eq "Off") { Set-DnsMode "off" }
     }
 
     Update-Status "Settings applied successfully!"
@@ -375,7 +426,7 @@ function Reset-AllSettings {
 
 $resetButton = New-Object System.Windows.Forms.Button
 $resetButton.Text = "Reset All Settings"
-$resetButton.Location = New-Object System.Drawing.Point(570, 580)
+$resetButton.Location = New-Object System.Drawing.Point(570, 615)
 $resetButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($resetButton)
 $resetButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -402,6 +453,7 @@ $exportButton.Add_Click({
     if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         $settingsToExport = @{
             Features = @()
+            SafeBrowsing = $sbDropdown.SelectedItem
             DnsMode = $dnsDropdown.SelectedItem
         }
         
@@ -446,6 +498,10 @@ $importButton.Add_Click({
                 }
             }
             
+            if ($importedSettings.SafeBrowsing) {
+                $sbDropdown.SelectedItem = $importedSettings.SafeBrowsing
+            }
+
             if ($importedSettings.DnsMode) {
                 $dnsDropdown.SelectedItem = $importedSettings.DnsMode
             }
