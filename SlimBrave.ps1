@@ -3,7 +3,7 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     exit
 }
 
-# --- SHARPNESS / HIGH-DPI FIX (With Error Suppression for re-runs) ---
+# --- SHARPNESS / HIGH-DPI FIX ---
 if (-not ("DPI" -as [type])) {
     try {
         Add-Type -TypeDefinition @"
@@ -41,11 +41,11 @@ Clear-Host
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "SlimBrave - Revived"
 $form.ForeColor = [System.Drawing.Color]::White
-$form.Size = New-Object System.Drawing.Size(765, 720) 
+$form.Size = New-Object System.Drawing.Size(765, 750) 
 $form.StartPosition = "CenterScreen"
 $form.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $form.MaximizeBox = $true
-$form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable # Fully resizable
+$form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
 
 $allFeatures = @()
 $toolTip = New-Object System.Windows.Forms.ToolTip
@@ -74,9 +74,35 @@ function Set-DnsMode {
     Update-Status "DNS Over HTTPS Mode set to $dnsMode"
 }
 
-# Left Panel (Anchored to grow vertically)
+# --- NEW: Quick Preset Toggles ---
+$presetLabel = New-Object System.Windows.Forms.Label
+$presetLabel.Text = "Quick Toggles:"
+$presetLabel.Location = New-Object System.Drawing.Point(20, 15)
+$presetLabel.Size = New-Object System.Drawing.Size(120, 20)
+$presetLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9, [System.Drawing.FontStyle]::Bold)
+$presetLabel.ForeColor = [System.Drawing.Color]::LightSkyBlue
+$form.Controls.Add($presetLabel)
+
+$btnPrivacy = New-Object System.Windows.Forms.Button
+$btnPrivacy.Text = "High Privacy + Moderate Security"
+$btnPrivacy.Location = New-Object System.Drawing.Point(130, 12)
+$btnPrivacy.Size = New-Object System.Drawing.Size(230, 25)
+$btnPrivacy.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnPrivacy.BackColor = [System.Drawing.Color]::FromArgb(255, 60, 60, 60)
+$form.Controls.Add($btnPrivacy)
+
+$btnSecurity = New-Object System.Windows.Forms.Button
+$btnSecurity.Text = "High Security + Moderate Privacy"
+$btnSecurity.Location = New-Object System.Drawing.Point(370, 12)
+$btnSecurity.Size = New-Object System.Drawing.Size(230, 25)
+$btnSecurity.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnSecurity.BackColor = [System.Drawing.Color]::FromArgb(255, 60, 60, 60)
+$form.Controls.Add($btnSecurity)
+# ---------------------------------
+
+# Left Panel
 $leftPanel = New-Object System.Windows.Forms.Panel
-$leftPanel.Location = New-Object System.Drawing.Point(20, 20)
+$leftPanel.Location = New-Object System.Drawing.Point(20, 50)
 $leftPanel.Size = New-Object System.Drawing.Size(340, 500) 
 $leftPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $leftPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
@@ -127,17 +153,18 @@ $privacyLabel.ForeColor = [System.Drawing.Color]::LightSalmon
 $leftPanel.Controls.Add($privacyLabel)
 $y += 25
 
+# --- UPDATED: Plain-English explanations & Privacy/Security Recommendations ---
 $privacyFeatures = @(
     @{ Name = "Disable Autofill (Addresses)"; Key = "AutofillAddressEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables saving and autofilling addresses." },
     @{ Name = "Disable Autofill (Credit Cards)"; Key = "AutofillCreditCardEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables saving and autofilling credit cards." },
     @{ Name = "Disable Password Manager"; Key = "PasswordManagerEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the built-in password manager." },
-    @{ Name = "Disable Browser Sign-in"; Key = "BrowserSignin"; Value = 0; Type = "DWord"; ToolTip = "Prevents signing into the browser profile." },
-    @{ Name = "Disable WebRTC IP Leak"; Key = "WebRtcIPHandling"; Value = "disable_non_proxied_udp"; Type = "String"; ToolTip = "Prevents your real IP address from leaking when using a VPN." },
-    @{ Name = "Disable QUIC Protocol"; Key = "QuicAllowed"; Value = 0; Type = "DWord"; ToolTip = "Disables the QUIC protocol, forcing standard TCP (useful for strict firewalls)." },
+    @{ Name = "Disable Browser Sign-in"; Key = "BrowserSignin"; Value = 0; Type = "DWord"; ToolTip = "Prevents syncing your data to cloud accounts. Recommended: Disabled for Privacy." },
+    @{ Name = "Disable WebRTC IP Leak"; Key = "WebRtcIPHandling"; Value = "disable_non_proxied_udp"; Type = "String"; ToolTip = "Prevents your real IP address from leaking when using a VPN. Recommended: Disabled for Privacy." },
+    @{ Name = "Disable QUIC Protocol"; Key = "QuicAllowed"; Value = 0; Type = "DWord"; ToolTip = "Forces standard TCP, stopping UDP firewall bypasses and tracking. Recommended: Disabled for Security." },
     @{ Name = "Block Third Party Cookies"; Key = "BlockThirdPartyCookies"; Value = 1; Type = "DWord"; ToolTip = "Blocks all third-party tracking cookies." },
     @{ Name = "Enable Do Not Track"; Key = "EnableDoNotTrack"; Value = 1; Type = "DWord"; ToolTip = "Sends a Do Not Track request with your browsing traffic." },
-    @{ Name = "Force Google SafeSearch"; Key = "ForceGoogleSafeSearch"; Value = 1; Type = "DWord"; ToolTip = "Forces Google SafeSearch for all web queries." },
-    @{ Name = "Disable IPFS"; Key = "IPFSEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the built-in IPFS node/support." },
+    @{ Name = "Force Google SafeSearch"; Key = "ForceGoogleSafeSearch"; Value = 1; Type = "DWord"; ToolTip = "Filters explicit search results. Recommended: Disabled for High Privacy (no filtering), Enabled for Security (safe browsing)." },
+    @{ Name = "Disable IPFS"; Key = "IPFSEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops peer-to-peer background connections to unknown nodes. Recommended: Disabled for Privacy & Security." },
     @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord"; ToolTip = "Forces the browser to always open in Incognito Mode." },
     @{ Name = "Force Download Prompts"; Key = "PromptForDownloadLocation"; Value = 1; Type = "DWord"; ToolTip = "Forces Brave to ask where to save a file before downloading, preventing background drive-by downloads." },
     @{ Name = "Clear Data on Exit (Cookies/History)"; Key = "ClearBrowsingDataOnExitList"; Value = @("browsing_history", "download_history", "cookies_and_other_site_data", "cached_images_and_files", "password_signin", "autofill", "site_settings", "hosted_app_data"); Type = "List"; ToolTip = "Wipes all cookies, cache, and browsing history the moment the browser closes." }
@@ -156,9 +183,9 @@ foreach ($feature in $privacyFeatures) {
     $y += 25
 }
 
-# Right Panel (Anchored to grow vertically and stretch horizontally if widened)
+# Right Panel
 $rightPanel = New-Object System.Windows.Forms.Panel
-$rightPanel.Location = New-Object System.Drawing.Point(380, 20)
+$rightPanel.Location = New-Object System.Drawing.Point(380, 50)
 $rightPanel.Size = New-Object System.Drawing.Size(340, 500) 
 $rightPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $rightPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
@@ -240,16 +267,16 @@ foreach ($feature in $perfFeatures) {
     $y += 25
 }
 
-# Safe Browsing Dropdown (Anchored Bottom)
+# Bottom UI Adjustments
 $sbLabel = New-Object System.Windows.Forms.Label
 $sbLabel.Text = "Safe Browsing:"
-$sbLabel.Location = New-Object System.Drawing.Point(35, 540)
+$sbLabel.Location = New-Object System.Drawing.Point(35, 570)
 $sbLabel.Size = New-Object System.Drawing.Size(140, 20)
 $sbLabel.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
 $form.Controls.Add($sbLabel)
 
 $sbDropdown = New-Object System.Windows.Forms.ComboBox
-$sbDropdown.Location = New-Object System.Drawing.Point(180, 535)
+$sbDropdown.Location = New-Object System.Drawing.Point(180, 565)
 $sbDropdown.Size = New-Object System.Drawing.Size(150, 20)
 $sbDropdown.Items.AddRange(@("On", "Off"))
 $sbDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -259,16 +286,15 @@ $sbDropdown.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Wi
 $toolTip.SetToolTip($sbDropdown, "On = Standard Safe Browsing. Off = Disabled entirely.")
 $form.Controls.Add($sbDropdown)
 
-# DNS Dropdown (Anchored Bottom)
 $dnsLabel = New-Object System.Windows.Forms.Label
 $dnsLabel.Text = "DNS Over HTTPS:"
-$dnsLabel.Location = New-Object System.Drawing.Point(35, 575)
+$dnsLabel.Location = New-Object System.Drawing.Point(35, 605)
 $dnsLabel.Size = New-Object System.Drawing.Size(140, 20)
 $dnsLabel.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
 $form.Controls.Add($dnsLabel)
 
 $dnsDropdown = New-Object System.Windows.Forms.ComboBox
-$dnsDropdown.Location = New-Object System.Drawing.Point(180, 570)
+$dnsDropdown.Location = New-Object System.Drawing.Point(180, 600)
 $dnsDropdown.Size = New-Object System.Drawing.Size(150, 20)
 $dnsDropdown.Items.AddRange(@("On", "Off"))
 $dnsDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -278,10 +304,10 @@ $dnsDropdown.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.W
 $toolTip.SetToolTip($dnsDropdown, "Forces encrypted DNS lookups.")
 $form.Controls.Add($dnsDropdown)
 
-# Buttons (Widened to 160px so text fits perfectly on High-DPI displays)
+# Action Buttons
 $exportButton = New-Object System.Windows.Forms.Button
 $exportButton.Text = "Export Settings"
-$exportButton.Location = New-Object System.Drawing.Point(25, 615)
+$exportButton.Location = New-Object System.Drawing.Point(25, 645)
 $exportButton.Size = New-Object System.Drawing.Size(160, 30)
 $exportButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
 $form.Controls.Add($exportButton)
@@ -293,7 +319,7 @@ $exportButton.ForeColor = [System.Drawing.Color]::LightSalmon
 
 $importButton = New-Object System.Windows.Forms.Button
 $importButton.Text = "Import Settings"
-$importButton.Location = New-Object System.Drawing.Point(200, 615)
+$importButton.Location = New-Object System.Drawing.Point(200, 645)
 $importButton.Size = New-Object System.Drawing.Size(160, 30)
 $importButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
 $form.Controls.Add($importButton)
@@ -305,7 +331,7 @@ $importButton.ForeColor = [System.Drawing.Color]::LightSkyBlue
 
 $saveButton = New-Object System.Windows.Forms.Button
 $saveButton.Text = "Apply Settings"
-$saveButton.Location = New-Object System.Drawing.Point(375, 615)
+$saveButton.Location = New-Object System.Drawing.Point(375, 645)
 $saveButton.Size = New-Object System.Drawing.Size(160, 30)
 $saveButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
 $form.Controls.Add($saveButton)
@@ -317,7 +343,7 @@ $saveButton.ForeColor = [System.Drawing.Color]::LightGreen
 
 $resetButton = New-Object System.Windows.Forms.Button
 $resetButton.Text = "Reset All Settings"
-$resetButton.Location = New-Object System.Drawing.Point(550, 615)
+$resetButton.Location = New-Object System.Drawing.Point(550, 645)
 $resetButton.Size = New-Object System.Drawing.Size(160, 30)
 $resetButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
 $form.Controls.Add($resetButton)
@@ -326,6 +352,30 @@ $resetButton.FlatAppearance.BorderSize = 1
 $resetButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(120, 120, 120)
 $resetButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $resetButton.ForeColor = [System.Drawing.Color]::LightCoral
+
+# --- NEW: Quick Preset Click Actions ---
+$btnPrivacy.Add_Click({
+    foreach ($cb in $allFeatures) { $cb.Checked = $false }
+    $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "AutofillAddressEnabled", "AutofillCreditCardEnabled", "PasswordManagerEnabled", "BrowserSignin", "WebRtcIPHandling", "BlockThirdPartyCookies", "EnableDoNotTrack", "IPFSEnabled", "PromptForDownloadLocation", "ClearBrowsingDataOnExitList", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled", "AlwaysOpenPdfExternally", "PromotionsEnabled", "SearchSuggestEnabled", "DefaultBrowserSettingEnabled", "BravePlaylistEnabled")
+    foreach ($key in $keys) {
+        foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } }
+    }
+    $sbDropdown.SelectedItem = "Off"
+    $dnsDropdown.SelectedItem = "Off"
+    Update-Status "Loaded: High Privacy + Moderate Security preset."
+})
+
+$btnSecurity.Add_Click({
+    foreach ($cb in $allFeatures) { $cb.Checked = $false }
+    $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "WebRtcIPHandling", "QuicAllowed", "BlockThirdPartyCookies", "EnableDoNotTrack", "ForceGoogleSafeSearch", "IPFSEnabled", "PromptForDownloadLocation", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "SyncDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BackgroundModeEnabled", "AlwaysOpenPdfExternally", "DeveloperToolsDisabled", "BravePlaylistEnabled")
+    foreach ($key in $keys) {
+        foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } }
+    }
+    $sbDropdown.SelectedItem = "On"
+    $dnsDropdown.SelectedItem = "On"
+    Update-Status "Loaded: High Security + Moderate Privacy preset."
+})
+# --------------------------------------
 
 $saveButton.Add_Click({
     $restorePrompt = [System.Windows.Forms.MessageBox]::Show("Would you like to create a System Restore point before applying these changes? (Recommended)", "System Restore", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
