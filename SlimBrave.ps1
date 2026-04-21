@@ -41,10 +41,11 @@ Clear-Host
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "SlimBrave - Revived"
 $form.ForeColor = [System.Drawing.Color]::White
-$form.Size = New-Object System.Drawing.Size(780, 760) 
-$form.MinimumSize = New-Object System.Drawing.Size(780, 760)
-# Locks resizing to a maximum of +25% of the base size
-$form.MaximumSize = New-Object System.Drawing.Size([int](780 * 1.25), [int](760 * 1.25)) 
+
+# --- LARGER DEFAULT SIZE & SCALING LIMITS ---
+$form.Size = New-Object System.Drawing.Size(900, 800) 
+$form.MinimumSize = New-Object System.Drawing.Size(900, 800)
+$form.MaximumSize = New-Object System.Drawing.Size([int](900 * 1.25), [int](800 * 1.25)) 
 $form.StartPosition = "CenterScreen"
 $form.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $form.MaximizeBox = $true
@@ -77,30 +78,34 @@ function Set-DnsMode {
     Update-Status "DNS Over HTTPS Mode set to $dnsMode"
 }
 
-# --- Quick Preset Toggles (Widened to 270px to fix cut-offs) ---
+# --- Quick Preset Toggles (AutoSize Enabled to prevent cutoffs) ---
 $presetLabel = New-Object System.Windows.Forms.Label
 $presetLabel.Text = "Quick Toggles:"
-$presetLabel.Size = New-Object System.Drawing.Size(110, 20)
+$presetLabel.AutoSize = $true
 $presetLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9, [System.Drawing.FontStyle]::Bold)
 $presetLabel.ForeColor = [System.Drawing.Color]::LightSkyBlue
 $form.Controls.Add($presetLabel)
 
 $btnPrivacy = New-Object System.Windows.Forms.Button
 $btnPrivacy.Text = "High Privacy + Moderate Security"
-$btnPrivacy.Size = New-Object System.Drawing.Size(270, 25)
+$btnPrivacy.AutoSize = $true
+$btnPrivacy.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+$btnPrivacy.Padding = New-Object System.Windows.Forms.Padding(5, 2, 5, 2)
 $btnPrivacy.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $btnPrivacy.BackColor = [System.Drawing.Color]::FromArgb(255, 60, 60, 60)
 $form.Controls.Add($btnPrivacy)
 
 $btnSecurity = New-Object System.Windows.Forms.Button
 $btnSecurity.Text = "High Security + Moderate Privacy"
-$btnSecurity.Size = New-Object System.Drawing.Size(270, 25)
+$btnSecurity.AutoSize = $true
+$btnSecurity.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+$btnSecurity.Padding = New-Object System.Windows.Forms.Padding(5, 2, 5, 2)
 $btnSecurity.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $btnSecurity.BackColor = [System.Drawing.Color]::FromArgb(255, 60, 60, 60)
 $form.Controls.Add($btnSecurity)
 # ---------------------------------
 
-# Left Panel
+# Left Panel (Anchors removed to let Layout Engine control it flawlessly)
 $leftPanel = New-Object System.Windows.Forms.Panel
 $leftPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $leftPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
@@ -131,7 +136,7 @@ foreach ($feature in $telemetryFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(280, 20) 
+    $checkbox.Size = New-Object System.Drawing.Size(380, 20) # Widened checkboxes
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
@@ -172,7 +177,7 @@ foreach ($feature in $privacyFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(280, 20)
+    $checkbox.Size = New-Object System.Drawing.Size(380, 20)
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
@@ -181,7 +186,7 @@ foreach ($feature in $privacyFeatures) {
     $y += 25
 }
 
-# Right Panel
+# Right Panel (Anchors removed)
 $rightPanel = New-Object System.Windows.Forms.Panel
 $rightPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $rightPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
@@ -215,7 +220,7 @@ foreach ($feature in $braveFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(280, 20)
+    $checkbox.Size = New-Object System.Drawing.Size(380, 20)
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
@@ -255,7 +260,7 @@ foreach ($feature in $perfFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(280, 20)
+    $checkbox.Size = New-Object System.Drawing.Size(380, 20)
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
@@ -264,7 +269,7 @@ foreach ($feature in $perfFeatures) {
     $y += 25
 }
 
-# Bottom Controls
+# Bottom Controls (Anchors removed, Layout Engine handles positioning)
 $sbLabel = New-Object System.Windows.Forms.Label
 $sbLabel.Text = "Safe Browsing:"
 $sbLabel.Size = New-Object System.Drawing.Size(140, 20)
@@ -295,7 +300,6 @@ $form.Controls.Add($dnsDropdown)
 
 $exportButton = New-Object System.Windows.Forms.Button
 $exportButton.Text = "Export Settings"
-$exportButton.Size = New-Object System.Drawing.Size(160, 30)
 $exportButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $exportButton.FlatAppearance.BorderSize = 1
 $exportButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(120, 120, 120)
@@ -305,7 +309,6 @@ $form.Controls.Add($exportButton)
 
 $importButton = New-Object System.Windows.Forms.Button
 $importButton.Text = "Import Settings"
-$importButton.Size = New-Object System.Drawing.Size(160, 30)
 $importButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $importButton.FlatAppearance.BorderSize = 1
 $importButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(120, 120, 120)
@@ -315,7 +318,6 @@ $form.Controls.Add($importButton)
 
 $saveButton = New-Object System.Windows.Forms.Button
 $saveButton.Text = "Apply Settings"
-$saveButton.Size = New-Object System.Drawing.Size(160, 30)
 $saveButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $saveButton.FlatAppearance.BorderSize = 1
 $saveButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(120, 120, 120)
@@ -325,7 +327,6 @@ $form.Controls.Add($saveButton)
 
 $resetButton = New-Object System.Windows.Forms.Button
 $resetButton.Text = "Reset All Settings"
-$resetButton.Size = New-Object System.Drawing.Size(160, 30)
 $resetButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $resetButton.FlatAppearance.BorderSize = 1
 $resetButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(120, 120, 120)
@@ -333,28 +334,29 @@ $resetButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $resetButton.ForeColor = [System.Drawing.Color]::LightCoral
 $form.Controls.Add($resetButton)
 
-# --- Dynamic Layout Engine (Centers and Scales proportionally) ---
+
+# --- DYNAMIC LAYOUT ENGINE (Flawless Centering & Math) ---
 function Update-Layout {
     if ($form.ClientSize.Width -eq 0) { return }
 
-    # Top Bar (Center Align)
+    # Top Bar (Perfectly Center Align AutoSized items)
     $totalTopWidth = $presetLabel.Width + $btnPrivacy.Width + $btnSecurity.Width + 20
     $startX = ($form.ClientSize.Width - $totalTopWidth) / 2
-    $presetLabel.Location = New-Object System.Drawing.Point($startX, 15)
-    $btnPrivacy.Location = New-Object System.Drawing.Point(($presetLabel.Right + 10), 12)
-    $btnSecurity.Location = New-Object System.Drawing.Point(($btnPrivacy.Right + 10), 12)
+    $presetLabel.Location = New-Object System.Drawing.Point($startX, 20)
+    $btnPrivacy.Location = New-Object System.Drawing.Point(($presetLabel.Right + 10), 16)
+    $btnSecurity.Location = New-Object System.Drawing.Point(($btnPrivacy.Right + 10), 16)
 
-    # Panels (Scale proportionally)
+    # Panels (Mathematically distribute to ensure both sides are EXACTLY equal)
     $panelWidth = ($form.ClientSize.Width - 60) / 2 
     $panelHeight = $form.ClientSize.Height - 190 
     
-    $leftPanel.Location = New-Object System.Drawing.Point(20, 50)
+    $leftPanel.Location = New-Object System.Drawing.Point(20, 55)
     $leftPanel.Size = New-Object System.Drawing.Size($panelWidth, $panelHeight)
     
-    $rightPanel.Location = New-Object System.Drawing.Point(($leftPanel.Right + 20), 50)
+    $rightPanel.Location = New-Object System.Drawing.Point(($leftPanel.Right + 20), 55)
     $rightPanel.Size = New-Object System.Drawing.Size($panelWidth, $panelHeight)
 
-    # Dropdowns (Align under left panel)
+    # Dropdowns (Align neatly under left panel)
     $bottomY = $leftPanel.Bottom + 15
     $sbLabel.Location = New-Object System.Drawing.Point($leftPanel.Left, ($bottomY + 3))
     $sbDropdown.Location = New-Object System.Drawing.Point(($sbLabel.Right + 5), $bottomY)
@@ -362,9 +364,15 @@ function Update-Layout {
     $dnsLabel.Location = New-Object System.Drawing.Point($leftPanel.Left, ($bottomY + 35))
     $dnsDropdown.Location = New-Object System.Drawing.Point(($dnsLabel.Right + 5), ($bottomY + 32))
 
-    # Action Buttons (Spread evenly at the bottom)
-    $buttonY = $dnsDropdown.Bottom + 20
-    $totalBtnWidth = 160 * 4
+    # Action Buttons (Dynamically distribute to fill the entire bottom row)
+    $buttonY = $dnsDropdown.Bottom + 15
+    $btnWidth = 180 
+    $exportButton.Size = New-Object System.Drawing.Size($btnWidth, 30)
+    $importButton.Size = New-Object System.Drawing.Size($btnWidth, 30)
+    $saveButton.Size = New-Object System.Drawing.Size($btnWidth, 30)
+    $resetButton.Size = New-Object System.Drawing.Size($btnWidth, 30)
+
+    $totalBtnWidth = $btnWidth * 4
     $remainingSpace = $form.ClientSize.Width - 40 - $totalBtnWidth
     $gap = $remainingSpace / 3
     if ($gap -lt 5) { $gap = 5 }
