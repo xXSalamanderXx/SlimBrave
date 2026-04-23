@@ -564,7 +564,7 @@ $saveButton.Add_Click({
                 }
                 Write-Log "Successfully applied permission policy: $k = $val"
             } catch {
-                Write-Log "Failed to apply permission policy $k: $_"
+                Write-Log "Failed to apply permission policy $($k): $_"
             }
         }
     }
