@@ -72,7 +72,7 @@ function Update-Status ($text) {
 function Set-DnsMode {
     param ([string] $dnsMode)
     $regKey = "HKLM:\\Software\\Policies\\BraveSoftware\\Brave"
-    Set-ItemProperty -Path $regKey -Name "DnsOverHttpsMode" -Value $dnsMode -Type String -Force
+    [void](Set-ItemProperty -Path $regKey -Name "DnsOverHttpsMode" -Value $dnsMode -Type String -Force)
     Update-Status "DNS Over HTTPS Mode set to $dnsMode"
 }
 
@@ -144,6 +144,16 @@ foreach ($feature in $telemetryFeatures) {
     $checkbox.Size = New-Object System.Drawing.Size(340, 25) 
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $checkbox.FlatAppearance.BorderSize = 1
+    $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
+    $checkbox.FlatAppearance.CheckedBackColor = [System.Drawing.Color]::DodgerBlue
+    $checkbox.Add_CheckedChanged({
+        if ($this.Checked) {
+            $this.ForeColor = [System.Drawing.Color]::DeepSkyBlue
+        } else {
+            $this.ForeColor = [System.Drawing.Color]::White
+        }
+    })
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $leftPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
@@ -185,11 +195,26 @@ foreach ($feature in $privacyFeatures) {
     $checkbox.Size = New-Object System.Drawing.Size(340, 25)
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $checkbox.FlatAppearance.BorderSize = 1
+    $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
+    $checkbox.FlatAppearance.CheckedBackColor = [System.Drawing.Color]::DodgerBlue
+    $checkbox.Add_CheckedChanged({
+        if ($this.Checked) {
+            $this.ForeColor = [System.Drawing.Color]::DeepSkyBlue
+        } else {
+            $this.ForeColor = [System.Drawing.Color]::White
+        }
+    })
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $leftPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
     $leftY += 28
 }
+
+$leftPad = New-Object System.Windows.Forms.Label
+$leftPad.Location = New-Object System.Drawing.Point(0, $leftY)
+$leftPad.Size = New-Object System.Drawing.Size(10, 40)
+[void]$leftPanel.Controls.Add($leftPad)
 
 $midPanel = New-Object System.Windows.Forms.Panel
 $midPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
@@ -227,6 +252,16 @@ foreach ($feature in $braveFeatures) {
     $checkbox.Size = New-Object System.Drawing.Size(340, 25)
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $checkbox.FlatAppearance.BorderSize = 1
+    $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
+    $checkbox.FlatAppearance.CheckedBackColor = [System.Drawing.Color]::DodgerBlue
+    $checkbox.Add_CheckedChanged({
+        if ($this.Checked) {
+            $this.ForeColor = [System.Drawing.Color]::DeepSkyBlue
+        } else {
+            $this.ForeColor = [System.Drawing.Color]::White
+        }
+    })
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $midPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
@@ -267,11 +302,26 @@ foreach ($feature in $perfFeatures) {
     $checkbox.Size = New-Object System.Drawing.Size(340, 25)
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $checkbox.FlatAppearance.BorderSize = 1
+    $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
+    $checkbox.FlatAppearance.CheckedBackColor = [System.Drawing.Color]::DodgerBlue
+    $checkbox.Add_CheckedChanged({
+        if ($this.Checked) {
+            $this.ForeColor = [System.Drawing.Color]::DeepSkyBlue
+        } else {
+            $this.ForeColor = [System.Drawing.Color]::White
+        }
+    })
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $midPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
     $midY += 28
 }
+
+$midPad = New-Object System.Windows.Forms.Label
+$midPad.Location = New-Object System.Drawing.Point(0, $midY)
+$midPad.Size = New-Object System.Drawing.Size(10, 40)
+[void]$midPanel.Controls.Add($midPad)
 
 $rightPanel = New-Object System.Windows.Forms.Panel
 $rightPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
@@ -291,21 +341,21 @@ $rightPanel.Controls.Add($permLabel)
 $permY += 30
 
 $permissionSettings = @(
-    @{ Name = "Location"; Key = "DefaultGeolocationSetting"; Options = @("Not Configured", "Ask", "Block", "Allow") },
-    @{ Name = "Camera"; Key = "DefaultVideoCaptureSetting"; Options = @("Not Configured", "Ask", "Block") },
-    @{ Name = "Microphone"; Key = "DefaultAudioCaptureSetting"; Options = @("Not Configured", "Ask", "Block") },
-    @{ Name = "Notifications"; Key = "DefaultNotificationsSetting"; Options = @("Not Configured", "Ask", "Block", "Allow") },
-    @{ Name = "JavaScript"; Key = "DefaultJavaScriptSetting"; Options = @("Not Configured", "Allow", "Block") },
-    @{ Name = "Images"; Key = "DefaultImagesSetting"; Options = @("Not Configured", "Allow", "Block") },
-    @{ Name = "Pop-ups & Redirects"; Key = "DefaultPopupsSetting"; Options = @("Not Configured", "Block", "Allow") },
-    @{ Name = "USB Devices"; Key = "DefaultWebUsbGuardSetting"; Options = @("Not Configured", "Ask", "Block") },
-    @{ Name = "Serial Ports"; Key = "DefaultSerialGuardSetting"; Options = @("Not Configured", "Ask", "Block") },
-    @{ Name = "HID Devices"; Key = "DefaultWebHidGuardSetting"; Options = @("Not Configured", "Ask", "Block") },
-    @{ Name = "File Editing"; Key = "DefaultFileSystemReadGuardSetting"; Options = @("Not Configured", "Ask", "Block") },
-    @{ Name = "Clipboard"; Key = "DefaultClipboardSetting"; Options = @("Not Configured", "Ask", "Block") },
-    @{ Name = "Window Management"; Key = "DefaultWindowPlacementSetting"; Options = @("Not Configured", "Ask", "Block", "Allow") },
-    @{ Name = "Local Fonts"; Key = "DefaultLocalFontsSetting"; Options = @("Not Configured", "Ask", "Block") },
-    @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Configured", "Block", "Allow") }
+    @{ Name = "Location"; Key = "DefaultGeolocationSetting"; Options = @("Not Configured", "Ask", "Block", "Allow"); ToolTip = "Allows sites to request your physical location." },
+    @{ Name = "Camera"; Key = "DefaultVideoCaptureSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to record video via your webcam." },
+    @{ Name = "Microphone"; Key = "DefaultAudioCaptureSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to record audio via your microphone." },
+    @{ Name = "Notifications"; Key = "DefaultNotificationsSetting"; Options = @("Not Configured", "Ask", "Block", "Allow"); ToolTip = "Allows sites to send you native desktop push notifications." },
+    @{ Name = "JavaScript"; Key = "DefaultJavaScriptSetting"; Options = @("Not Configured", "Allow", "Block"); ToolTip = "Allows sites to run interactive scripts. Blocking this breaks almost all websites." },
+    @{ Name = "Images"; Key = "DefaultImagesSetting"; Options = @("Not Configured", "Allow", "Block"); ToolTip = "Allows sites to load and display images." },
+    @{ Name = "Pop-ups & Redirects"; Key = "DefaultPopupsSetting"; Options = @("Not Configured", "Block", "Allow"); ToolTip = "Allows sites to open new windows or redirect you without your input." },
+    @{ Name = "USB Devices"; Key = "DefaultWebUsbGuardSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to request direct connection to your plugged-in USB devices." },
+    @{ Name = "Serial Ports"; Key = "DefaultSerialGuardSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to request connection to hardware via serial ports." },
+    @{ Name = "HID Devices"; Key = "DefaultWebHidGuardSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to request access to Human Interface Devices (e.g. controllers)." },
+    @{ Name = "File Editing"; Key = "DefaultFileSystemReadGuardSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to read and save files directly to your local file system." },
+    @{ Name = "Clipboard"; Key = "DefaultClipboardSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to read text and images copied to your clipboard." },
+    @{ Name = "Window Management"; Key = "DefaultWindowPlacementSetting"; Options = @("Not Configured", "Ask", "Block", "Allow"); ToolTip = "Allows sites to open windows on specific monitors or in fullscreen." },
+    @{ Name = "Local Fonts"; Key = "DefaultLocalFontsSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to fingerprint your device based on locally installed fonts." },
+    @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Configured", "Block", "Allow"); ToolTip = "Allows sites to check if you have local payment apps installed." }
 )
 
 foreach ($p in $permissionSettings) {
@@ -314,6 +364,7 @@ foreach ($p in $permissionSettings) {
     $lbl.Size = New-Object System.Drawing.Size(165, 20)
     $lbl.Location = New-Object System.Drawing.Point(30, $permY)
     $lbl.ForeColor = [System.Drawing.Color]::White
+    $toolTip.SetToolTip($lbl, $p.ToolTip)
     [void]$rightPanel.Controls.Add($lbl)
 
     $cb = New-Object System.Windows.Forms.ComboBox
@@ -326,11 +377,17 @@ foreach ($p in $permissionSettings) {
     $cb.BackColor = [System.Drawing.Color]::FromArgb(255, 45, 45, 45)
     $cb.ForeColor = [System.Drawing.Color]::White
     $cb.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $toolTip.SetToolTip($cb, $p.ToolTip)
     [void]$rightPanel.Controls.Add($cb)
 
     $allPerms += $cb
     $permY += 35
 }
+
+$permPad = New-Object System.Windows.Forms.Label
+$permPad.Location = New-Object System.Drawing.Point(0, $permY)
+$permPad.Size = New-Object System.Drawing.Size(10, 40)
+[void]$rightPanel.Controls.Add($permPad)
 
 $sbLabel = New-Object System.Windows.Forms.Label
 $sbLabel.Text = "Safe Browsing:"
@@ -700,6 +757,7 @@ $importButton.Add_Click({
             
             foreach ($checkbox in $allFeatures) {
                 $checkbox.Checked = $false
+                $checkbox.ForeColor = [System.Drawing.Color]::White
             }
             
             foreach ($featureKey in $importedSettings.Features) {
