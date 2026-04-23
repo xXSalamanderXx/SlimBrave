@@ -356,22 +356,7 @@ $permissionSettings = @(
     @{ Name = "Clipboard"; Key = "DefaultClipboardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read text and images copied to your clipboard." },
     @{ Name = "Window Management"; Key = "DefaultWindowPlacementSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to open windows on specific monitors or in fullscreen." },
     @{ Name = "Local Fonts"; Key = "DefaultLocalFontsSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to fingerprint your device based on locally installed fonts." },
-    @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to check if you have local payment apps installed." },
-    @{ Name = "Apps on Device"; Key = "DefaultAppsOnDeviceSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to access your device's installed apps." },
-    @{ Name = "Local Network"; Key = "DefaultLocalNetworkAccessSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to request access to local network devices." },
-    @{ Name = "Web App Installations"; Key = "DefaultWebAppInstallationSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to install progressive web apps (PWAs)." },
-    @{ Name = "Scrolling & Zooming"; Key = "DefaultCapturedSurfaceControlSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to scroll and zoom shared tabs during screen sharing." },
-    @{ Name = "Auto Picture-in-Picture"; Key = "DefaultAutoPictureInPictureSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows videos to automatically pop out into Picture-in-Picture mode." },
-    @{ Name = "Hand Tracking"; Key = "DefaultHandTrackingSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to track your hand movements via camera." },
-    @{ Name = "Virtual Reality"; Key = "DefaultVirtualRealitySetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to access virtual reality headsets." },
-    @{ Name = "Augmented Reality"; Key = "DefaultAugmentedRealitySetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to access augmented reality hardware." },
-    @{ Name = "Midi Device Control"; Key = "DefaultMidiSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to connect to and reprogram MIDI devices." },
-    @{ Name = "Leo AI Chat"; Key = "DefaultLeoChatSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to invoke Brave's Leo AI chat." },
-    @{ Name = "Protocol Handlers"; Key = "DefaultCustomHandlersSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to ask to become the default handler for protocols (like mailto:)." },
-    @{ Name = "Google Sign-In"; Key = "DefaultGoogleSignInSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to show legacy Google Sign-In prompts." },
-    @{ Name = "Autoplay"; Key = "DefaultAutoplaySetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows videos and audio to play automatically." },
-    @{ Name = "Automatic Downloads"; Key = "DefaultMultipleAutomaticDownloadsSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to automatically download multiple files." },
-    @{ Name = "Motion Sensors"; Key = "DefaultSensorsSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to access your device's motion and light sensors." }
+    @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to check if you have local payment apps installed." }
 )
 
 foreach ($p in $permissionSettings) {
@@ -581,7 +566,7 @@ $btnPrivacy.Add_Click({
             $perm.SelectedItem = "Allow"
         } elseif ($n -eq "Camera" -or $n -eq "Microphone") {
             $perm.SelectedItem = "Ask"
-        } elseif ($n -match "Images|Automatic Downloads|Autoplay|Web App Installations|Leo AI Chat|Auto Picture-in-Picture") {
+        } elseif ($n -eq "Images") {
             $perm.SelectedItem = "Not Set"
         } else {
             if ($perm.Items.Contains("Block")) {
@@ -606,9 +591,7 @@ $btnSecurity.Add_Click({
         $n = $perm.Tag.Name
         if ($n -eq "JavaScript") {
             $perm.SelectedItem = "Allow"
-        } elseif ($n -match "Images|Automatic Downloads|Autoplay|Web App Installations|Leo AI Chat|Auto Picture-in-Picture") {
-            $perm.SelectedItem = "Not Set"
-        } elseif ($n -match "USB|Serial|HID|File|Window|Payment|Apps on Device|Local Network|Scrolling & Zooming|Hand Tracking|Virtual Reality|Augmented Reality|Midi Device Control|Protocol Handlers|Google Sign-In|Motion Sensors") {
+        } elseif ($n -match "USB|Serial|HID|File|Window|Payment") {
             $perm.SelectedItem = "Block"
         } elseif ($n -match "Camera|Microphone|Location|Clipboard|Local Fonts") {
             $perm.SelectedItem = "Ask"
