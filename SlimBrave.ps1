@@ -1,4 +1,4 @@
-# Slimbrave - Revived - v1.0.4
+# Slimbrave - Revived - v1.0.5
 
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Start-Process powershell -ArgumentList "-File `"$($MyInvocation.MyCommand.Path)`"" -Verb RunAs
@@ -41,15 +41,16 @@ Clear-Host
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "SlimBrave - Revived"
 $form.ForeColor = [System.Drawing.Color]::White
-$form.Size = New-Object System.Drawing.Size(950, 850) 
-$form.MinimumSize = New-Object System.Drawing.Size(950, 850)
-$form.MaximumSize = New-Object System.Drawing.Size([int](950 * 1.25), [int](850 * 1.25)) 
+$form.Size = New-Object System.Drawing.Size(1250, 850) 
+$form.MinimumSize = New-Object System.Drawing.Size(1250, 850)
+$form.MaximumSize = New-Object System.Drawing.Size([int](1250 * 1.25), [int](850 * 1.25)) 
 $form.StartPosition = "CenterScreen"
 $form.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $form.MaximizeBox = $true
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
 
 $allFeatures = @()
+$allPerms = @()
 $toolTip = New-Object System.Windows.Forms.ToolTip
 
 $statusBar = New-Object System.Windows.Forms.Label
@@ -140,7 +141,7 @@ foreach ($feature in $telemetryFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(380, 25) 
+    $checkbox.Size = New-Object System.Drawing.Size(340, 25) 
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
@@ -173,7 +174,7 @@ $privacyFeatures = @(
     @{ Name = "Disable IPFS"; Key = "IPFSEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops peer-to-peer background connections to unknown nodes. Recommended: Disabled for Privacy & Security." },
     @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord"; ToolTip = "Forces the browser to always open in Incognito Mode." },
     @{ Name = "Force Download Prompts"; Key = "PromptForDownloadLocation"; Value = 1; Type = "DWord"; ToolTip = "Forces Brave to ask where to save a file before downloading, preventing background drive-by downloads." },
-    @{ Name = "Clear Data on Exit (Cookies/History)"; Key = "ClearBrowsingDataOnExitList"; Value = @("browsing_history", "download_history", "cookies_and_other_site_data", "cached_images_and_files", "password_signin", "autofill", "site_settings", "hosted_app_data"); Type = "List"; ToolTip = "Wipes all cookies, cache, and browsing history the moment the browser closes." }
+    @{ Name = "Clear Data on Exit"; Key = "ClearBrowsingDataOnExitList"; Value = @("browsing_history", "download_history", "cookies_and_other_site_data", "cached_images_and_files", "password_signin", "autofill", "site_settings", "hosted_app_data"); Type = "List"; ToolTip = "Wipes all cookies, cache, and browsing history the moment the browser closes." }
 )
 
 foreach ($feature in $privacyFeatures) {
@@ -181,7 +182,7 @@ foreach ($feature in $privacyFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(380, 25)
+    $checkbox.Size = New-Object System.Drawing.Size(340, 25)
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
@@ -190,13 +191,13 @@ foreach ($feature in $privacyFeatures) {
     $y += 28
 }
 
-$rightPanel = New-Object System.Windows.Forms.Panel
-$rightPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
-$rightPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-$rightPanel.AutoScroll = $true 
-$form.Controls.Add($rightPanel)
+$midPanel = New-Object System.Windows.Forms.Panel
+$midPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
+$midPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::None
+$midPanel.AutoScroll = $true 
+$form.Controls.Add($midPanel)
 
-$y = 5
+$y = 10
 
 $braveLabel = New-Object System.Windows.Forms.Label
 $braveLabel.Text = "Brave Features"
@@ -204,7 +205,7 @@ $braveLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 11, [S
 $braveLabel.Location = New-Object System.Drawing.Point(28, $y)
 $braveLabel.Size = New-Object System.Drawing.Size(300, 20)
 $braveLabel.ForeColor = [System.Drawing.Color]::LightSalmon
-$rightPanel.Controls.Add($braveLabel)
+$midPanel.Controls.Add($braveLabel)
 $y += 25
 
 $braveFeatures = @(
@@ -223,11 +224,11 @@ foreach ($feature in $braveFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(380, 25)
+    $checkbox.Size = New-Object System.Drawing.Size(340, 25)
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
-    $rightPanel.Controls.Add($checkbox)
+    $midPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
     $y += 28
 }
@@ -240,7 +241,7 @@ $perfLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 11, [Sy
 $perfLabel.Location = New-Object System.Drawing.Point(28, $y)
 $perfLabel.Size = New-Object System.Drawing.Size(300, 20)
 $perfLabel.ForeColor = [System.Drawing.Color]::LightSalmon
-$rightPanel.Controls.Add($perfLabel)
+$midPanel.Controls.Add($perfLabel)
 $y += 25
 
 $perfFeatures = @(
@@ -263,13 +264,72 @@ foreach ($feature in $perfFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $y)
-    $checkbox.Size = New-Object System.Drawing.Size(380, 25)
+    $checkbox.Size = New-Object System.Drawing.Size(340, 25)
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
-    $rightPanel.Controls.Add($checkbox)
+    $midPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
     $y += 28
+}
+
+$rightPanel = New-Object System.Windows.Forms.Panel
+$rightPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
+$rightPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::None
+$rightPanel.AutoScroll = $true 
+$form.Controls.Add($rightPanel)
+
+$y = 10
+
+$permLabel = New-Object System.Windows.Forms.Label
+$permLabel.Text = "Site Permissions"
+$permLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 11, [System.Drawing.FontStyle]::Bold)
+$permLabel.Location = New-Object System.Drawing.Point(28, $y)
+$permLabel.Size = New-Object System.Drawing.Size(300, 20)
+$permLabel.ForeColor = [System.Drawing.Color]::LightSalmon
+$rightPanel.Controls.Add($permLabel)
+$y += 30
+
+$permissionSettings = @(
+    @{ Name = "Location"; Key = "DefaultGeolocationSetting"; Options = @("Not Configured", "Ask", "Block", "Allow") },
+    @{ Name = "Camera"; Key = "DefaultVideoCaptureSetting"; Options = @("Not Configured", "Ask", "Block") },
+    @{ Name = "Microphone"; Key = "DefaultAudioCaptureSetting"; Options = @("Not Configured", "Ask", "Block") },
+    @{ Name = "Notifications"; Key = "DefaultNotificationsSetting"; Options = @("Not Configured", "Ask", "Block", "Allow") },
+    @{ Name = "JavaScript"; Key = "DefaultJavaScriptSetting"; Options = @("Not Configured", "Allow", "Block") },
+    @{ Name = "Images"; Key = "DefaultImagesSetting"; Options = @("Not Configured", "Allow", "Block") },
+    @{ Name = "Pop-ups & Redirects"; Key = "DefaultPopupsSetting"; Options = @("Not Configured", "Block", "Allow") },
+    @{ Name = "USB Devices"; Key = "DefaultWebUsbGuardSetting"; Options = @("Not Configured", "Ask", "Block") },
+    @{ Name = "Serial Ports"; Key = "DefaultSerialGuardSetting"; Options = @("Not Configured", "Ask", "Block") },
+    @{ Name = "HID Devices"; Key = "DefaultWebHidGuardSetting"; Options = @("Not Configured", "Ask", "Block") },
+    @{ Name = "File Editing"; Key = "DefaultFileSystemReadGuardSetting"; Options = @("Not Configured", "Ask", "Block") },
+    @{ Name = "Clipboard"; Key = "DefaultClipboardSetting"; Options = @("Not Configured", "Ask", "Block") },
+    @{ Name = "Window Management"; Key = "DefaultWindowPlacementSetting"; Options = @("Not Configured", "Ask", "Block", "Allow") },
+    @{ Name = "Local Fonts"; Key = "DefaultLocalFontsSetting"; Options = @("Not Configured", "Ask", "Block") },
+    @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Configured", "Block", "Allow") }
+)
+
+foreach ($p in $permissionSettings) {
+    $lbl = New-Object System.Windows.Forms.Label
+    $lbl.Text = $p.Name
+    $lbl.Size = New-Object System.Drawing.Size(160, 20)
+    $lbl.Location = New-Object System.Drawing.Point(30, $y)
+    $lbl.ForeColor = [System.Drawing.Color]::White
+    $rightPanel.Controls.Add($lbl)
+
+    $cb = New-Object System.Windows.Forms.ComboBox
+    $cb.Tag = $p
+    $cb.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+    $cb.Items.AddRange($p.Options)
+    $cb.SelectedIndex = 0
+    $cb.Size = New-Object System.Drawing.Size(120, 20)
+    $cb.Location = New-Object System.Drawing.Point(200, $y - 3)
+    $cb.BackColor = [System.Drawing.Color]::FromArgb(255, 45, 45, 45)
+    $cb.ForeColor = [System.Drawing.Color]::White
+    $cb.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $rightPanel.Controls.Add($cb)
+
+    $allPerms += $cb
+    $y += 35
 }
 
 $sbLabel = New-Object System.Windows.Forms.Label
@@ -341,13 +401,16 @@ function Update-Layout {
     $btnPrivacy.Location = New-Object System.Drawing.Point(($presetLabel.Right + 10), 16)
     $btnSecurity.Location = New-Object System.Drawing.Point(($btnPrivacy.Right + 10), 16)
 
-    $panelWidth = ($form.ClientSize.Width - 60) / 2 
+    $panelWidth = ($form.ClientSize.Width - 80) / 3 
     $panelHeight = $form.ClientSize.Height - 250 
     
     $leftPanel.Location = New-Object System.Drawing.Point(20, 70)
     $leftPanel.Size = New-Object System.Drawing.Size($panelWidth, $panelHeight)
     
-    $rightPanel.Location = New-Object System.Drawing.Point(($leftPanel.Right + 20), 70)
+    $midPanel.Location = New-Object System.Drawing.Point(($leftPanel.Right + 20), 70)
+    $midPanel.Size = New-Object System.Drawing.Size($panelWidth, $panelHeight)
+
+    $rightPanel.Location = New-Object System.Drawing.Point(($midPanel.Right + 20), 70)
     $rightPanel.Size = New-Object System.Drawing.Size($panelWidth, $panelHeight)
 
     $bottomY = $leftPanel.Bottom + 20
@@ -375,6 +438,7 @@ function Update-Layout {
     $resetButton.Location = New-Object System.Drawing.Point(($saveButton.Right + $gap), $buttonY)
 
     Set-RoundedCorners $leftPanel 12
+    Set-RoundedCorners $midPanel 12
     Set-RoundedCorners $rightPanel 12
     Set-RoundedCorners $btnPrivacy 10
     Set-RoundedCorners $btnSecurity 10
@@ -392,6 +456,20 @@ $btnPrivacy.Add_Click({
     foreach ($key in $keys) {
         foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } }
     }
+
+    foreach ($perm in $allPerms) {
+        $n = $perm.Tag.Name
+        if ($n -eq "Camera" -or $n -eq "Microphone") {
+            $perm.SelectedItem = "Ask"
+        } elseif ($n -eq "JavaScript" -or $n -eq "Images") {
+            $perm.SelectedItem = "Not Configured"
+        } else {
+            if ($perm.Items.Contains("Block")) {
+                $perm.SelectedItem = "Block"
+            }
+        }
+    }
+
     $sbDropdown.SelectedItem = "Off"
     $dnsDropdown.SelectedItem = "Off"
     Update-Status "Loaded: High Privacy + Moderate Security preset."
@@ -403,6 +481,20 @@ $btnSecurity.Add_Click({
     foreach ($key in $keys) {
         foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } }
     }
+
+    foreach ($perm in $allPerms) {
+        $n = $perm.Tag.Name
+        if ($n -eq "Camera" -or $n -eq "Microphone") {
+            $perm.SelectedItem = "Ask"
+        } elseif ($n -eq "JavaScript" -or $n -eq "Images") {
+            $perm.SelectedItem = "Not Configured"
+        } else {
+            if ($perm.Items.Contains("Block")) {
+                $perm.SelectedItem = "Block"
+            }
+        }
+    }
+
     $sbDropdown.SelectedItem = "On"
     $dnsDropdown.SelectedItem = "On"
     Update-Status "Loaded: High Security + Moderate Privacy preset."
@@ -445,6 +537,34 @@ $saveButton.Add_Click({
                 Write-Log "Successfully applied policy: $($feature.Key)"
             } catch {
                 Write-Log "Failed to apply policy $($feature.Key): $_"
+            }
+        }
+    }
+
+    foreach ($perm in $allPerms) {
+        $sel = $perm.SelectedItem
+        $k = $perm.Tag.Key
+        if ($sel -eq "Not Configured") {
+            Remove-ItemProperty -Path $registryPath -Name $k -ErrorAction SilentlyContinue
+            if ($k -eq "DefaultFileSystemReadGuardSetting") {
+                Remove-ItemProperty -Path $registryPath -Name "DefaultFileSystemWriteGuardSetting" -ErrorAction SilentlyContinue
+            }
+        } else {
+            $val = 0
+            if ($sel -eq "Ask") { $val = 3 }
+            if ($sel -eq "Block") {
+                if ($k -eq "PaymentMethodQueryEnabled") { $val = 0 } else { $val = 2 }
+            }
+            if ($sel -eq "Allow") { $val = 1 }
+
+            try {
+                Set-ItemProperty -Path $registryPath -Name $k -Value $val -Type DWord -Force
+                if ($k -eq "DefaultFileSystemReadGuardSetting") {
+                    Set-ItemProperty -Path $registryPath -Name "DefaultFileSystemWriteGuardSetting" -Value $val -Type DWord -Force
+                }
+                Write-Log "Successfully applied permission policy: $k = $val"
+            } catch {
+                Write-Log "Failed to apply permission policy $k: $_"
             }
         }
     }
@@ -543,6 +663,7 @@ $exportButton.Add_Click({
     if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         $settingsToExport = @{
             Features = @()
+            Permissions = @{}
             SafeBrowsing = $sbDropdown.SelectedItem
             DnsMode = $dnsDropdown.SelectedItem
         }
@@ -550,6 +671,12 @@ $exportButton.Add_Click({
         foreach ($checkbox in $allFeatures) {
             if ($checkbox.Checked) {
                 $settingsToExport.Features += $checkbox.Tag.Key
+            }
+        }
+
+        foreach ($perm in $allPerms) {
+            if ($perm.SelectedItem -ne "Not Configured") {
+                $settingsToExport.Permissions[$perm.Tag.Key] = $perm.SelectedItem
             }
         }
         
@@ -584,6 +711,21 @@ $importButton.Add_Click({
                     if ($checkbox.Tag.Key -eq $featureKey) {
                         $checkbox.Checked = $true
                         break
+                    }
+                }
+            }
+
+            foreach ($perm in $allPerms) {
+                $perm.SelectedItem = "Not Configured"
+            }
+
+            if ($importedSettings.Permissions) {
+                foreach ($prop in $importedSettings.Permissions.PSObject.Properties) {
+                    foreach ($perm in $allPerms) {
+                        if ($perm.Tag.Key -eq $prop.Name) {
+                            $perm.SelectedItem = $prop.Value
+                            break
+                        }
                     }
                 }
             }
