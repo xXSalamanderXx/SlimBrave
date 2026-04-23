@@ -1,4 +1,4 @@
-# Slimbrave - Revived - v1.0.5
+# Slimbrave - Revived - v1.0.6
 
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Start-Process powershell -ArgumentList "-File `"$($MyInvocation.MyCommand.Path)`"" -Verb RunAs
@@ -52,6 +52,7 @@ $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
 $allFeatures = @()
 $allPerms = @()
 $toolTip = New-Object System.Windows.Forms.ToolTip
+$boldFont = New-Object System.Drawing.Font("Microsoft Sans Serif", 9.5, [System.Drawing.FontStyle]::Bold)
 
 $statusBar = New-Object System.Windows.Forms.Label
 $statusBar.Height = 30
@@ -341,21 +342,21 @@ $rightPanel.Controls.Add($permLabel)
 $permY += 30
 
 $permissionSettings = @(
-    @{ Name = "Location"; Key = "DefaultGeolocationSetting"; Options = @("Not Configured", "Ask", "Block", "Allow"); ToolTip = "Allows sites to request your physical location." },
-    @{ Name = "Camera"; Key = "DefaultVideoCaptureSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to record video via your webcam." },
-    @{ Name = "Microphone"; Key = "DefaultAudioCaptureSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to record audio via your microphone." },
-    @{ Name = "Notifications"; Key = "DefaultNotificationsSetting"; Options = @("Not Configured", "Ask", "Block", "Allow"); ToolTip = "Allows sites to send you native desktop push notifications." },
-    @{ Name = "JavaScript"; Key = "DefaultJavaScriptSetting"; Options = @("Not Configured", "Allow", "Block"); ToolTip = "Allows sites to run interactive scripts. Blocking this breaks almost all websites." },
-    @{ Name = "Images"; Key = "DefaultImagesSetting"; Options = @("Not Configured", "Allow", "Block"); ToolTip = "Allows sites to load and display images." },
-    @{ Name = "Pop-ups & Redirects"; Key = "DefaultPopupsSetting"; Options = @("Not Configured", "Block", "Allow"); ToolTip = "Allows sites to open new windows or redirect you without your input." },
-    @{ Name = "USB Devices"; Key = "DefaultWebUsbGuardSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to request direct connection to your plugged-in USB devices." },
-    @{ Name = "Serial Ports"; Key = "DefaultSerialGuardSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to request connection to hardware via serial ports." },
-    @{ Name = "HID Devices"; Key = "DefaultWebHidGuardSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to request access to Human Interface Devices (e.g. controllers)." },
-    @{ Name = "File Editing"; Key = "DefaultFileSystemReadGuardSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to read and save files directly to your local file system." },
-    @{ Name = "Clipboard"; Key = "DefaultClipboardSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to read text and images copied to your clipboard." },
-    @{ Name = "Window Management"; Key = "DefaultWindowPlacementSetting"; Options = @("Not Configured", "Ask", "Block", "Allow"); ToolTip = "Allows sites to open windows on specific monitors or in fullscreen." },
-    @{ Name = "Local Fonts"; Key = "DefaultLocalFontsSetting"; Options = @("Not Configured", "Ask", "Block"); ToolTip = "Allows sites to fingerprint your device based on locally installed fonts." },
-    @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Configured", "Block", "Allow"); ToolTip = "Allows sites to check if you have local payment apps installed." }
+    @{ Name = "Location"; Key = "DefaultGeolocationSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to request your physical location." },
+    @{ Name = "Camera"; Key = "DefaultVideoCaptureSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to record video via your webcam." },
+    @{ Name = "Microphone"; Key = "DefaultAudioCaptureSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to record audio via your microphone." },
+    @{ Name = "Notifications"; Key = "DefaultNotificationsSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to send you native desktop push notifications." },
+    @{ Name = "JavaScript"; Key = "DefaultJavaScriptSetting"; Options = @("Not Set", "Allow", "Block"); ToolTip = "Allows sites to run interactive scripts. Blocking this breaks almost all websites." },
+    @{ Name = "Images"; Key = "DefaultImagesSetting"; Options = @("Not Set", "Allow", "Block"); ToolTip = "Allows sites to load and display images." },
+    @{ Name = "Pop-ups & Redirects"; Key = "DefaultPopupsSetting"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to open new windows or redirect you without your input." },
+    @{ Name = "USB Devices"; Key = "DefaultWebUsbGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request direct connection to your plugged-in USB devices." },
+    @{ Name = "Serial Ports"; Key = "DefaultSerialGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request connection to hardware via serial ports." },
+    @{ Name = "HID Devices"; Key = "DefaultWebHidGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request access to Human Interface Devices (e.g. controllers)." },
+    @{ Name = "File Editing"; Key = "DefaultFileSystemReadGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read and save files directly to your local file system." },
+    @{ Name = "Clipboard"; Key = "DefaultClipboardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read text and images copied to your clipboard." },
+    @{ Name = "Window Management"; Key = "DefaultWindowPlacementSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to open windows on specific monitors or in fullscreen." },
+    @{ Name = "Local Fonts"; Key = "DefaultLocalFontsSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to fingerprint your device based on locally installed fonts." },
+    @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to check if you have local payment apps installed." }
 )
 
 foreach ($p in $permissionSettings) {
@@ -419,22 +420,25 @@ $form.Controls.Add($dnsDropdown)
 
 $exportButton = New-Object System.Windows.Forms.Button
 $exportButton.Text = "Export Settings"
+$exportButton.Font = $boldFont
 $exportButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $exportButton.FlatAppearance.BorderSize = 0
 $exportButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
-$exportButton.ForeColor = [System.Drawing.Color]::LightSalmon
+$exportButton.ForeColor = [System.Drawing.Color]::White
 $form.Controls.Add($exportButton)
 
 $importButton = New-Object System.Windows.Forms.Button
 $importButton.Text = "Import Settings"
+$importButton.Font = $boldFont
 $importButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $importButton.FlatAppearance.BorderSize = 0
 $importButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
-$importButton.ForeColor = [System.Drawing.Color]::LightSkyBlue
+$importButton.ForeColor = [System.Drawing.Color]::White
 $form.Controls.Add($importButton)
 
 $saveButton = New-Object System.Windows.Forms.Button
 $saveButton.Text = "Apply Settings"
+$saveButton.Font = $boldFont
 $saveButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $saveButton.FlatAppearance.BorderSize = 0
 $saveButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
@@ -443,11 +447,53 @@ $form.Controls.Add($saveButton)
 
 $resetButton = New-Object System.Windows.Forms.Button
 $resetButton.Text = "Reset All Settings"
+$resetButton.Font = $boldFont
 $resetButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $resetButton.FlatAppearance.BorderSize = 0
 $resetButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $resetButton.ForeColor = [System.Drawing.Color]::LightCoral
 $form.Controls.Add($resetButton)
+
+$regProps = Get-ItemProperty -Path $registryPath -ErrorAction SilentlyContinue
+
+if ($null -ne $regProps) {
+    foreach ($checkbox in $allFeatures) {
+        $feature = $checkbox.Tag
+        if ($feature.Type -eq "List") {
+            $listPath = Join-Path $registryPath $feature.Key
+            if (Test-Path $listPath) {
+                $checkbox.Checked = $true
+            }
+        } else {
+            $val = $regProps.($feature.Key)
+            if ($null -ne $val -and $val -eq $feature.Value) {
+                $checkbox.Checked = $true
+            }
+        }
+    }
+
+    foreach ($perm in $allPerms) {
+        $k = $perm.Tag.Key
+        $val = $regProps.$k
+        if ($null -ne $val) {
+            if ($val -eq 3) { $perm.SelectedItem = "Ask" }
+            elseif ($val -eq 1) { $perm.SelectedItem = "Allow" }
+            elseif ($k -eq "PaymentMethodQueryEnabled" -and $val -eq 0) { $perm.SelectedItem = "Block" }
+            elseif ($val -eq 2) { $perm.SelectedItem = "Block" }
+            else { $perm.SelectedItem = "Not Set" }
+        }
+    }
+
+    if ($null -ne $regProps.SafeBrowsingProtectionLevel) {
+        if ($regProps.SafeBrowsingProtectionLevel -eq 1) { $sbDropdown.SelectedItem = "On" }
+        elseif ($regProps.SafeBrowsingProtectionLevel -eq 0) { $sbDropdown.SelectedItem = "Off" }
+    }
+
+    if ($null -ne $regProps.DnsOverHttpsMode) {
+        if ($regProps.DnsOverHttpsMode -eq "automatic") { $dnsDropdown.SelectedItem = "On" }
+        elseif ($regProps.DnsOverHttpsMode -eq "off") { $dnsDropdown.SelectedItem = "Off" }
+    }
+}
 
 function Update-Layout {
     if ($form.ClientSize.Width -eq 0) { return }
@@ -521,7 +567,7 @@ $btnPrivacy.Add_Click({
         } elseif ($n -eq "Camera" -or $n -eq "Microphone") {
             $perm.SelectedItem = "Ask"
         } elseif ($n -eq "Images") {
-            $perm.SelectedItem = "Not Configured"
+            $perm.SelectedItem = "Not Set"
         } else {
             if ($perm.Items.Contains("Block")) {
                 $perm.SelectedItem = "Block"
@@ -550,7 +596,7 @@ $btnSecurity.Add_Click({
         } elseif ($n -match "Camera|Microphone|Location|Clipboard|Local Fonts") {
             $perm.SelectedItem = "Ask"
         } else {
-            $perm.SelectedItem = "Not Configured"
+            $perm.SelectedItem = "Not Set"
         }
     }
 
@@ -597,13 +643,23 @@ $saveButton.Add_Click({
             } catch {
                 Write-Log "Failed to apply policy $($feature.Key): $_"
             }
+        } else {
+            $feature = $checkbox.Tag
+            try {
+                if ($feature.Type -eq "List") {
+                    $listPath = Join-Path $registryPath $feature.Key
+                    if (Test-Path $listPath) { Remove-Item -Path $listPath -Recurse -Force -ErrorAction SilentlyContinue }
+                } else {
+                    Remove-ItemProperty -Path $registryPath -Name $feature.Key -ErrorAction SilentlyContinue
+                }
+            } catch { }
         }
     }
 
     foreach ($perm in $allPerms) {
         $sel = $perm.SelectedItem
         $k = $perm.Tag.Key
-        if ($sel -eq "Not Configured") {
+        if ($sel -eq "Not Set") {
             Remove-ItemProperty -Path $registryPath -Name $k -ErrorAction SilentlyContinue
             if ($k -eq "DefaultFileSystemReadGuardSetting") {
                 Remove-ItemProperty -Path $registryPath -Name "DefaultFileSystemWriteGuardSetting" -ErrorAction SilentlyContinue
@@ -635,12 +691,15 @@ $saveButton.Add_Click({
         } elseif ($sbDropdown.SelectedItem -eq "Off") {
             [void](Set-ItemProperty -Path $registryPath -Name "SafeBrowsingProtectionLevel" -Value 0 -Type DWord -Force)
             Write-Log "Set SafeBrowsingProtectionLevel to 0 (Off)"
+        } else {
+            Remove-ItemProperty -Path $registryPath -Name "SafeBrowsingProtectionLevel" -ErrorAction SilentlyContinue
         }
     }
 
     if ($dnsDropdown.SelectedItem) {
         if ($dnsDropdown.SelectedItem -eq "On") { Set-DnsMode "automatic" }
-        if ($dnsDropdown.SelectedItem -eq "Off") { Set-DnsMode "off" }
+        elseif ($dnsDropdown.SelectedItem -eq "Off") { Set-DnsMode "off" }
+        else { Remove-ItemProperty -Path $registryPath -Name "DnsOverHttpsMode" -ErrorAction SilentlyContinue }
     }
 
     Update-Status "Settings applied successfully!"
@@ -679,6 +738,15 @@ function Reset-AllSettings {
         try {
             Remove-Item -Path $registryPath -Recurse -Force
             [void](New-Item -Path $registryPath -Force)
+            
+            foreach ($cb in $allFeatures) { 
+                $cb.Checked = $false 
+                $cb.ForeColor = [System.Drawing.Color]::White 
+            }
+            foreach ($perm in $allPerms) { $perm.SelectedItem = "Not Set" }
+            $sbDropdown.SelectedIndex = -1
+            $dnsDropdown.SelectedIndex = -1
+
             Write-Log "All settings successfully wiped from registry."
             
             [System.Windows.Forms.MessageBox]::Show(
@@ -734,7 +802,7 @@ $exportButton.Add_Click({
         }
 
         foreach ($perm in $allPerms) {
-            if ($perm.SelectedItem -ne "Not Configured") {
+            if ($perm.SelectedItem -ne "Not Set") {
                 $settingsToExport.Permissions[$perm.Tag.Key] = $perm.SelectedItem
             }
         }
@@ -776,7 +844,7 @@ $importButton.Add_Click({
             }
 
             foreach ($perm in $allPerms) {
-                $perm.SelectedItem = "Not Configured"
+                $perm.SelectedItem = "Not Set"
             }
 
             if ($importedSettings.Permissions) {
