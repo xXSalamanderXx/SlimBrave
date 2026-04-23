@@ -1,4 +1,4 @@
-# Slimbrave - Revived - v1.0.6
+# Slimbrave - Revived - v1.0.7
 
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Start-Process powershell -ArgumentList "-File `"$($MyInvocation.MyCommand.Path)`"" -Verb RunAs
@@ -436,6 +436,16 @@ $importButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $importButton.ForeColor = [System.Drawing.Color]::White
 $form.Controls.Add($importButton)
 
+$pullButton = New-Object System.Windows.Forms.Button
+$pullButton.Text = "Pull Settings from Brave"
+$pullButton.Font = $boldFont
+$pullButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$pullButton.FlatAppearance.BorderSize = 0
+$pullButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
+$pullButton.ForeColor = [System.Drawing.Color]::White
+$toolTip.SetToolTip($pullButton, "Pull / Reload the current Brave settings into SlimBrave UI")
+$form.Controls.Add($pullButton)
+
 $saveButton = New-Object System.Windows.Forms.Button
 $saveButton.Text = "Apply Settings"
 $saveButton.Font = $boldFont
@@ -453,47 +463,6 @@ $resetButton.FlatAppearance.BorderSize = 0
 $resetButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $resetButton.ForeColor = [System.Drawing.Color]::LightCoral
 $form.Controls.Add($resetButton)
-
-$regProps = Get-ItemProperty -Path $registryPath -ErrorAction SilentlyContinue
-
-if ($null -ne $regProps) {
-    foreach ($checkbox in $allFeatures) {
-        $feature = $checkbox.Tag
-        if ($feature.Type -eq "List") {
-            $listPath = Join-Path $registryPath $feature.Key
-            if (Test-Path $listPath) {
-                $checkbox.Checked = $true
-            }
-        } else {
-            $val = $regProps.($feature.Key)
-            if ($null -ne $val -and $val -eq $feature.Value) {
-                $checkbox.Checked = $true
-            }
-        }
-    }
-
-    foreach ($perm in $allPerms) {
-        $k = $perm.Tag.Key
-        $val = $regProps.$k
-        if ($null -ne $val) {
-            if ($val -eq 3) { $perm.SelectedItem = "Ask" }
-            elseif ($val -eq 1) { $perm.SelectedItem = "Allow" }
-            elseif ($k -eq "PaymentMethodQueryEnabled" -and $val -eq 0) { $perm.SelectedItem = "Block" }
-            elseif ($val -eq 2) { $perm.SelectedItem = "Block" }
-            else { $perm.SelectedItem = "Not Set" }
-        }
-    }
-
-    if ($null -ne $regProps.SafeBrowsingProtectionLevel) {
-        if ($regProps.SafeBrowsingProtectionLevel -eq 1) { $sbDropdown.SelectedItem = "On" }
-        elseif ($regProps.SafeBrowsingProtectionLevel -eq 0) { $sbDropdown.SelectedItem = "Off" }
-    }
-
-    if ($null -ne $regProps.DnsOverHttpsMode) {
-        if ($regProps.DnsOverHttpsMode -eq "automatic") { $dnsDropdown.SelectedItem = "On" }
-        elseif ($regProps.DnsOverHttpsMode -eq "off") { $dnsDropdown.SelectedItem = "Off" }
-    }
-}
 
 function Update-Layout {
     if ($form.ClientSize.Width -eq 0) { return }
@@ -524,20 +493,22 @@ function Update-Layout {
     $dnsDropdown.Location = New-Object System.Drawing.Point(($dnsLabel.Right + 5), ($bottomY + 32))
 
     $buttonY = $form.ClientSize.Height - $statusBar.Height - 55
-    $btnWidth = 190 
+    $btnWidth = 200 
     $exportButton.Size = New-Object System.Drawing.Size($btnWidth, 38)
     $importButton.Size = New-Object System.Drawing.Size($btnWidth, 38)
+    $pullButton.Size = New-Object System.Drawing.Size($btnWidth, 38)
     $saveButton.Size = New-Object System.Drawing.Size($btnWidth, 38)
     $resetButton.Size = New-Object System.Drawing.Size($btnWidth, 38)
 
-    $totalBtnWidth = $btnWidth * 4
+    $totalBtnWidth = $btnWidth * 5
     $remainingSpace = $form.ClientSize.Width - 40 - $totalBtnWidth
-    $gap = [int]($remainingSpace / 3)
+    $gap = [int]($remainingSpace / 4)
     if ($gap -lt 5) { $gap = 5 }
 
     $exportButton.Location = New-Object System.Drawing.Point(20, $buttonY)
     $importButton.Location = New-Object System.Drawing.Point(($exportButton.Right + $gap), $buttonY)
-    $saveButton.Location = New-Object System.Drawing.Point(($importButton.Right + $gap), $buttonY)
+    $pullButton.Location = New-Object System.Drawing.Point(($importButton.Right + $gap), $buttonY)
+    $saveButton.Location = New-Object System.Drawing.Point(($pullButton.Right + $gap), $buttonY)
     $resetButton.Location = New-Object System.Drawing.Point(($saveButton.Right + $gap), $buttonY)
 
     Set-RoundedCorners $leftPanel 12
@@ -547,6 +518,7 @@ function Update-Layout {
     Set-RoundedCorners $btnSecurity 10
     Set-RoundedCorners $exportButton 10
     Set-RoundedCorners $importButton 10
+    Set-RoundedCorners $pullButton 10
     Set-RoundedCorners $saveButton 10
     Set-RoundedCorners $resetButton 10
 }
@@ -554,7 +526,10 @@ function Update-Layout {
 $form.Add_Resize({ Update-Layout })
 
 $btnPrivacy.Add_Click({
-    foreach ($cb in $allFeatures) { $cb.Checked = $false }
+    foreach ($cb in $allFeatures) { 
+        $cb.Checked = $false 
+        $cb.ForeColor = [System.Drawing.Color]::White
+    }
     $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "AutofillAddressEnabled", "AutofillCreditCardEnabled", "PasswordManagerEnabled", "BrowserSignin", "WebRtcIPHandling", "BlockThirdPartyCookies", "EnableDoNotTrack", "IPFSEnabled", "PromptForDownloadLocation", "ClearBrowsingDataOnExitList", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled", "AlwaysOpenPdfExternally", "PromotionsEnabled", "SearchSuggestEnabled", "DefaultBrowserSettingEnabled", "BravePlaylistEnabled")
     foreach ($key in $keys) {
         foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } }
@@ -581,7 +556,10 @@ $btnPrivacy.Add_Click({
 })
 
 $btnSecurity.Add_Click({
-    foreach ($cb in $allFeatures) { $cb.Checked = $false }
+    foreach ($cb in $allFeatures) { 
+        $cb.Checked = $false 
+        $cb.ForeColor = [System.Drawing.Color]::White
+    }
     $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "WebRtcIPHandling", "QuicAllowed", "BlockThirdPartyCookies", "EnableDoNotTrack", "ForceGoogleSafeSearch", "IPFSEnabled", "PromptForDownloadLocation", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "SyncDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BackgroundModeEnabled", "AlwaysOpenPdfExternally", "DeveloperToolsDisabled", "BravePlaylistEnabled")
     foreach ($key in $keys) {
         foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } }
@@ -603,6 +581,64 @@ $btnSecurity.Add_Click({
     $sbDropdown.SelectedItem = "On"
     $dnsDropdown.SelectedItem = "On"
     Update-Status "Loaded: High Security + Moderate Privacy preset."
+})
+
+function Reload-UIFromRegistry {
+    foreach ($checkbox in $allFeatures) {
+        $checkbox.Checked = $false
+        $checkbox.ForeColor = [System.Drawing.Color]::White
+    }
+    foreach ($perm in $allPerms) {
+        $perm.SelectedItem = "Not Set"
+    }
+    $sbDropdown.SelectedIndex = -1
+    $dnsDropdown.SelectedIndex = -1
+
+    $regProps = Get-ItemProperty -Path $registryPath -ErrorAction SilentlyContinue
+
+    if ($null -ne $regProps) {
+        foreach ($checkbox in $allFeatures) {
+            $feature = $checkbox.Tag
+            if ($feature.Type -eq "List") {
+                $listPath = Join-Path $registryPath $feature.Key
+                if (Test-Path $listPath) {
+                    $checkbox.Checked = $true
+                }
+            } else {
+                $val = $regProps.($feature.Key)
+                if ($null -ne $val -and $val -eq $feature.Value) {
+                    $checkbox.Checked = $true
+                }
+            }
+        }
+
+        foreach ($perm in $allPerms) {
+            $k = $perm.Tag.Key
+            $val = $regProps.$k
+            if ($null -ne $val) {
+                if ($val -eq 3) { $perm.SelectedItem = "Ask" }
+                elseif ($val -eq 1) { $perm.SelectedItem = "Allow" }
+                elseif ($k -eq "PaymentMethodQueryEnabled" -and $val -eq 0) { $perm.SelectedItem = "Block" }
+                elseif ($val -eq 2) { $perm.SelectedItem = "Block" }
+                else { $perm.SelectedItem = "Not Set" }
+            }
+        }
+
+        if ($null -ne $regProps.SafeBrowsingProtectionLevel) {
+            if ($regProps.SafeBrowsingProtectionLevel -eq 1) { $sbDropdown.SelectedItem = "On" }
+            elseif ($regProps.SafeBrowsingProtectionLevel -eq 0) { $sbDropdown.SelectedItem = "Off" }
+        }
+
+        if ($null -ne $regProps.DnsOverHttpsMode) {
+            if ($regProps.DnsOverHttpsMode -eq "automatic") { $dnsDropdown.SelectedItem = "On" }
+            elseif ($regProps.DnsOverHttpsMode -eq "off") { $dnsDropdown.SelectedItem = "Off" }
+        }
+    }
+}
+
+$pullButton.Add_Click({
+    Reload-UIFromRegistry
+    Update-Status "UI reloaded from current Brave registry settings."
 })
 
 $saveButton.Add_Click({
@@ -878,5 +914,6 @@ $importButton.Add_Click({
 
 Write-Log "SlimBrave UI Loaded successfully."
 
+Reload-UIFromRegistry
 Update-Layout
 [void] $form.ShowDialog()
