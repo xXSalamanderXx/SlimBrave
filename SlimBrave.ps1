@@ -516,8 +516,12 @@ $btnPrivacy.Add_Click({
 
     foreach ($perm in $allPerms) {
         $n = $perm.Tag.Name
-        if ($n -eq "Camera" -or $n -eq "Microphone") {
+        if ($n -eq "JavaScript") {
+            $perm.SelectedItem = "Allow"
+        } elseif ($n -eq "Camera" -or $n -eq "Microphone") {
             $perm.SelectedItem = "Ask"
+        } elseif ($n -eq "Images") {
+            $perm.SelectedItem = "Not Configured"
         } else {
             if ($perm.Items.Contains("Block")) {
                 $perm.SelectedItem = "Block"
@@ -539,7 +543,9 @@ $btnSecurity.Add_Click({
 
     foreach ($perm in $allPerms) {
         $n = $perm.Tag.Name
-        if ($n -match "USB|Serial|HID|File|Window|Payment") {
+        if ($n -eq "JavaScript") {
+            $perm.SelectedItem = "Allow"
+        } elseif ($n -match "USB|Serial|HID|File|Window|Payment") {
             $perm.SelectedItem = "Block"
         } elseif ($n -match "Camera|Microphone|Location|Clipboard|Local Fonts") {
             $perm.SelectedItem = "Ask"
