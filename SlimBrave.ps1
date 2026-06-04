@@ -1,4 +1,4 @@
-# Slimbrave - Revived - v1.0.7
+# Slimbrave - Revived - v1.0.8
 
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Start-Process powershell -ArgumentList "-File `"$($MyInvocation.MyCommand.Path)`"" -Verb RunAs
@@ -25,6 +25,7 @@ Add-Type -AssemblyName System.Drawing
 
 $registryPath = "HKLM:\SOFTWARE\Policies\BraveSoftware\Brave"
 $logFile = Join-Path $PSScriptRoot "SlimBrave.log"
+$stateFile = Join-Path $PSScriptRoot "SlimBraveState.json"
 
 function Write-Log ($message) {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -39,7 +40,7 @@ if (-not (Test-Path -Path $registryPath)) {
 Clear-Host
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "SlimBrave - Revived"
+$form.Text = "SlimBrave - Revived v1.0.8"
 $form.ForeColor = [System.Drawing.Color]::White
 $form.Size = New-Object System.Drawing.Size(1300, 850) 
 $form.MinimumSize = New-Object System.Drawing.Size(1300, 850)
@@ -72,7 +73,7 @@ function Update-Status ($text) {
 
 function Set-DnsMode {
     param ([string] $dnsMode)
-    $regKey = "HKLM:\\Software\\Policies\\BraveSoftware\\Brave"
+    $regKey = "HKLM:\Software\Policies\BraveSoftware\Brave"
     [void](Set-ItemProperty -Path $regKey -Name "DnsOverHttpsMode" -Value $dnsMode -Type String -Force)
     Update-Status "DNS Over HTTPS Mode set to $dnsMode"
 }
@@ -143,7 +144,7 @@ foreach ($feature in $telemetryFeatures) {
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $leftY)
     $checkbox.Size = New-Object System.Drawing.Size(340, 25) 
-    $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $checkbox.FlatAppearance.BorderSize = 1
     $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
@@ -185,7 +186,8 @@ $privacyFeatures = @(
     @{ Name = "Disable IPFS"; Key = "IPFSEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops peer-to-peer background connections to unknown nodes. Recommended: Disabled for Privacy & Security." },
     @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord"; ToolTip = "Forces the browser to always open in Incognito Mode." },
     @{ Name = "Force Download Prompts"; Key = "PromptForDownloadLocation"; Value = 1; Type = "DWord"; ToolTip = "Forces Brave to ask where to save a file before downloading, preventing background drive-by downloads." },
-    @{ Name = "Clear Data on Exit"; Key = "ClearBrowsingDataOnExitList"; Value = @("browsing_history", "download_history", "cookies_and_other_site_data", "cached_images_and_files", "password_signin", "autofill", "site_settings", "hosted_app_data"); Type = "List"; ToolTip = "Wipes all cookies, cache, and browsing history the moment the browser closes." }
+    @{ Name = "Clear Data on Exit"; Key = "ClearBrowsingDataOnExitList"; Value = @("browsing_history", "download_history", "cookies_and_other_site_data", "cached_images_and_files", "password_signin", "autofill", "site_settings", "hosted_app_data"); Type = "List"; ToolTip = "Wipes all cookies, cache, and browsing history the moment the browser closes." },
+    @{ Name = "Force HTTPS-Only Mode"; Key = "HttpsOnlyMode"; Value = "force_enabled"; Type = "String"; ToolTip = "Strictly upgrades all connections to HTTPS and blocks unencrypted HTTP traffic." }
 )
 
 foreach ($feature in $privacyFeatures) {
@@ -194,7 +196,7 @@ foreach ($feature in $privacyFeatures) {
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $leftY)
     $checkbox.Size = New-Object System.Drawing.Size(340, 25)
-    $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $checkbox.FlatAppearance.BorderSize = 1
     $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
@@ -242,7 +244,9 @@ $braveFeatures = @(
     @{ Name = "Disable Tor"; Key = "TorDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables built-in Tor window support." },
     @{ Name = "Disable Sync"; Key = "SyncDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables Brave Sync functionality across devices." },
     @{ Name = "Disable Brave News"; Key = "BraveNewsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the Brave News feed bloat from the New Tab page." },
-    @{ Name = "Disable Brave Talk"; Key = "BraveTalkDisabled"; Value = "Disabled"; Type = "String"; ToolTip = "Removes the built-in video calling integration." }
+    @{ Name = "Disable Brave Talk"; Key = "BraveTalkDisabled"; Value = "Disabled"; Type = "String"; ToolTip = "Removes the built-in video calling integration." },
+    @{ Name = "Disable Speedreader"; Key = "BraveSpeedreaderEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the automatic suggestion to strip CSS and switch to reader mode on articles." },
+    @{ Name = "Disable Wayback Machine Prompts"; Key = "BraveWaybackMachineEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from asking to search the Internet Archive when you hit a 404 error page." }
 )
 
 foreach ($feature in $braveFeatures) {
@@ -251,7 +255,7 @@ foreach ($feature in $braveFeatures) {
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $midY)
     $checkbox.Size = New-Object System.Drawing.Size(340, 25)
-    $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $checkbox.FlatAppearance.BorderSize = 1
     $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
@@ -301,7 +305,7 @@ foreach ($feature in $perfFeatures) {
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $midY)
     $checkbox.Size = New-Object System.Drawing.Size(340, 25)
-    $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $checkbox.FlatAppearance.BorderSize = 1
     $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
@@ -464,6 +468,178 @@ $resetButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $resetButton.ForeColor = [System.Drawing.Color]::LightCoral
 $form.Controls.Add($resetButton)
 
+# --- START OF V1.0.8 STATE MANAGEMENT FUNCTIONS ---
+
+function Get-UIStateSnapshot {
+    $snap = @{
+        Features = @()
+        Permissions = @{}
+        SafeBrowsing = $sbDropdown.SelectedItem
+        DnsMode = $dnsDropdown.SelectedItem
+    }
+    foreach ($checkbox in $allFeatures) {
+        if ($checkbox.Checked) {
+            $snap.Features += $checkbox.Tag.Key
+        }
+    }
+    foreach ($perm in $allPerms) {
+        if ($perm.SelectedItem -ne "Not Set") {
+            $snap.Permissions[$perm.Tag.Key] = $perm.SelectedItem
+        }
+    }
+    return $snap
+}
+
+function Save-CurrentState {
+    try {
+        Get-UIStateSnapshot | ConvertTo-Json -Depth 3 | Out-File -FilePath $stateFile -Force
+        Write-Log "State baseline saved to $stateFile"
+    } catch {
+        Write-Log "Failed to save state baseline: $_"
+    }
+}
+
+function Restore-StateToUI ($stateObj) {
+    foreach ($checkbox in $allFeatures) {
+        $checkbox.Checked = $false
+        $checkbox.ForeColor = [System.Drawing.Color]::White
+    }
+
+    if ($stateObj.Features) {
+        foreach ($featureKey in $stateObj.Features) {
+            foreach ($checkbox in $allFeatures) {
+                if ($checkbox.Tag.Key -eq $featureKey) {
+                    $checkbox.Checked = $true
+                    break
+                }
+            }
+        }
+    }
+
+    foreach ($perm in $allPerms) { $perm.SelectedItem = "Not Set" }
+
+    if ($stateObj.Permissions -and $stateObj.Permissions.PSObject.Properties) {
+        foreach ($prop in $stateObj.Permissions.PSObject.Properties) {
+            foreach ($perm in $allPerms) {
+                if ($perm.Tag.Key -eq $prop.Name) {
+                    $perm.SelectedItem = $prop.Value
+                    break
+                }
+            }
+        }
+    }
+
+    if ($stateObj.SafeBrowsing) { $sbDropdown.SelectedItem = $stateObj.SafeBrowsing } else { $sbDropdown.SelectedIndex = -1 }
+    if ($stateObj.DnsMode) { $dnsDropdown.SelectedItem = $stateObj.DnsMode } else { $dnsDropdown.SelectedIndex = -1 }
+}
+
+function Check-StateChanges {
+    if (-not (Test-Path $stateFile)) {
+        Save-CurrentState
+        return
+    }
+
+    $savedState = Get-Content -Path $stateFile -Raw | ConvertFrom-Json
+    $currentSnap = Get-UIStateSnapshot
+    $diffs = @()
+
+    foreach ($f in $allFeatures) {
+        $key = $f.Tag.Key
+        $name = $f.Tag.Name
+        $wasEnabled = ($null -ne $savedState.Features -and $key -in $savedState.Features)
+        $isNowEnabled = ($key -in $currentSnap.Features)
+        if ($wasEnabled -ne $isNowEnabled) {
+            $diffs += "Feature: $name`n  Expected: $(if($wasEnabled){'On'}else{'Off'}) | Found: $(if($isNowEnabled){'On'}else{'Off'})"
+        }
+    }
+
+    foreach ($perm in $allPerms) {
+        $key = $perm.Tag.Key
+        $name = $perm.Tag.Name
+        $savedVal = "Not Set"
+        if ($null -ne $savedState.Permissions -and $null -ne $savedState.Permissions.PSObject.Properties[$key]) {
+            $savedVal = $savedState.Permissions.PSObject.Properties[$key].Value
+        }
+        $currVal = "Not Set"
+        if ($null -ne $currentSnap.Permissions[$key]) {
+            $currVal = $currentSnap.Permissions[$key]
+        }
+        if ($savedVal -ne $currVal) {
+            $diffs += "Permission: $name`n  Expected: $savedVal | Found: $currVal"
+        }
+    }
+
+    if ($savedState.SafeBrowsing -ne $currentSnap.SafeBrowsing) {
+        $diffs += "Safe Browsing:`n  Expected: $($savedState.SafeBrowsing) | Found: $($currentSnap.SafeBrowsing)"
+    }
+    if ($savedState.DnsMode -ne $currentSnap.DnsMode) {
+        $diffs += "DNS Mode:`n  Expected: $($savedState.DnsMode) | Found: $($currentSnap.DnsMode)"
+    }
+
+    if ($diffs.Count -gt 0) {
+        $diffForm = New-Object System.Windows.Forms.Form
+        $diffForm.Text = "SlimBrave - Background Changes Detected"
+        $diffForm.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
+        $diffForm.ForeColor = [System.Drawing.Color]::White
+        $diffForm.Size = New-Object System.Drawing.Size(650, 480)
+        $diffForm.StartPosition = "CenterParent"
+        $diffForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+        $diffForm.MaximizeBox = $false
+
+        $lblInfo = New-Object System.Windows.Forms.Label
+        $lblInfo.Text = "Brave or your OS has modified policies since you last ran SlimBrave.`nReview the changes below and choose how to proceed:"
+        $lblInfo.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9.5, [System.Drawing.FontStyle]::Bold)
+        $lblInfo.Location = New-Object System.Drawing.Point(20, 15)
+        $lblInfo.Size = New-Object System.Drawing.Size(600, 40)
+        $diffForm.Controls.Add($lblInfo)
+
+        $lbDiffs = New-Object System.Windows.Forms.ListBox
+        $lbDiffs.Location = New-Object System.Drawing.Point(20, 60)
+        $lbDiffs.Size = New-Object System.Drawing.Size(590, 300)
+        $lbDiffs.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
+        $lbDiffs.ForeColor = [System.Drawing.Color]::LightSalmon
+        $lbDiffs.Font = New-Object System.Drawing.Font("Consolas", 9.5, [System.Drawing.FontStyle]::Regular)
+        $lbDiffs.IntegralHeight = $false
+        foreach ($d in $diffs) { 
+            foreach($line in $d -split "`n") { [void]$lbDiffs.Items.Add($line) }
+            [void]$lbDiffs.Items.Add("--------------------------------------------------")
+        }
+        $diffForm.Controls.Add($lbDiffs)
+
+        $btnRevert = New-Object System.Windows.Forms.Button
+        $btnRevert.Text = "Revert (Load Prior Settings)"
+        $btnRevert.Location = New-Object System.Drawing.Point(20, 380)
+        $btnRevert.Size = New-Object System.Drawing.Size(280, 40)
+        $btnRevert.BackColor = [System.Drawing.Color]::LightGreen
+        $btnRevert.ForeColor = [System.Drawing.Color]::Black
+        $btnRevert.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+        $btnRevert.DialogResult = [System.Windows.Forms.DialogResult]::Yes
+        $diffForm.Controls.Add($btnRevert)
+
+        $btnKeep = New-Object System.Windows.Forms.Button
+        $btnKeep.Text = "Keep Current Changes"
+        $btnKeep.Location = New-Object System.Drawing.Point(330, 380)
+        $btnKeep.Size = New-Object System.Drawing.Size(280, 40)
+        $btnKeep.BackColor = [System.Drawing.Color]::LightSkyBlue
+        $btnKeep.ForeColor = [System.Drawing.Color]::Black
+        $btnKeep.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+        $btnKeep.DialogResult = [System.Windows.Forms.DialogResult]::No
+        $diffForm.Controls.Add($btnKeep)
+
+        $result = $diffForm.ShowDialog()
+
+        if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
+            Restore-StateToUI $savedState
+            Update-Status "Prior settings loaded to UI. Click 'Apply Settings' to enforce."
+            [System.Windows.Forms.MessageBox]::Show("Your previous SlimBrave settings have been mapped to the UI.`n`nClick 'Apply Settings' when you are ready to write them to the registry.", "Revert Initiated", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+        } else {
+            Save-CurrentState
+            Update-Status "State baseline updated to match current system modifications."
+        }
+    }
+}
+# --- END OF V1.0.8 STATE MANAGEMENT FUNCTIONS ---
+
 function Update-Layout {
     if ($form.ClientSize.Width -eq 0) { return }
 
@@ -484,6 +660,11 @@ function Update-Layout {
 
     $rightPanel.Location = New-Object System.Drawing.Point(($midPanel.Right + 20), 70)
     $rightPanel.Size = New-Object System.Drawing.Size($panelWidth, $panelHeight)
+
+    # Set width manually for all checkboxes so they fill their panel properly
+    foreach ($cb in $allFeatures) {
+        $cb.Width = $panelWidth - 60
+    }
 
     $bottomY = $leftPanel.Bottom + 20
     $sbLabel.Location = New-Object System.Drawing.Point($leftPanel.Left, ($bottomY + 3))
@@ -530,7 +711,7 @@ $btnPrivacy.Add_Click({
         $cb.Checked = $false 
         $cb.ForeColor = [System.Drawing.Color]::White
     }
-    $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "AutofillAddressEnabled", "AutofillCreditCardEnabled", "PasswordManagerEnabled", "BrowserSignin", "WebRtcIPHandling", "BlockThirdPartyCookies", "EnableDoNotTrack", "IPFSEnabled", "PromptForDownloadLocation", "ClearBrowsingDataOnExitList", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled", "AlwaysOpenPdfExternally", "PromotionsEnabled", "SearchSuggestEnabled", "DefaultBrowserSettingEnabled", "BravePlaylistEnabled")
+    $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "AutofillAddressEnabled", "AutofillCreditCardEnabled", "PasswordManagerEnabled", "BrowserSignin", "WebRtcIPHandling", "BlockThirdPartyCookies", "EnableDoNotTrack", "IPFSEnabled", "PromptForDownloadLocation", "ClearBrowsingDataOnExitList", "HttpsOnlyMode", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled", "AlwaysOpenPdfExternally", "PromotionsEnabled", "SearchSuggestEnabled", "DefaultBrowserSettingEnabled", "BravePlaylistEnabled")
     foreach ($key in $keys) {
         foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } }
     }
@@ -560,7 +741,7 @@ $btnSecurity.Add_Click({
         $cb.Checked = $false 
         $cb.ForeColor = [System.Drawing.Color]::White
     }
-    $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "WebRtcIPHandling", "QuicAllowed", "BlockThirdPartyCookies", "EnableDoNotTrack", "ForceGoogleSafeSearch", "IPFSEnabled", "PromptForDownloadLocation", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "SyncDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BackgroundModeEnabled", "AlwaysOpenPdfExternally", "DeveloperToolsDisabled", "BravePlaylistEnabled")
+    $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "WebRtcIPHandling", "QuicAllowed", "BlockThirdPartyCookies", "EnableDoNotTrack", "ForceGoogleSafeSearch", "IPFSEnabled", "PromptForDownloadLocation", "HttpsOnlyMode", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "SyncDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BackgroundModeEnabled", "AlwaysOpenPdfExternally", "DeveloperToolsDisabled", "BravePlaylistEnabled")
     foreach ($key in $keys) {
         foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } }
     }
@@ -738,6 +919,7 @@ $saveButton.Add_Click({
         else { Remove-ItemProperty -Path $registryPath -Name "DnsOverHttpsMode" -ErrorAction SilentlyContinue }
     }
 
+    Save-CurrentState
     Update-Status "Settings applied successfully!"
 
     $braveProcess = Get-Process brave -ErrorAction SilentlyContinue
@@ -813,6 +995,7 @@ $resetButton.Add_Click({
         if (-not (Test-Path -Path $registryPath)) {
             [void](New-Item -Path $registryPath -Force)
         }
+        Save-CurrentState
     }
 })
 
@@ -824,27 +1007,8 @@ $exportButton.Add_Click({
     $saveFileDialog.FileName = "SlimBraveSettings.json"
     
     if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-        $settingsToExport = @{
-            Features = @()
-            Permissions = @{}
-            SafeBrowsing = $sbDropdown.SelectedItem
-            DnsMode = $dnsDropdown.SelectedItem
-        }
-        
-        foreach ($checkbox in $allFeatures) {
-            if ($checkbox.Checked) {
-                $settingsToExport.Features += $checkbox.Tag.Key
-            }
-        }
-
-        foreach ($perm in $allPerms) {
-            if ($perm.SelectedItem -ne "Not Set") {
-                $settingsToExport.Permissions[$perm.Tag.Key] = $perm.SelectedItem
-            }
-        }
-        
         try {
-            $settingsToExport | ConvertTo-Json | Out-File -FilePath $saveFileDialog.FileName -Force
+            Get-UIStateSnapshot | ConvertTo-Json -Depth 3 | Out-File -FilePath $saveFileDialog.FileName -Force
             Update-Status "Settings exported successfully."
             Write-Log "Settings exported to $($saveFileDialog.FileName)"
             [System.Windows.Forms.MessageBox]::Show("Settings exported successfully to:`n$($saveFileDialog.FileName)", "Export Successful", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
@@ -864,43 +1028,7 @@ $importButton.Add_Click({
     if ($openFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         try {
             $importedSettings = Get-Content -Path $openFileDialog.FileName -Raw | ConvertFrom-Json
-            
-            foreach ($checkbox in $allFeatures) {
-                $checkbox.Checked = $false
-                $checkbox.ForeColor = [System.Drawing.Color]::White
-            }
-            
-            foreach ($featureKey in $importedSettings.Features) {
-                foreach ($checkbox in $allFeatures) {
-                    if ($checkbox.Tag.Key -eq $featureKey) {
-                        $checkbox.Checked = $true
-                        break
-                    }
-                }
-            }
-
-            foreach ($perm in $allPerms) {
-                $perm.SelectedItem = "Not Set"
-            }
-
-            if ($importedSettings.Permissions) {
-                foreach ($prop in $importedSettings.Permissions.PSObject.Properties) {
-                    foreach ($perm in $allPerms) {
-                        if ($perm.Tag.Key -eq $prop.Name) {
-                            $perm.SelectedItem = $prop.Value
-                            break
-                        }
-                    }
-                }
-            }
-            
-            if ($importedSettings.SafeBrowsing) {
-                $sbDropdown.SelectedItem = $importedSettings.SafeBrowsing
-            }
-
-            if ($importedSettings.DnsMode) {
-                $dnsDropdown.SelectedItem = $importedSettings.DnsMode
-            }
+            Restore-StateToUI $importedSettings
             
             Update-Status "Settings imported successfully."
             Write-Log "Settings imported from $($openFileDialog.FileName)"
@@ -915,5 +1043,6 @@ $importButton.Add_Click({
 Write-Log "SlimBrave UI Loaded successfully."
 
 Reload-UIFromRegistry
+Check-StateChanges
 Update-Layout
 [void] $form.ShowDialog()
