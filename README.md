@@ -13,36 +13,9 @@ A lightweight, GUI-driven PowerShell utility designed to give you ultimate contr
 
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://buymeacoffee.com/SinZZzz)
 
-<details>
-<summary> Preset Details </summary>
-
-- **Maximum Privacy Preset**
-   - Privacy: Disables password manager, address autofill, WebRTC IP leaking, and QUIC to prevent local data extraction and tracking.
-   - Telemetry: Aggressively blocks all usage reporting, safe browsing checks, and daily pings.
-   - Brave Features: Disables Rewards, Wallet, VPN, AI Chat, and all news/media features.
-   - DNS: Forces DNS over HTTPS to "off" to prevent specific provider logging if you use a system-wide VPN.
-   - Best for: Journalists, activists, and highly privacy-conscious users who rely on external tools (like third-party password managers).
-
-- **Balanced / Performance Preset**
-   - Brave Features: Disables Rewards, Wallet, VPN, and AI to declutter the browser.
-   - Performance: Kills background processes, shopping features, and promotions.
-   - DNS: Automatic DoH for a balance of speed and security.
-   - Best for: Users who want a faster, cleaner Brave without extreme privacy tweaks.
-
-- **Developer Preset**
-   - Telemetry: Blocks all reporting.
-   - Brave Features: Disables Rewards, Wallet, and VPN but keeps developer tools.
-   - Performance: Turns off background services and ads.
-   - DNS: Automatic DoH (default secure DNS).
-   - Best for: Developers who need dev tools but still want telemetry and ads disabled.
-
-- **Strict Parental Controls Preset**
-   - Privacy: Blocks incognito mode, forces Google SafeSearch, and disables sign-in.
-   - Brave Features: Disables Rewards, Wallet, VPN, Tor, and dev tools.
-   - DNS: Uses custom DoH (can be set to a family-friendly DNS like Cloudflare for Families).
-   - Best for: Parents, schools, or workplaces that need restricted browsing.
-
-</details>
+> [!WARNING]
+> This tool is currently not built for MacOS or Linux.
+> On Linux, it is recommended to use Brave Origin. Brave Origin is free to use on Linux and debloats Brave out of the box.
 
 <details>
 <summary> Requirements </summary>
@@ -80,14 +53,20 @@ iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave.p
 4. Check the boxes for the features you wish to disable/enable.
 5. Click **Apply Settings** and restart your Brave Browser.
 
-## 📂 How to Use Presets
+##
 
+> [!IMPORTANT]
+> Presets are now built in, so using the presets below is no longer recommended.
+> They still work, but they are deprecated and not updated for the new options available in 2026+.
+## 📂 How to Use Presets
 Instead of manually checking boxes, you can instantly load a pre-configured setup:
 1. Download your desired preset `.json` file from the `Presets` folder in this repository.
 2. Run `SlimBrave.ps1`.
 3. Click the **Import Settings** button at the bottom of the window.
 4. Select the downloaded `.json` file. The script will automatically check the correct boxes for that specific setup.
 5. Click **Apply Settings**.
+
+##
   
 ### Why SlimBrave Matters
 
