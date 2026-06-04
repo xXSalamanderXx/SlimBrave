@@ -184,7 +184,7 @@ foreach ($feature in $telemetryFeatures) {
         } else {
             $this.ForeColor = [System.Drawing.Color]::White
         }
-        Set-DirtyState $true
+        Check-DirtyState
     })
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $leftPanel.Controls.Add($checkbox)
@@ -237,7 +237,7 @@ foreach ($feature in $privacyFeatures) {
         } else {
             $this.ForeColor = [System.Drawing.Color]::White
         }
-        Set-DirtyState $true
+        Check-DirtyState
     })
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $leftPanel.Controls.Add($checkbox)
@@ -297,7 +297,7 @@ foreach ($feature in $braveFeatures) {
         } else {
             $this.ForeColor = [System.Drawing.Color]::White
         }
-        Set-DirtyState $true
+        Check-DirtyState
     })
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $midPanel.Controls.Add($checkbox)
@@ -348,7 +348,7 @@ foreach ($feature in $perfFeatures) {
         } else {
             $this.ForeColor = [System.Drawing.Color]::White
         }
-        Set-DirtyState $true
+        Check-DirtyState
     })
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $midPanel.Controls.Add($checkbox)
@@ -415,7 +415,7 @@ foreach ($p in $permissionSettings) {
     $cb.BackColor = [System.Drawing.Color]::FromArgb(255, 45, 45, 45)
     $cb.ForeColor = [System.Drawing.Color]::White
     $cb.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $cb.Add_SelectedIndexChanged({ Set-DirtyState $true })
+    $cb.Add_SelectedIndexChanged({ Check-DirtyState })
     $toolTip.SetToolTip($cb, $p.ToolTip)
     [void]$rightPanel.Controls.Add($cb)
 
@@ -439,7 +439,7 @@ $sbDropdown.Size = New-Object System.Drawing.Size(150, 20)
 $sbDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $sbDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $sbDropdown.ForeColor = [System.Drawing.Color]::White
-$sbDropdown.Add_SelectedIndexChanged({ Set-DirtyState $true })
+$sbDropdown.Add_SelectedIndexChanged({ Check-DirtyState })
 $toolTip.SetToolTip($sbDropdown, "On = Standard Safe Browsing. Off = Disabled entirely.")
 $form.Controls.Add($sbDropdown)
 
@@ -454,7 +454,7 @@ $dnsDropdown.Size = New-Object System.Drawing.Size(150, 20)
 $dnsDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $dnsDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $dnsDropdown.ForeColor = [System.Drawing.Color]::White
-$dnsDropdown.Add_SelectedIndexChanged({ Set-DirtyState $true })
+$dnsDropdown.Add_SelectedIndexChanged({ Check-DirtyState })
 $toolTip.SetToolTip($dnsDropdown, "Forces encrypted DNS lookups.")
 $form.Controls.Add($dnsDropdown)
 
@@ -505,25 +505,43 @@ $resetButton.ForeColor = [System.Drawing.Color]::LightCoral
 $form.Controls.Add($resetButton)
 
 # --- START OF V1.0.8 STATE MANAGEMENT FUNCTIONS ---
+$global:baselineStateJson = ""
 
 function Get-UIStateSnapshot {
-    $snap = @{
+    $snap = [ordered]@{
         Features = @()
-        Permissions = @{}
+        Permissions = [ordered]@{}
         SafeBrowsing = $sbDropdown.SelectedItem
         DnsMode = $dnsDropdown.SelectedItem
     }
+    $fList = @()
     foreach ($checkbox in $allFeatures) {
         if ($checkbox.Checked) {
-            $snap.Features += $checkbox.Tag.Key
+            $fList += $checkbox.Tag.Key
         }
     }
+    $snap.Features = $fList
+    
     foreach ($perm in $allPerms) {
         if ($perm.SelectedItem -ne "Not Set") {
             $snap.Permissions[$perm.Tag.Key] = $perm.SelectedItem
         }
     }
     return $snap
+}
+
+function Update-Baseline {
+    $global:baselineStateJson = Get-UIStateSnapshot | ConvertTo-Json -Depth 3 -Compress
+}
+
+function Check-DirtyState {
+    if ($global:suspendDirtyTracking) { return }
+    $currentJson = Get-UIStateSnapshot | ConvertTo-Json -Depth 3 -Compress
+    if ($currentJson -ne $global:baselineStateJson) {
+        Set-DirtyState $true
+    } else {
+        Set-DirtyState $false
+    }
 }
 
 function Save-CurrentState {
@@ -570,6 +588,7 @@ function Restore-StateToUI ($stateObj) {
     if ($stateObj.DnsMode) { $dnsDropdown.SelectedItem = $stateObj.DnsMode } else { $dnsDropdown.SelectedIndex = -1 }
     
     $global:suspendDirtyTracking = $false
+    Check-DirtyState
 }
 
 function Check-StateChanges {
@@ -669,12 +688,12 @@ function Check-StateChanges {
 
         if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
             Restore-StateToUI $savedState
-            Set-DirtyState $true
             Update-Status "Prior settings loaded to UI. Click 'Apply Settings' to enforce."
             [System.Windows.Forms.MessageBox]::Show("Your previous SlimBrave settings have been mapped to the UI.`n`nClick 'Apply Settings' when you are ready to write them to the registry.", "Revert Initiated", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         } else {
             Save-CurrentState
-            Set-DirtyState $false
+            Update-Baseline
+            Check-DirtyState
             Update-Status "State baseline updated to match current system modifications."
         }
     }
@@ -779,7 +798,7 @@ $btnPrivacy.Add_Click({
     $sbDropdown.SelectedItem = "Off"
     $dnsDropdown.SelectedItem = "Off"
     $global:suspendDirtyTracking = $false
-    Set-DirtyState $true
+    Check-DirtyState
     Update-Status "Loaded: High Privacy + Moderate Security preset."
 })
 
@@ -810,7 +829,7 @@ $btnSecurity.Add_Click({
     $sbDropdown.SelectedItem = "On"
     $dnsDropdown.SelectedItem = "On"
     $global:suspendDirtyTracking = $false
-    Set-DirtyState $true
+    Check-DirtyState
     Update-Status "Loaded: High Security + Moderate Privacy preset."
 })
 
@@ -867,7 +886,8 @@ function Reload-UIFromRegistry {
         }
     }
     $global:suspendDirtyTracking = $false
-    Set-DirtyState $false
+    Update-Baseline
+    Check-DirtyState
 }
 
 $pullButton.Add_Click({
@@ -973,7 +993,8 @@ $saveButton.Add_Click({
     }
 
     Save-CurrentState
-    Set-DirtyState $false
+    Update-Baseline
+    Check-DirtyState
     Update-Status "Settings applied successfully!"
 
     $braveProcess = Get-Process brave -ErrorAction SilentlyContinue
@@ -1052,7 +1073,8 @@ $resetButton.Add_Click({
             [void](New-Item -Path $registryPath -Force)
         }
         Save-CurrentState
-        Set-DirtyState $false
+        Update-Baseline
+        Check-DirtyState
     }
 })
 
@@ -1086,7 +1108,6 @@ $importButton.Add_Click({
         try {
             $importedSettings = Get-Content -Path $openFileDialog.FileName -Raw | ConvertFrom-Json
             Restore-StateToUI $importedSettings
-            Set-DirtyState $true
             
             Update-Status "Settings imported successfully. Pending save."
             Write-Log "Settings imported from $($openFileDialog.FileName)"
