@@ -9,7 +9,7 @@ A lightweight, GUI-driven PowerShell utility designed to give you ultimate contr
 
 <br>
 
-[![Release](https://img.shields.io/github/v/release/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave/releases) [![Top language](https://img.shields.io/github/languages/top/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave) [![License](https://img.shields.io/github/license/xXSalamanderXx/SlimBrave?style=for-the-badge)](./LICENSE)
+[![Release](https://img.shields.io/github/v/release/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave/releases) [![Top language](https://img.shields.io/github/languages/top/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave) [![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge)](./LICENSE)
 
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://buymeacoffee.com/SinZZzz)
 
