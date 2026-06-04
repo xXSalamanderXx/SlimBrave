@@ -72,11 +72,11 @@ Instead of manually checking boxes, you can instantly load a pre-configured setu
 
 In an era of increasingly bloated browsers, SlimBrave puts **you** back in control:
 
-🚀 **Faster browsing** by removing unnecessary features
+🚀 **Faster browsing** by removing unnecessary features.
 
-🛡️ **Enhanced privacy** through granular controls
+🛡️ **Enhanced privacy and security** through granular controls.
 
-⚙️ **Transparent customization** without hidden settings
+⚙️ **Transparent customization** without hidden settings.
 
 ---
 
