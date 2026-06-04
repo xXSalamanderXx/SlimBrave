@@ -27,6 +27,9 @@ $registryPath = "HKLM:\SOFTWARE\Policies\BraveSoftware\Brave"
 $logFile = Join-Path $PSScriptRoot "SlimBrave.log"
 $stateFile = Join-Path $PSScriptRoot "SlimBraveState.json"
 
+$global:isDirty = $false
+$global:suspendDirtyTracking = $false
+
 function Write-Log ($message) {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     "$timestamp - $message" | Out-File -FilePath $logFile -Append
@@ -64,6 +67,32 @@ $statusBar.Font = New-Object System.Drawing.Font("Consolas", 9, [System.Drawing.
 $statusBar.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 $statusBar.Text = "Ready. Hover over options for details."
 $form.Controls.Add($statusBar)
+
+# --- START OF UI STATUS NOTIFIER ---
+$statusPanel = New-Object System.Windows.Forms.Panel
+$statusPanel.Size = New-Object System.Drawing.Size(260, 32)
+$statusPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 18, 18, 18)
+$form.Controls.Add($statusPanel)
+
+$saveStatusLabel = New-Object System.Windows.Forms.Label
+$saveStatusLabel.Dock = [System.Windows.Forms.DockStyle]::Fill
+$saveStatusLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$saveStatusLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9, [System.Drawing.FontStyle]::Bold)
+$statusPanel.Controls.Add($saveStatusLabel)
+
+function Set-DirtyState([bool]$dirty) {
+    if ($global:suspendDirtyTracking) { return }
+    $global:isDirty = $dirty
+    if ($dirty) {
+        $saveStatusLabel.Text = "Changes Need To Be Saved....."
+        $saveStatusLabel.ForeColor = [System.Drawing.Color]::Gold
+    } else {
+        $saveStatusLabel.Text = "Changes Applied ✔"
+        $saveStatusLabel.ForeColor = [System.Drawing.Color]::LightGreen
+    }
+    $statusPanel.Refresh()
+}
+# --- END OF UI STATUS NOTIFIER ---
 
 function Update-Status ($text) {
     $statusBar.Text = $text
@@ -155,6 +184,7 @@ foreach ($feature in $telemetryFeatures) {
         } else {
             $this.ForeColor = [System.Drawing.Color]::White
         }
+        Set-DirtyState $true
     })
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $leftPanel.Controls.Add($checkbox)
@@ -207,6 +237,7 @@ foreach ($feature in $privacyFeatures) {
         } else {
             $this.ForeColor = [System.Drawing.Color]::White
         }
+        Set-DirtyState $true
     })
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $leftPanel.Controls.Add($checkbox)
@@ -245,7 +276,7 @@ $braveFeatures = @(
     @{ Name = "Disable Sync"; Key = "SyncDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables Brave Sync functionality across devices." },
     @{ Name = "Disable Brave News"; Key = "BraveNewsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the Brave News feed bloat from the New Tab page." },
     @{ Name = "Disable Brave Talk"; Key = "BraveTalkDisabled"; Value = "Disabled"; Type = "String"; ToolTip = "Removes the built-in video calling integration." },
-    @{ Name = "Disable Speedreader"; Key = "BraveSpeedreaderEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the automatic suggestion to strip CSS and switch to reader mode on articles." },
+    @{ Name = "Disable Speedreader"; Key = "BraveSpeedreaderEnabled"; Value = 0; Type = "DWord"; ToolTip = "Completely disables the Speedreader feature and its backend hooks, removing both the functionality to switch to reader mode and the automatic prompts/icons." },
     @{ Name = "Disable Wayback Machine Prompts"; Key = "BraveWaybackMachineEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from asking to search the Internet Archive when you hit a 404 error page." }
 )
 
@@ -266,6 +297,7 @@ foreach ($feature in $braveFeatures) {
         } else {
             $this.ForeColor = [System.Drawing.Color]::White
         }
+        Set-DirtyState $true
     })
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $midPanel.Controls.Add($checkbox)
@@ -316,6 +348,7 @@ foreach ($feature in $perfFeatures) {
         } else {
             $this.ForeColor = [System.Drawing.Color]::White
         }
+        Set-DirtyState $true
     })
     if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
     $midPanel.Controls.Add($checkbox)
@@ -382,6 +415,7 @@ foreach ($p in $permissionSettings) {
     $cb.BackColor = [System.Drawing.Color]::FromArgb(255, 45, 45, 45)
     $cb.ForeColor = [System.Drawing.Color]::White
     $cb.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $cb.Add_SelectedIndexChanged({ Set-DirtyState $true })
     $toolTip.SetToolTip($cb, $p.ToolTip)
     [void]$rightPanel.Controls.Add($cb)
 
@@ -405,6 +439,7 @@ $sbDropdown.Size = New-Object System.Drawing.Size(150, 20)
 $sbDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $sbDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $sbDropdown.ForeColor = [System.Drawing.Color]::White
+$sbDropdown.Add_SelectedIndexChanged({ Set-DirtyState $true })
 $toolTip.SetToolTip($sbDropdown, "On = Standard Safe Browsing. Off = Disabled entirely.")
 $form.Controls.Add($sbDropdown)
 
@@ -419,6 +454,7 @@ $dnsDropdown.Size = New-Object System.Drawing.Size(150, 20)
 $dnsDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $dnsDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $dnsDropdown.ForeColor = [System.Drawing.Color]::White
+$dnsDropdown.Add_SelectedIndexChanged({ Set-DirtyState $true })
 $toolTip.SetToolTip($dnsDropdown, "Forces encrypted DNS lookups.")
 $form.Controls.Add($dnsDropdown)
 
@@ -500,6 +536,7 @@ function Save-CurrentState {
 }
 
 function Restore-StateToUI ($stateObj) {
+    $global:suspendDirtyTracking = $true
     foreach ($checkbox in $allFeatures) {
         $checkbox.Checked = $false
         $checkbox.ForeColor = [System.Drawing.Color]::White
@@ -531,6 +568,8 @@ function Restore-StateToUI ($stateObj) {
 
     if ($stateObj.SafeBrowsing) { $sbDropdown.SelectedItem = $stateObj.SafeBrowsing } else { $sbDropdown.SelectedIndex = -1 }
     if ($stateObj.DnsMode) { $dnsDropdown.SelectedItem = $stateObj.DnsMode } else { $dnsDropdown.SelectedIndex = -1 }
+    
+    $global:suspendDirtyTracking = $false
 }
 
 function Check-StateChanges {
@@ -630,10 +669,12 @@ function Check-StateChanges {
 
         if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
             Restore-StateToUI $savedState
+            Set-DirtyState $true
             Update-Status "Prior settings loaded to UI. Click 'Apply Settings' to enforce."
             [System.Windows.Forms.MessageBox]::Show("Your previous SlimBrave settings have been mapped to the UI.`n`nClick 'Apply Settings' when you are ready to write them to the registry.", "Revert Initiated", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         } else {
             Save-CurrentState
+            Set-DirtyState $false
             Update-Status "State baseline updated to match current system modifications."
         }
     }
@@ -648,6 +689,8 @@ function Update-Layout {
     $presetLabel.Location = New-Object System.Drawing.Point($startX, 24)
     $btnPrivacy.Location = New-Object System.Drawing.Point(($presetLabel.Right + 10), 16)
     $btnSecurity.Location = New-Object System.Drawing.Point(($btnPrivacy.Right + 10), 16)
+    
+    $statusPanel.Location = New-Object System.Drawing.Point(($form.ClientSize.Width - $statusPanel.Width - 20), 18)
 
     $panelWidth = [int](($form.ClientSize.Width - 80) / 3)
     $panelHeight = [int]($form.ClientSize.Height - 250)
@@ -702,11 +745,13 @@ function Update-Layout {
     Set-RoundedCorners $pullButton 10
     Set-RoundedCorners $saveButton 10
     Set-RoundedCorners $resetButton 10
+    Set-RoundedCorners $statusPanel 10
 }
 
 $form.Add_Resize({ Update-Layout })
 
 $btnPrivacy.Add_Click({
+    $global:suspendDirtyTracking = $true
     foreach ($cb in $allFeatures) { 
         $cb.Checked = $false 
         $cb.ForeColor = [System.Drawing.Color]::White
@@ -733,10 +778,13 @@ $btnPrivacy.Add_Click({
 
     $sbDropdown.SelectedItem = "Off"
     $dnsDropdown.SelectedItem = "Off"
+    $global:suspendDirtyTracking = $false
+    Set-DirtyState $true
     Update-Status "Loaded: High Privacy + Moderate Security preset."
 })
 
 $btnSecurity.Add_Click({
+    $global:suspendDirtyTracking = $true
     foreach ($cb in $allFeatures) { 
         $cb.Checked = $false 
         $cb.ForeColor = [System.Drawing.Color]::White
@@ -761,10 +809,13 @@ $btnSecurity.Add_Click({
 
     $sbDropdown.SelectedItem = "On"
     $dnsDropdown.SelectedItem = "On"
+    $global:suspendDirtyTracking = $false
+    Set-DirtyState $true
     Update-Status "Loaded: High Security + Moderate Privacy preset."
 })
 
 function Reload-UIFromRegistry {
+    $global:suspendDirtyTracking = $true
     foreach ($checkbox in $allFeatures) {
         $checkbox.Checked = $false
         $checkbox.ForeColor = [System.Drawing.Color]::White
@@ -815,6 +866,8 @@ function Reload-UIFromRegistry {
             elseif ($regProps.DnsOverHttpsMode -eq "off") { $dnsDropdown.SelectedItem = "Off" }
         }
     }
+    $global:suspendDirtyTracking = $false
+    Set-DirtyState $false
 }
 
 $pullButton.Add_Click({
@@ -920,6 +973,7 @@ $saveButton.Add_Click({
     }
 
     Save-CurrentState
+    Set-DirtyState $false
     Update-Status "Settings applied successfully!"
 
     $braveProcess = Get-Process brave -ErrorAction SilentlyContinue
@@ -957,6 +1011,7 @@ function Reset-AllSettings {
             Remove-Item -Path $registryPath -Recurse -Force
             [void](New-Item -Path $registryPath -Force)
             
+            $global:suspendDirtyTracking = $true
             foreach ($cb in $allFeatures) { 
                 $cb.Checked = $false 
                 $cb.ForeColor = [System.Drawing.Color]::White 
@@ -964,6 +1019,7 @@ function Reset-AllSettings {
             foreach ($perm in $allPerms) { $perm.SelectedItem = "Not Set" }
             $sbDropdown.SelectedIndex = -1
             $dnsDropdown.SelectedIndex = -1
+            $global:suspendDirtyTracking = $false
 
             Write-Log "All settings successfully wiped from registry."
             
@@ -996,6 +1052,7 @@ $resetButton.Add_Click({
             [void](New-Item -Path $registryPath -Force)
         }
         Save-CurrentState
+        Set-DirtyState $false
     }
 })
 
@@ -1029,10 +1086,11 @@ $importButton.Add_Click({
         try {
             $importedSettings = Get-Content -Path $openFileDialog.FileName -Raw | ConvertFrom-Json
             Restore-StateToUI $importedSettings
+            Set-DirtyState $true
             
-            Update-Status "Settings imported successfully."
+            Update-Status "Settings imported successfully. Pending save."
             Write-Log "Settings imported from $($openFileDialog.FileName)"
-            [System.Windows.Forms.MessageBox]::Show("Settings imported successfully from:`n$($openFileDialog.FileName)", "Import Successful", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+            [System.Windows.Forms.MessageBox]::Show("Settings imported successfully from:`n$($openFileDialog.FileName)`n`nClick 'Apply Settings' to enforce them.", "Import Successful", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         } catch {
             Write-Log "Import Failed: $_"
             [System.Windows.Forms.MessageBox]::Show("Failed to import settings: $_", "Import Failed", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
