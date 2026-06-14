@@ -1,4 +1,4 @@
-# Slimbrave - Revived - v1.0.8
+# Slimbrave - Revived - v1.0.9
 
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Start-Process powershell -ArgumentList "-File `"$($MyInvocation.MyCommand.Path)`"" -Verb RunAs
@@ -43,7 +43,7 @@ if (-not (Test-Path -Path $registryPath)) {
 Clear-Host
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "SlimBrave - Revived v1.0.8"
+$form.Text = "SlimBrave - Revived v1.0.9"
 $form.ForeColor = [System.Drawing.Color]::White
 $form.Size = New-Object System.Drawing.Size(1300, 850) 
 $form.MinimumSize = New-Object System.Drawing.Size(1300, 850)
@@ -68,7 +68,6 @@ $statusBar.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 $statusBar.Text = "Ready. Hover over options for details."
 $form.Controls.Add($statusBar)
 
-# --- START OF UI STATUS NOTIFIER ---
 $statusPanel = New-Object System.Windows.Forms.Panel
 $statusPanel.Size = New-Object System.Drawing.Size(260, 32)
 $statusPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 18, 18, 18)
@@ -92,7 +91,6 @@ function Set-DirtyState([bool]$dirty) {
     }
     $statusPanel.Refresh()
 }
-# --- END OF UI STATUS NOTIFIER ---
 
 function Update-Status ($text) {
     $statusBar.Text = $text
@@ -132,6 +130,7 @@ $btnPrivacy.Size = New-Object System.Drawing.Size(280, 35)
 $btnPrivacy.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $btnPrivacy.FlatAppearance.BorderSize = 0
 $btnPrivacy.BackColor = [System.Drawing.Color]::FromArgb(255, 60, 60, 60)
+$toolTip.SetToolTip($btnPrivacy, "Applies the recommended preset for High Privacy and Moderate Security.")
 $form.Controls.Add($btnPrivacy)
 
 $btnSecurity = New-Object System.Windows.Forms.Button
@@ -140,6 +139,7 @@ $btnSecurity.Size = New-Object System.Drawing.Size(280, 35)
 $btnSecurity.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $btnSecurity.FlatAppearance.BorderSize = 0
 $btnSecurity.BackColor = [System.Drawing.Color]::FromArgb(255, 60, 60, 60)
+$toolTip.SetToolTip($btnSecurity, "Applies the recommended preset for High Security and Moderate Privacy.")
 $form.Controls.Add($btnSecurity)
 
 $leftPanel = New-Object System.Windows.Forms.Panel
@@ -149,7 +149,7 @@ $leftPanel.AutoScroll = $true
 $form.Controls.Add($leftPanel)
 
 $telemetryLabel = New-Object System.Windows.Forms.Label
-$telemetryLabel.Text = "Telemetry & Reporting"
+$telemetryLabel.Text = "Telemetry and Reporting"
 $telemetryLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10.5, [System.Drawing.FontStyle]::Bold)
 $telemetryLabel.Location = New-Object System.Drawing.Point(28, 10)
 $telemetryLabel.Size = New-Object System.Drawing.Size(300, 20)
@@ -157,13 +157,13 @@ $telemetryLabel.ForeColor = [System.Drawing.Color]::LightSalmon
 $leftPanel.Controls.Add($telemetryLabel)
 
 $telemetryFeatures = @(
-    @{ Name = "Disable Metrics Reporting"; Key = "MetricsReportingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from sending anonymous usage and crash reports." },
-    @{ Name = "Disable Safe Browsing Reporting"; Key = "SafeBrowsingExtendedReportingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from sending extended Safe Browsing data back to servers." },
-    @{ Name = "Disable URL Data Collection"; Key = "UrlKeyedAnonymizedDataCollectionEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops sending anonymized URLs to help improve the browser." },
-    @{ Name = "Disable Feedback Surveys"; Key = "FeedbackSurveysEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables proactive feedback survey prompts." },
-    @{ Name = "Disable P3A Telemetry"; Key = "BraveP3AEnabled"; Value = "Disabled"; Type = "String"; ToolTip = "Disables Privacy-Preserving Product Analytics completely." },
-    @{ Name = "Disable Daily Stats Ping"; Key = "BraveStatsPingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops the daily active user ping." },
-    @{ Name = "Disable Web Discovery"; Key = "BraveWebDiscoveryEnabled"; Value = 0; Type = "DWord"; ToolTip = "Prevents anonymous search/browsing data from being sent to Brave Search." }
+    @{ Name = "Disable Metrics Reporting"; Key = "MetricsReportingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from sending anonymous usage and crash reports.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Safe Browsing Reporting"; Key = "SafeBrowsingExtendedReportingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from sending extended Safe Browsing data back to servers.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable URL Data Collection"; Key = "UrlKeyedAnonymizedDataCollectionEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops sending anonymized URLs to help improve the browser.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Feedback Surveys"; Key = "FeedbackSurveysEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables proactive feedback survey prompts.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable P3A Telemetry"; Key = "BraveP3AEnabled"; Value = "Disabled"; Type = "String"; ToolTip = "Disables Privacy-Preserving Product Analytics completely.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Daily Stats Ping"; Key = "BraveStatsPingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops the daily active user ping.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Web Discovery"; Key = "BraveWebDiscoveryEnabled"; Value = 0; Type = "DWord"; ToolTip = "Prevents anonymous search/browsing data from being sent to Brave Search.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" }
 )
 
 [int]$leftY = 35
@@ -186,7 +186,7 @@ foreach ($feature in $telemetryFeatures) {
         }
         Check-DirtyState
     })
-    if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
+    $toolTip.SetToolTip($checkbox, $feature.ToolTip)
     $leftPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
     $leftY += 28
@@ -195,7 +195,7 @@ foreach ($feature in $telemetryFeatures) {
 $leftY += 10
 
 $privacyLabel = New-Object System.Windows.Forms.Label
-$privacyLabel.Text = "Privacy & Security"
+$privacyLabel.Text = "Privacy and Security"
 $privacyLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 11, [System.Drawing.FontStyle]::Bold)
 $privacyLabel.Location = New-Object System.Drawing.Point(28, $leftY)
 $privacyLabel.Size = New-Object System.Drawing.Size(300, 20)
@@ -204,20 +204,20 @@ $leftPanel.Controls.Add($privacyLabel)
 $leftY += 25
 
 $privacyFeatures = @(
-    @{ Name = "Disable Autofill (Addresses)"; Key = "AutofillAddressEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables saving and autofilling addresses." },
-    @{ Name = "Disable Autofill (Credit Cards)"; Key = "AutofillCreditCardEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables saving and autofilling credit cards." },
-    @{ Name = "Disable Password Manager"; Key = "PasswordManagerEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the built-in password manager." },
-    @{ Name = "Disable Browser Sign-in"; Key = "BrowserSignin"; Value = 0; Type = "DWord"; ToolTip = "Prevents syncing your data to cloud accounts. Recommended: Disabled for Privacy." },
-    @{ Name = "Disable WebRTC IP Leak"; Key = "WebRtcIPHandling"; Value = "disable_non_proxied_udp"; Type = "String"; ToolTip = "Prevents your real IP address from leaking when using a VPN. Recommended: Disabled for Privacy." },
-    @{ Name = "Disable QUIC Protocol"; Key = "QuicAllowed"; Value = 0; Type = "DWord"; ToolTip = "Forces standard TCP, stopping UDP firewall bypasses and tracking. Recommended: Disabled for Security." },
-    @{ Name = "Block Third Party Cookies"; Key = "BlockThirdPartyCookies"; Value = 1; Type = "DWord"; ToolTip = "Blocks all third-party tracking cookies." },
-    @{ Name = "Enable Do Not Track"; Key = "EnableDoNotTrack"; Value = 1; Type = "DWord"; ToolTip = "Sends a Do Not Track request with your browsing traffic." },
-    @{ Name = "Force Google SafeSearch"; Key = "ForceGoogleSafeSearch"; Value = 1; Type = "DWord"; ToolTip = "Filters explicit search results. Recommended: Disabled for High Privacy (no filtering), Enabled for Security (safe browsing)." },
-    @{ Name = "Disable IPFS"; Key = "IPFSEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops peer-to-peer background connections to unknown nodes. Recommended: Disabled for Privacy & Security." },
-    @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord"; ToolTip = "Forces the browser to always open in Incognito Mode." },
-    @{ Name = "Force Download Prompts"; Key = "PromptForDownloadLocation"; Value = 1; Type = "DWord"; ToolTip = "Forces Brave to ask where to save a file before downloading, preventing background drive-by downloads." },
-    @{ Name = "Clear Data on Exit"; Key = "ClearBrowsingDataOnExitList"; Value = @("browsing_history", "download_history", "cookies_and_other_site_data", "cached_images_and_files", "password_signin", "autofill", "site_settings", "hosted_app_data"); Type = "List"; ToolTip = "Wipes all cookies, cache, and browsing history the moment the browser closes." },
-    @{ Name = "Force HTTPS-Only Mode"; Key = "HttpsOnlyMode"; Value = "force_enabled"; Type = "String"; ToolTip = "Strictly upgrades all connections to HTTPS and blocks unencrypted HTTP traffic." }
+    @{ Name = "Disable Autofill (Addresses)"; Key = "AutofillAddressEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables saving and autofilling addresses.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
+    @{ Name = "Disable Autofill (Credit Cards)"; Key = "AutofillCreditCardEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables saving and autofilling credit cards.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
+    @{ Name = "Disable Password Manager"; Key = "PasswordManagerEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the built-in password manager.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
+    @{ Name = "Disable Browser Sign-in"; Key = "BrowserSignin"; Value = 0; Type = "DWord"; ToolTip = "Prevents syncing your data to cloud accounts.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
+    @{ Name = "Disable WebRTC IP Leak"; Key = "WebRtcIPHandling"; Value = "disable_non_proxied_udp"; Type = "String"; ToolTip = "Prevents your real IP address from leaking when using a VPN.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable QUIC Protocol"; Key = "QuicAllowed"; Value = 0; Type = "DWord"; ToolTip = "Forces standard TCP, stopping UDP firewall bypasses and tracking.`n`nSuggested Settings for Privacy: Unticked | Security: Ticked" },
+    @{ Name = "Block Third Party Cookies"; Key = "BlockThirdPartyCookies"; Value = 1; Type = "DWord"; ToolTip = "Blocks all third-party tracking cookies.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Enable Do Not Track"; Key = "EnableDoNotTrack"; Value = 1; Type = "DWord"; ToolTip = "Sends a Do Not Track request with your browsing traffic.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Force Google SafeSearch"; Key = "ForceGoogleSafeSearch"; Value = 1; Type = "DWord"; ToolTip = "Filters explicit search results.`n`nSuggested Settings for Privacy: Unticked | Security: Ticked" },
+    @{ Name = "Disable IPFS"; Key = "IPFSEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops peer-to-peer background connections to unknown nodes.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord"; ToolTip = "Forces the browser to always open in Incognito Mode.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Force Download Prompts"; Key = "PromptForDownloadLocation"; Value = 1; Type = "DWord"; ToolTip = "Forces Brave to ask where to save a file before downloading, preventing drive-by downloads.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Clear Data on Exit"; Key = "ClearBrowsingDataOnExitList"; Value = @("browsing_history", "download_history", "cookies_and_other_site_data", "cached_images_and_files", "password_signin", "autofill", "site_settings", "hosted_app_data"); Type = "List"; ToolTip = "Wipes all cookies, cache, and browsing history the moment the browser closes.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
+    @{ Name = "Force HTTPS-Only Mode"; Key = "HttpsOnlyMode"; Value = "force_enabled"; Type = "String"; ToolTip = "Strictly upgrades all connections to HTTPS and blocks unencrypted HTTP traffic.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" }
 )
 
 foreach ($feature in $privacyFeatures) {
@@ -239,7 +239,7 @@ foreach ($feature in $privacyFeatures) {
         }
         Check-DirtyState
     })
-    if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
+    $toolTip.SetToolTip($checkbox, $feature.ToolTip)
     $leftPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
     $leftY += 28
@@ -268,16 +268,16 @@ $midPanel.Controls.Add($braveLabel)
 $midY += 25
 
 $braveFeatures = @(
-    @{ Name = "Disable Brave Rewards"; Key = "BraveRewardsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Completely disables the Brave Crypto Rewards system." },
-    @{ Name = "Disable Brave Wallet"; Key = "BraveWalletDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables the built-in Brave Crypto Wallet." },
-    @{ Name = "Disable Brave VPN"; Key = "BraveVPNDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the Brave VPN integration and prompts." },
-    @{ Name = "Disable Brave AI Chat"; Key = "BraveAIChatEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Brave Leo (AI Chat) integration." },
-    @{ Name = "Disable Tor"; Key = "TorDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables built-in Tor window support." },
-    @{ Name = "Disable Sync"; Key = "SyncDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables Brave Sync functionality across devices." },
-    @{ Name = "Disable Brave News"; Key = "BraveNewsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the Brave News feed bloat from the New Tab page." },
-    @{ Name = "Disable Brave Talk"; Key = "BraveTalkDisabled"; Value = "Disabled"; Type = "String"; ToolTip = "Removes the built-in video calling integration." },
-    @{ Name = "Disable Speedreader"; Key = "BraveSpeedreaderEnabled"; Value = 0; Type = "DWord"; ToolTip = "Completely disables the Speedreader feature and its backend hooks, removing both the functionality to switch to reader mode and the automatic prompts/icons." },
-    @{ Name = "Disable Wayback Machine Prompts"; Key = "BraveWaybackMachineEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from asking to search the Internet Archive when you hit a 404 error page." }
+    @{ Name = "Disable Brave Rewards and Sponsored Elements"; Key = "BraveRewardsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Completely disables the Brave Crypto Rewards system and disables sponsored backgrounds on the New Tab page.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Brave Wallet"; Key = "BraveWalletDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables the built-in Brave Crypto Wallet.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Brave VPN"; Key = "BraveVPNDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the Brave VPN integration and prompts.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Brave AI Chat"; Key = "BraveAIChatEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Brave Leo (AI Chat) integration.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Tor"; Key = "TorDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables built-in Tor window support.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Sync"; Key = "SyncDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables Brave Sync functionality across devices.`n`nSuggested Settings for Privacy: Unticked | Security: Ticked" },
+    @{ Name = "Disable Brave News"; Key = "BraveNewsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the Brave News feed bloat from the New Tab page.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Brave Talk"; Key = "BraveTalkDisabled"; Value = "Disabled"; Type = "String"; ToolTip = "Removes the built-in video calling integration.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Speedreader"; Key = "BraveSpeedreaderEnabled"; Value = 0; Type = "DWord"; ToolTip = "Completely disables the Speedreader feature, reader mode, and automatic prompts.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Wayback Machine Prompts"; Key = "BraveWaybackMachineEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from asking to search the Internet Archive when you hit a 404 error.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" }
 )
 
 foreach ($feature in $braveFeatures) {
@@ -299,7 +299,7 @@ foreach ($feature in $braveFeatures) {
         }
         Check-DirtyState
     })
-    if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
+    $toolTip.SetToolTip($checkbox, $feature.ToolTip)
     $midPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
     $midY += 28
@@ -308,7 +308,7 @@ foreach ($feature in $braveFeatures) {
 $midY += 10
 
 $perfLabel = New-Object System.Windows.Forms.Label
-$perfLabel.Text = "Performance & Bloat"
+$perfLabel.Text = "Performance and Bloat"
 $perfLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 11, [System.Drawing.FontStyle]::Bold)
 $perfLabel.Location = New-Object System.Drawing.Point(28, $midY)
 $perfLabel.Size = New-Object System.Drawing.Size(300, 20)
@@ -317,18 +317,18 @@ $midPanel.Controls.Add($perfLabel)
 $midY += 25
 
 $perfFeatures = @(
-    @{ Name = "Disable Background Mode"; Key = "BackgroundModeEnabled"; Value = 0; Type = "DWord"; ToolTip = "Prevents extensions/apps from running after the browser is closed." },
-    @{ Name = "Disable Media Recommendations"; Key = "MediaRecommendationsEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables media recommendations to save memory." },
-    @{ Name = "Disable Shopping List"; Key = "ShoppingListEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the shopping list feature." },
-    @{ Name = "Always Open PDF Externally"; Key = "AlwaysOpenPdfExternally"; Value = 1; Type = "DWord"; ToolTip = "Forces PDFs to download and open in your default system viewer instead of the browser." },
-    @{ Name = "Disable Translate"; Key = "TranslateEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables automatic translation prompts." },
-    @{ Name = "Disable Spellcheck"; Key = "SpellcheckEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the built-in spellchecker to save CPU cycles." },
-    @{ Name = "Disable Promotions"; Key = "PromotionsEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Brave promotional notifications." },
-    @{ Name = "Disable Search Suggestions"; Key = "SearchSuggestEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables predictive search suggestions in the URL bar." },
-    @{ Name = "Disable Printing"; Key = "PrintingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the browser print function." },
-    @{ Name = "Disable Default Browser Prompt"; Key = "DefaultBrowserSettingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from asking to be the default browser." },
-    @{ Name = "Disable Developer Tools"; Key = "DeveloperToolsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables F12 / Inspect Element." },
-    @{ Name = "Disable Brave Playlist"; Key = "BravePlaylistEnabled"; Value = 0; Type = "DWord"; ToolTip = "Removes the Brave Playlist media feature." }
+    @{ Name = "Disable Background Mode"; Key = "BackgroundModeEnabled"; Value = 0; Type = "DWord"; ToolTip = "Prevents extensions/apps from running after the browser is closed.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Media Recommendations"; Key = "MediaRecommendationsEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables media recommendations to save memory.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
+    @{ Name = "Disable Shopping List"; Key = "ShoppingListEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the shopping list feature.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
+    @{ Name = "Always Open PDF Externally"; Key = "AlwaysOpenPdfExternally"; Value = 1; Type = "DWord"; ToolTip = "Forces PDFs to download and open in your system viewer instead of the browser.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Translate"; Key = "TranslateEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables automatic translation prompts.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Disable Spellcheck"; Key = "SpellcheckEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the built-in spellchecker to save CPU cycles.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Disable Promotions"; Key = "PromotionsEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Brave promotional notifications.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
+    @{ Name = "Disable Search Suggestions"; Key = "SearchSuggestEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables predictive search suggestions in the URL bar.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
+    @{ Name = "Disable Printing"; Key = "PrintingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the browser print function.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Disable Default Browser Prompt"; Key = "DefaultBrowserSettingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from asking to be the default browser.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
+    @{ Name = "Disable Developer Tools"; Key = "DeveloperToolsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables F12 / Inspect Element.`n`nSuggested Settings for Privacy: Unticked | Security: Ticked" },
+    @{ Name = "Disable Brave Playlist"; Key = "BravePlaylistEnabled"; Value = 0; Type = "DWord"; ToolTip = "Removes the Brave Playlist media feature.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" }
 )
 
 foreach ($feature in $perfFeatures) {
@@ -350,7 +350,7 @@ foreach ($feature in $perfFeatures) {
         }
         Check-DirtyState
     })
-    if ($feature.ToolTip) { $toolTip.SetToolTip($checkbox, $feature.ToolTip) }
+    $toolTip.SetToolTip($checkbox, $feature.ToolTip)
     $midPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
     $midY += 28
@@ -379,21 +379,21 @@ $rightPanel.Controls.Add($permLabel)
 $permY += 30
 
 $permissionSettings = @(
-    @{ Name = "Location"; Key = "DefaultGeolocationSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to request your physical location." },
-    @{ Name = "Camera"; Key = "DefaultVideoCaptureSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to record video via your webcam." },
-    @{ Name = "Microphone"; Key = "DefaultAudioCaptureSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to record audio via your microphone." },
-    @{ Name = "Notifications"; Key = "DefaultNotificationsSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to send you native desktop push notifications." },
-    @{ Name = "JavaScript"; Key = "DefaultJavaScriptSetting"; Options = @("Not Set", "Allow", "Block"); ToolTip = "Allows sites to run interactive scripts. Blocking this breaks almost all websites." },
-    @{ Name = "Images"; Key = "DefaultImagesSetting"; Options = @("Not Set", "Allow", "Block"); ToolTip = "Allows sites to load and display images." },
-    @{ Name = "Pop-ups & Redirects"; Key = "DefaultPopupsSetting"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to open new windows or redirect you without your input." },
-    @{ Name = "USB Devices"; Key = "DefaultWebUsbGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request direct connection to your plugged-in USB devices." },
-    @{ Name = "Serial Ports"; Key = "DefaultSerialGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request connection to hardware via serial ports." },
-    @{ Name = "HID Devices"; Key = "DefaultWebHidGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request access to Human Interface Devices (e.g. controllers)." },
-    @{ Name = "File Editing"; Key = "DefaultFileSystemReadGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read and save files directly to your local file system." },
-    @{ Name = "Clipboard"; Key = "DefaultClipboardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read text and images copied to your clipboard." },
-    @{ Name = "Window Management"; Key = "DefaultWindowPlacementSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to open windows on specific monitors or in fullscreen." },
-    @{ Name = "Local Fonts"; Key = "DefaultLocalFontsSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to fingerprint your device based on locally installed fonts." },
-    @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to check if you have local payment apps installed." }
+    @{ Name = "Location"; Key = "DefaultGeolocationSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to request your physical location.`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "Camera"; Key = "DefaultVideoCaptureSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to record video via your webcam.`n`nSuggested Settings for Privacy: Ask | Security: Ask" },
+    @{ Name = "Microphone"; Key = "DefaultAudioCaptureSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to record audio via your microphone.`n`nSuggested Settings for Privacy: Ask | Security: Ask" },
+    @{ Name = "Notifications"; Key = "DefaultNotificationsSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to send you native desktop push notifications.`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "JavaScript"; Key = "DefaultJavaScriptSetting"; Options = @("Not Set", "Allow", "Block"); ToolTip = "Allows sites to run interactive scripts. Blocking this breaks almost all websites.`n`nSuggested Settings for Privacy: Allow | Security: Allow" },
+    @{ Name = "Images"; Key = "DefaultImagesSetting"; Options = @("Not Set", "Allow", "Block"); ToolTip = "Allows sites to load and display images.`n`nSuggested Settings for Privacy: Not Set | Security: Not Set" },
+    @{ Name = "Pop-ups and Redirects"; Key = "DefaultPopupsSetting"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to open new windows or redirect you without your input.`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "USB Devices"; Key = "DefaultWebUsbGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request direct connection to your plugged-in USB devices.`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "Serial Ports"; Key = "DefaultSerialGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request connection to hardware via serial ports.`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "HID Devices"; Key = "DefaultWebHidGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request access to Human Interface Devices (e.g. controllers).`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "File Editing"; Key = "DefaultFileSystemReadGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read and save files directly to your local file system.`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "Clipboard"; Key = "DefaultClipboardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read text and images copied to your clipboard.`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "Window Management"; Key = "DefaultWindowPlacementSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to open windows on specific monitors or in fullscreen.`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "Local Fonts"; Key = "DefaultLocalFontsSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to fingerprint your device based on locally installed fonts.`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to check if you have local payment apps installed.`n`nSuggested Settings for Privacy: Block | Security: Block" }
 )
 
 foreach ($p in $permissionSettings) {
@@ -440,8 +440,11 @@ $sbDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $sbDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $sbDropdown.ForeColor = [System.Drawing.Color]::White
 $sbDropdown.Add_SelectedIndexChanged({ Check-DirtyState })
-$toolTip.SetToolTip($sbDropdown, "On = Standard Safe Browsing. Off = Disabled entirely.")
 $form.Controls.Add($sbDropdown)
+
+$sbTooltip = "On = Standard Safe Browsing. Off = Disabled entirely.`n`nSuggested Settings for Privacy: Off | Security: On"
+$toolTip.SetToolTip($sbDropdown, $sbTooltip)
+$toolTip.SetToolTip($sbLabel, $sbTooltip)
 
 $dnsLabel = New-Object System.Windows.Forms.Label
 $dnsLabel.Text = "DNS Over HTTPS:"
@@ -455,8 +458,11 @@ $dnsDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $dnsDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $dnsDropdown.ForeColor = [System.Drawing.Color]::White
 $dnsDropdown.Add_SelectedIndexChanged({ Check-DirtyState })
-$toolTip.SetToolTip($dnsDropdown, "Forces encrypted DNS lookups.")
 $form.Controls.Add($dnsDropdown)
+
+$dnsTooltip = "Forces encrypted DNS lookups.`n`nSuggested Settings for Privacy: On | Security: On  (If you use a VPN keep this off, otherwise it will likely lead to DNS leaks)"
+$toolTip.SetToolTip($dnsDropdown, $dnsTooltip)
+$toolTip.SetToolTip($dnsLabel, $dnsTooltip)
 
 $exportButton = New-Object System.Windows.Forms.Button
 $exportButton.Text = "Export Settings"
@@ -465,6 +471,7 @@ $exportButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $exportButton.FlatAppearance.BorderSize = 0
 $exportButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $exportButton.ForeColor = [System.Drawing.Color]::White
+$toolTip.SetToolTip($exportButton, "Export the current UI configuration to a JSON file.")
 $form.Controls.Add($exportButton)
 
 $importButton = New-Object System.Windows.Forms.Button
@@ -474,6 +481,7 @@ $importButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $importButton.FlatAppearance.BorderSize = 0
 $importButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $importButton.ForeColor = [System.Drawing.Color]::White
+$toolTip.SetToolTip($importButton, "Import a JSON configuration file into the UI.")
 $form.Controls.Add($importButton)
 
 $pullButton = New-Object System.Windows.Forms.Button
@@ -483,7 +491,7 @@ $pullButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $pullButton.FlatAppearance.BorderSize = 0
 $pullButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $pullButton.ForeColor = [System.Drawing.Color]::White
-$toolTip.SetToolTip($pullButton, "Pull / Reload the current Brave settings into SlimBrave UI")
+$toolTip.SetToolTip($pullButton, "Pull / Reload the current Brave settings from the registry into the SlimBrave UI.")
 $form.Controls.Add($pullButton)
 
 $saveButton = New-Object System.Windows.Forms.Button
@@ -493,6 +501,7 @@ $saveButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $saveButton.FlatAppearance.BorderSize = 0
 $saveButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $saveButton.ForeColor = [System.Drawing.Color]::LightGreen
+$toolTip.SetToolTip($saveButton, "Apply the current UI configuration directly to the Windows Registry.")
 $form.Controls.Add($saveButton)
 
 $resetButton = New-Object System.Windows.Forms.Button
@@ -502,9 +511,9 @@ $resetButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $resetButton.FlatAppearance.BorderSize = 0
 $resetButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $resetButton.ForeColor = [System.Drawing.Color]::LightCoral
+$toolTip.SetToolTip($resetButton, "Erase all Brave policy settings from the registry and restore to default.")
 $form.Controls.Add($resetButton)
 
-# --- START OF V1.0.8 STATE MANAGEMENT FUNCTIONS ---
 $global:baselineStateJson = ""
 
 function Get-UIStateSnapshot {
@@ -698,7 +707,6 @@ function Check-StateChanges {
         }
     }
 }
-# --- END OF V1.0.8 STATE MANAGEMENT FUNCTIONS ---
 
 function Update-Layout {
     if ($form.ClientSize.Width -eq 0) { return }
@@ -723,7 +731,6 @@ function Update-Layout {
     $rightPanel.Location = New-Object System.Drawing.Point(($midPanel.Right + 20), 70)
     $rightPanel.Size = New-Object System.Drawing.Size($panelWidth, $panelHeight)
 
-    # Set width manually for all checkboxes so they fill their panel properly
     foreach ($cb in $allFeatures) {
         $cb.Width = $panelWidth - 60
     }
@@ -784,7 +791,7 @@ $btnPrivacy.Add_Click({
         $n = $perm.Tag.Name
         if ($n -eq "JavaScript") {
             $perm.SelectedItem = "Allow"
-        } elseif ($n -eq "Camera" -or $n -eq "Microphone") {
+        } elseif ($n -in @("Camera", "Microphone")) {
             $perm.SelectedItem = "Ask"
         } elseif ($n -eq "Images") {
             $perm.SelectedItem = "Not Set"
@@ -817,12 +824,14 @@ $btnSecurity.Add_Click({
         $n = $perm.Tag.Name
         if ($n -eq "JavaScript") {
             $perm.SelectedItem = "Allow"
-        } elseif ($n -match "USB|Serial|HID|File|Window|Payment") {
-            $perm.SelectedItem = "Block"
-        } elseif ($n -match "Camera|Microphone|Location|Clipboard|Local Fonts") {
+        } elseif ($n -in @("Camera", "Microphone")) {
             $perm.SelectedItem = "Ask"
-        } else {
+        } elseif ($n -eq "Images") {
             $perm.SelectedItem = "Not Set"
+        } else {
+            if ($perm.Items.Contains("Block")) {
+                $perm.SelectedItem = "Block"
+            }
         }
     }
 
