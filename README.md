@@ -42,7 +42,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 ## Run the command below in PowerShell:
 *Tip: Better if you run Powershell as Administrator*
 ```ps1
-iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
+iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
 ```
 
 ## or
