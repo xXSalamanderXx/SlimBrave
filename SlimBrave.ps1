@@ -149,7 +149,7 @@ $leftPanel.AutoScroll = $true
 $form.Controls.Add($leftPanel)
 
 $telemetryLabel = New-Object System.Windows.Forms.Label
-$telemetryLabel.Text = "Telemetry & Reporting"
+$telemetryLabel.Text = "Telemetry and Reporting"
 $telemetryLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10.5, [System.Drawing.FontStyle]::Bold)
 $telemetryLabel.Location = New-Object System.Drawing.Point(28, 10)
 $telemetryLabel.Size = New-Object System.Drawing.Size(300, 20)
@@ -195,7 +195,7 @@ foreach ($feature in $telemetryFeatures) {
 $leftY += 10
 
 $privacyLabel = New-Object System.Windows.Forms.Label
-$privacyLabel.Text = "Privacy & Security"
+$privacyLabel.Text = "Privacy and Security"
 $privacyLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 11, [System.Drawing.FontStyle]::Bold)
 $privacyLabel.Location = New-Object System.Drawing.Point(28, $leftY)
 $privacyLabel.Size = New-Object System.Drawing.Size(300, 20)
@@ -268,7 +268,7 @@ $midPanel.Controls.Add($braveLabel)
 $midY += 25
 
 $braveFeatures = @(
-    @{ Name = "Disable Rewards & Sponsored BGs"; Key = "BraveRewardsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Completely disables the Brave Crypto Rewards system and Sponsored Background Images on the New Tab page.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Brave Rewards and Sponsored Elements"; Key = "BraveRewardsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Completely disables the Brave Crypto Rewards system and disables sponsored backgrounds on the New Tab page.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Brave Wallet"; Key = "BraveWalletDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables the built-in Brave Crypto Wallet.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Brave VPN"; Key = "BraveVPNDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the Brave VPN integration and prompts.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Brave AI Chat"; Key = "BraveAIChatEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Brave Leo (AI Chat) integration.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
@@ -308,7 +308,7 @@ foreach ($feature in $braveFeatures) {
 $midY += 10
 
 $perfLabel = New-Object System.Windows.Forms.Label
-$perfLabel.Text = "Performance & Bloat"
+$perfLabel.Text = "Performance and Bloat"
 $perfLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 11, [System.Drawing.FontStyle]::Bold)
 $perfLabel.Location = New-Object System.Drawing.Point(28, $midY)
 $perfLabel.Size = New-Object System.Drawing.Size(300, 20)
@@ -379,20 +379,20 @@ $rightPanel.Controls.Add($permLabel)
 $permY += 30
 
 $permissionSettings = @(
-    @{ Name = "Location"; Key = "DefaultGeolocationSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to request your physical location.`n`nSuggested Settings for Privacy: Ask | Security: Ask" },
+    @{ Name = "Location"; Key = "DefaultGeolocationSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to request your physical location.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "Camera"; Key = "DefaultVideoCaptureSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to record video via your webcam.`n`nSuggested Settings for Privacy: Ask | Security: Ask" },
     @{ Name = "Microphone"; Key = "DefaultAudioCaptureSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to record audio via your microphone.`n`nSuggested Settings for Privacy: Ask | Security: Ask" },
     @{ Name = "Notifications"; Key = "DefaultNotificationsSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to send you native desktop push notifications.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "JavaScript"; Key = "DefaultJavaScriptSetting"; Options = @("Not Set", "Allow", "Block"); ToolTip = "Allows sites to run interactive scripts. Blocking this breaks almost all websites.`n`nSuggested Settings for Privacy: Allow | Security: Allow" },
     @{ Name = "Images"; Key = "DefaultImagesSetting"; Options = @("Not Set", "Allow", "Block"); ToolTip = "Allows sites to load and display images.`n`nSuggested Settings for Privacy: Not Set | Security: Not Set" },
-    @{ Name = "Pop-ups & Redirects"; Key = "DefaultPopupsSetting"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to open new windows or redirect you without your input.`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "Pop-ups and Redirects"; Key = "DefaultPopupsSetting"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to open new windows or redirect you without your input.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "USB Devices"; Key = "DefaultWebUsbGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request direct connection to your plugged-in USB devices.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "Serial Ports"; Key = "DefaultSerialGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request connection to hardware via serial ports.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "HID Devices"; Key = "DefaultWebHidGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request access to Human Interface Devices (e.g. controllers).`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "File Editing"; Key = "DefaultFileSystemReadGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read and save files directly to your local file system.`n`nSuggested Settings for Privacy: Block | Security: Block" },
-    @{ Name = "Clipboard"; Key = "DefaultClipboardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read text and images copied to your clipboard.`n`nSuggested Settings for Privacy: Ask | Security: Ask" },
+    @{ Name = "Clipboard"; Key = "DefaultClipboardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read text and images copied to your clipboard.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "Window Management"; Key = "DefaultWindowPlacementSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to open windows on specific monitors or in fullscreen.`n`nSuggested Settings for Privacy: Block | Security: Block" },
-    @{ Name = "Local Fonts"; Key = "DefaultLocalFontsSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to fingerprint your device based on locally installed fonts.`n`nSuggested Settings for Privacy: Ask | Security: Ask" },
+    @{ Name = "Local Fonts"; Key = "DefaultLocalFontsSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to fingerprint your device based on locally installed fonts.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to check if you have local payment apps installed.`n`nSuggested Settings for Privacy: Block | Security: Block" }
 )
 
@@ -791,7 +791,7 @@ $btnPrivacy.Add_Click({
         $n = $perm.Tag.Name
         if ($n -eq "JavaScript") {
             $perm.SelectedItem = "Allow"
-        } elseif ($n -eq "Camera" -or $n -eq "Microphone") {
+        } elseif ($n -in @("Camera", "Microphone")) {
             $perm.SelectedItem = "Ask"
         } elseif ($n -eq "Images") {
             $perm.SelectedItem = "Not Set"
@@ -824,12 +824,14 @@ $btnSecurity.Add_Click({
         $n = $perm.Tag.Name
         if ($n -eq "JavaScript") {
             $perm.SelectedItem = "Allow"
-        } elseif ($n -match "USB|Serial|HID|File|Window|Payment") {
-            $perm.SelectedItem = "Block"
-        } elseif ($n -match "Camera|Microphone|Location|Clipboard|Local Fonts") {
+        } elseif ($n -in @("Camera", "Microphone")) {
             $perm.SelectedItem = "Ask"
-        } else {
+        } elseif ($n -eq "Images") {
             $perm.SelectedItem = "Not Set"
+        } else {
+            if ($perm.Items.Contains("Block")) {
+                $perm.SelectedItem = "Block"
+            }
         }
     }
 
