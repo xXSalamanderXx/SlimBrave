@@ -460,7 +460,7 @@ $dnsDropdown.ForeColor = [System.Drawing.Color]::White
 $dnsDropdown.Add_SelectedIndexChanged({ Check-DirtyState })
 $form.Controls.Add($dnsDropdown)
 
-$dnsTooltip = "Forces encrypted DNS lookups.`n`nSuggested Settings for Privacy: Off | Security: On"
+$dnsTooltip = "Forces encrypted DNS lookups.`n`nSuggested Settings for Privacy: On | Security: On  (If you use a VPN keep this off, otherwise it will likely lead to DNS leaks)"
 $toolTip.SetToolTip($dnsDropdown, $dnsTooltip)
 $toolTip.SetToolTip($dnsLabel, $dnsTooltip)
 
