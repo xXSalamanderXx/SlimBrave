@@ -431,7 +431,7 @@ def main():
                                  fg="#90EE90", font=("sans-serif", 10, "bold"))
     save_status_label.pack(side="right", padx=(50, 0))
 
-    # --- FIXED ScrollableFrame (macOS‑ready) ---
+    # --- FIXED ScrollableFrame (macOS‑ready, full‑width scroll detection) ---
     class ScrollableFrame(tk.Frame):
         def __init__(self, parent, bg, **kwargs):
             super().__init__(parent, bg=bg, **kwargs)
@@ -448,7 +448,7 @@ def main():
             # Put the inner frame onto the canvas
             self.canvas_window = self.canvas.create_window((0, 0), window=self.inner_frame, anchor="nw")
 
-            # Update scrollregion when inner frame size changes
+            # Update scrollregion when inner frame changes size
             self.inner_frame.bind("<Configure>", self._on_inner_configure)
             # Make inner frame fill canvas width
             self.canvas.bind("<Configure>", self._on_canvas_configure)
@@ -643,6 +643,8 @@ def main():
         suspend_dirty_tracking = False
         update_baseline()
         check_dirty_state()
+
+        # --- Updated status messages (as requested) ---
         if not any_loaded:
             set_status("No Brave policy settings found – SlimBrave hasn't been configured on this System before, or Brave isn't installed.")
             show_custom_info("Pull Settings", "No Brave policy settings were detected.\n\n"
