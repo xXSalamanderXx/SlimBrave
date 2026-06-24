@@ -119,6 +119,27 @@ def check_python_and_tk():
             print_step("Cannot run without a working Tk. Exiting.")
             sys.exit(1)
 
+def check_pillow():
+    """Check if Pillow is installed; if not, install via pip and relaunch."""
+    try:
+        import PIL
+        return True
+    except ImportError:
+        print_step("Pillow (PIL) is required for the application icon.")
+        if prompt_yes_no("Install Pillow via pip now?"):
+            try:
+                subprocess.run([sys.executable, "-m", "pip", "install", "Pillow"], check=True)
+                print_step("Pillow installed successfully.")
+                # Relaunch with dependencies checked flag to avoid re-prompting
+                os.environ["SLIMBRAVE_DEPENDENCIES_CHECKED"] = "1"
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+            except subprocess.CalledProcessError:
+                print_step("Pillow installation failed. Please install it manually: pip install Pillow")
+                sys.exit(1)
+        else:
+            print_step("Pillow is required. Exiting.")
+            sys.exit(1)
+
 def run_cleanup():
     if shutil.which("brew") and BREW_INSTALLED_SOMETHING:
         print_step("Running brew cleanup…")
@@ -135,6 +156,7 @@ def dependency_setup():
 
     check_homebrew()
     check_python_and_tk()
+    check_pillow()   # added Pillow check
     run_cleanup()
 
     os.environ["SLIMBRAVE_DEPENDENCIES_CHECKED"] = "1"
@@ -179,21 +201,16 @@ def main():
 
     # --- Load lion icon from web ---
     try:
-        # Fetch the WebP image from the URL
         url = "https://www.pngall.com/wp-content/uploads/13/Lions-Logo-PNG-Image-thumb.webp"
         with urllib.request.urlopen(url) as response:
             image_data = response.read()
-        
-        # Use PIL to open the WebP and convert to PhotoImage
         pil_image = Image.open(io.BytesIO(image_data))
-        # Resize to a reasonable icon size (e.g., 64x64)
         pil_image = pil_image.resize((64, 64), Image.Resampling.LANCZOS)
         icon_img = ImageTk.PhotoImage(pil_image)
         root.iconphoto(False, icon_img)
         write_log("Lion icon loaded successfully from web.")
     except Exception as e:
-        # Fallback to transparent GIF if loading fails
-        write_log(f"Failed to load lion icon from web: {e}. Using fallback transparent icon.")
+        write_log(f"Failed to load lion icon: {e}. Using fallback transparent icon.")
         transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
         icon_img = tk.PhotoImage(master=root, data=base64.b64decode(transparent_gif))
         root.iconphoto(False, icon_img)
@@ -908,7 +925,6 @@ def main():
     btn_frame = tk.Frame(bottom_bar, bg="#2d2d2d")
     btn_frame.pack(side="top", fill="x", pady=5)
 
-    # Use ttk buttons with the styles defined above
     ttk.Button(btn_frame, text="Export Settings", style="Export.TButton", command=export_settings).pack(side="left", expand=True, padx=5)
     ttk.Button(btn_frame, text="Import Settings", style="Import.TButton", command=import_settings).pack(side="left", expand=True, padx=5)
     ttk.Button(btn_frame, text="Pull Settings from Brave", style="Pull.TButton", command=reload_ui_from_registry).pack(side="left", expand=True, padx=5)
