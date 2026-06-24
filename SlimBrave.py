@@ -399,7 +399,7 @@ def main():
     # Container for top bar + main area
     container = tk.Frame(root, bg="#191919")
     container.grid(row=0, column=0, sticky="nsew")
-    container.grid_rowconfigure(1, weight=1)   # main area expands
+    container.grid_rowconfigure(1, weight=1)
     container.grid_columnconfigure(0, weight=1)
 
     # TOP BAR – single row with presets and save status inline
@@ -426,31 +426,29 @@ def main():
                                  fg="#90EE90", font=("sans-serif", 10, "bold"))
     save_status_label.pack(side="right", padx=(50, 0))
 
-    # --- Scrollable columns area ---
+    # --- Scrollable columns area (fixed scrolling, original spacing) ---
     class ScrollableFrame(tk.Frame):
-        """A frame with a vertical scrollbar."""
         def __init__(self, parent, bg, **kwargs):
             super().__init__(parent, bg=bg, **kwargs)
             self.canvas = tk.Canvas(self, bg=bg, highlightthickness=0, bd=0)
             self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
             self.inner_frame = tk.Frame(self.canvas, bg=bg)
 
-            self.inner_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
-            self.canvas.create_window((0, 0), window=self.inner_frame, anchor="nw")
+            self.canvas_window = self.canvas.create_window((0, 0), window=self.inner_frame, anchor="nw")
             self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+            self.inner_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+            self.canvas.bind("<Configure>", self._on_canvas_configure)
+
+            # Mousewheel scrolling bound to inner frame (works over all widgets)
+            self.inner_frame.bind("<MouseWheel>", self._on_mousewheel)
 
             self.canvas.pack(side="left", fill="both", expand=True)
             self.scrollbar.pack(side="right", fill="y")
 
-            # Make mouse wheel scroll work
-            self.canvas.bind("<Enter>", self._bind_mousewheel)
-            self.canvas.bind("<Leave>", self._unbind_mousewheel)
-
-        def _bind_mousewheel(self, event):
-            self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-
-        def _unbind_mousewheel(self, event):
-            self.canvas.unbind_all("<MouseWheel>")
+        def _on_canvas_configure(self, event):
+            # Resize inner frame width to canvas width
+            self.canvas.itemconfig(self.canvas_window, width=event.width)
 
         def _on_mousewheel(self, event):
             self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
@@ -462,7 +460,7 @@ def main():
     main_frame.grid_columnconfigure(2, weight=1)
     main_frame.grid_rowconfigure(0, weight=1)
 
-    # Create three scrollable panels
+    # Create three scrollable panels with the same column spacing as before (padx=3)
     left_scroll = ScrollableFrame(main_frame, bg="#191919")
     left_scroll.grid(row=0, column=0, sticky="nsew", padx=3)
     mid_scroll = ScrollableFrame(main_frame, bg="#191919")
