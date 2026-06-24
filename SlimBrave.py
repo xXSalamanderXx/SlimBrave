@@ -128,6 +128,7 @@ def dependency_setup():
 
     check_homebrew()
     check_python_and_tk()
+    # Pillow is NOT checked – it's not needed
     run_cleanup()
 
     print_step("All required dependencies OK. Launching SlimBrave interface…")
@@ -721,7 +722,6 @@ def main():
                 root.after(2000, lambda: run_cmd(["open", "-a", "Brave Browser"]))
                 set_status("Brave restarted successfully.")
         else:
-            # Use custom info popup for success message
             show_custom_info("SlimBrave", "Settings applied successfully! Open Brave to see changes.")
             set_status("Settings applied successfully.")
 
@@ -778,7 +778,7 @@ def main():
         dialog.geometry(f"+{x}+{y}")
         dialog.wait_window()
 
-    # --- Presets (from Windows version) ---
+    # --- Presets ---
     def apply_preset(preset_type):
         global suspend_dirty_tracking
         suspend_dirty_tracking = True
