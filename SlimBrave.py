@@ -164,7 +164,7 @@ def main():
 
     write_log("SlimBrave macOS UI Initializing...")
 
-    # Create root window FIRST
+    # --- Create root window FIRST ---
     root = tk.Tk()
     root.title("SlimBrave - Revived v1.0.9 (macOS)")
     root.geometry("1040x550")
@@ -219,7 +219,7 @@ def main():
     def create_tooltip(widget, text):
         ToolTip(widget, text)
 
-    # --- Feature Dictionaries (unchanged for brevity) ---
+    # --- Feature Dictionaries (unchanged) ---
     telemetry_features = [
         {"Name": "Disable Metrics Reporting", "Key": "MetricsReportingEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops Brave from sending anonymous usage and crash reports.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Safe Browsing Reporting", "Key": "SafeBrowsingExtendedReportingEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops Brave from sending extended Safe Browsing data back to servers.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
@@ -300,9 +300,15 @@ def main():
     style.configure("TCheckbutton", background="#232323", foreground="white", font=("sans-serif", 9))
     style.map("TCheckbutton", background=[('active', '#232323')])
 
+    # Darker dropdown – 15% darker than previous (#1a1a1a → #161616), no blue on select
     style.configure("Dark.TCombobox",
-                    fieldbackground="#1a1a1a", background="#1a1a1a", foreground="white",
+                    fieldbackground="#161616", background="#161616", foreground="white",
                     arrowcolor="white", selectbackground="#333333", selectforeground="white")
+    style.map("Dark.TCombobox",
+              fieldbackground=[('readonly', '#161616')],
+              background=[('readonly', '#161616')],
+              selectbackground=[('readonly', '#333333')],
+              selectforeground=[('readonly', 'white')])
 
     style.configure("Orange.TButton",
                     background="#E65100", foreground="white", font=("sans-serif", 10, "bold"),
@@ -385,20 +391,23 @@ def main():
         except Exception as e:
             write_log(f"Failed to save state baseline: {e}")
 
-    # --- Layout Construction ---
+    # --- Layout: root grid ---
     root.grid_rowconfigure(0, weight=1)
     root.grid_rowconfigure(1, weight=0)
     root.grid_columnconfigure(0, weight=1)
 
+    # Container for top bar + main area
     container = tk.Frame(root, bg="#191919")
     container.grid(row=0, column=0, sticky="nsew")
-    container.grid_rowconfigure(1, weight=1)
+    container.grid_rowconfigure(1, weight=1)   # main area expands
     container.grid_columnconfigure(0, weight=1)
 
+    # TOP BAR – single row with presets and save status inline
     top_frame = tk.Frame(container, bg="#191919")
     top_frame.grid(row=0, column=0, sticky="ew", padx=15, pady=(15, 0))
     inner_top = tk.Frame(top_frame, bg="#191919")
     inner_top.pack(fill="x")
+
     tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
 
     btn_priv = ttk.Button(inner_top, text="High Privacy + Moderate Security", style="Orange.TButton",
@@ -411,24 +420,63 @@ def main():
     btn_sec.pack(side="left", padx=10)
     create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
 
+    # Save status label – now on the same row, right‑aligned
     save_status_var = tk.StringVar(value="Changes Applied ✔")
-    save_status_label = tk.Label(top_frame, textvariable=save_status_var, bg="#191919",
+    save_status_label = tk.Label(inner_top, textvariable=save_status_var, bg="#191919",
                                  fg="#90EE90", font=("sans-serif", 10, "bold"))
-    save_status_label.pack(side="right", padx=30)
+    save_status_label.pack(side="right", padx=(50, 0))
+
+    # --- Scrollable columns area ---
+    class ScrollableFrame(tk.Frame):
+        """A frame with a vertical scrollbar."""
+        def __init__(self, parent, bg, **kwargs):
+            super().__init__(parent, bg=bg, **kwargs)
+            self.canvas = tk.Canvas(self, bg=bg, highlightthickness=0, bd=0)
+            self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+            self.inner_frame = tk.Frame(self.canvas, bg=bg)
+
+            self.inner_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+            self.canvas.create_window((0, 0), window=self.inner_frame, anchor="nw")
+            self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+            self.canvas.pack(side="left", fill="both", expand=True)
+            self.scrollbar.pack(side="right", fill="y")
+
+            # Make mouse wheel scroll work
+            self.canvas.bind("<Enter>", self._bind_mousewheel)
+            self.canvas.bind("<Leave>", self._unbind_mousewheel)
+
+        def _bind_mousewheel(self, event):
+            self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+        def _unbind_mousewheel(self, event):
+            self.canvas.unbind_all("<MouseWheel>")
+
+        def _on_mousewheel(self, event):
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     main_frame = tk.Frame(container, bg="#191919")
     main_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=(0, 5))
-    main_frame.grid_rowconfigure(0, weight=1)
     main_frame.grid_columnconfigure(0, weight=1)
     main_frame.grid_columnconfigure(1, weight=1)
     main_frame.grid_columnconfigure(2, weight=1)
+    main_frame.grid_rowconfigure(0, weight=1)
 
-    left_panel = tk.Frame(main_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
-    left_panel.grid(row=0, column=0, sticky="nsew", padx=3)
-    mid_panel = tk.Frame(main_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
-    mid_panel.grid(row=0, column=1, sticky="nsew", padx=3)
-    right_panel = tk.Frame(main_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
-    right_panel.grid(row=0, column=2, sticky="nsew", padx=3)
+    # Create three scrollable panels
+    left_scroll = ScrollableFrame(main_frame, bg="#191919")
+    left_scroll.grid(row=0, column=0, sticky="nsew", padx=3)
+    mid_scroll = ScrollableFrame(main_frame, bg="#191919")
+    mid_scroll.grid(row=0, column=1, sticky="nsew", padx=3)
+    right_scroll = ScrollableFrame(main_frame, bg="#191919")
+    right_scroll.grid(row=0, column=2, sticky="nsew", padx=3)
+
+    # Put the original panels inside the inner_frame of each scrollable frame
+    left_panel = tk.Frame(left_scroll.inner_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
+    left_panel.pack(fill="both", expand=True)
+    mid_panel = tk.Frame(mid_scroll.inner_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
+    mid_panel.pack(fill="both", expand=True)
+    right_panel = tk.Frame(right_scroll.inner_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
+    right_panel.pack(fill="both", expand=True)
 
     def populate_checkboxes(parent, title, feature_list):
         tk.Label(parent, text=title, font=("sans-serif", 11, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(8, 4), padx=12)
@@ -487,7 +535,7 @@ def main():
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
 
-    # --- Backend Communication ---
+    # --- Backend Communication (unchanged) ---
     def run_cmd(cmd):
         return subprocess.run(cmd, capture_output=True, text=True)
 
