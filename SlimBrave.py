@@ -10,9 +10,9 @@ import io
 import urllib.request
 
 # ----------------------------------------------------------------------
-# 1. Dependency checks and self‑repair (runs every time)
+# 1. Dependency checks – only Homebrew and Python/Tk are required
 # ----------------------------------------------------------------------
-BREW_INSTALLED_SOMETHING = False   # tracks if we installed/upgraded via brew
+BREW_INSTALLED_SOMETHING = False
 
 def print_step(msg):
     print(f"\n[SlimBrave] {msg}")
@@ -81,7 +81,7 @@ def check_python_and_tk():
     global BREW_INSTALLED_SOMETHING
     brew_prefix = get_brew_prefix()
     if not brew_prefix:
-        return   # should not happen
+        return
 
     current_python = sys.executable
     print_step(f"Current Python: {current_python}")
@@ -117,24 +117,41 @@ def check_python_and_tk():
             print_step("Cannot run without a working Tk. Exiting.")
             sys.exit(1)
 
-def check_pillow():
-    """Check if Pillow is installed; if not, install via pip and relaunch."""
+def check_pillow_optional():
+    """Optional Pillow check: if installed, use it; else offer to install (purely aesthetic)."""
     try:
         import PIL
+        print_step("Pillow found – using lion icon.")
         return True
     except ImportError:
-        print_step("Pillow (PIL) is required for the application icon.")
-        if prompt_yes_no("Install Pillow via pip now?"):
+        print_step("Pillow (PIL) is not installed.")
+        print("Pillow is optional – it only provides a nicer application icon (lion logo).")
+        print("If you skip, a transparent icon will be used instead.")
+        if prompt_yes_no("Would you like to install Pillow now? (recommended for aesthetics)"):
             try:
-                subprocess.run([sys.executable, "brew", "install", "Pillow"], check=True)
-                print_step("Pillow installed successfully. Relaunching...")
+                # Try Homebrew first
+                print_step("Attempting to install Pillow via Homebrew...")
+                subprocess.run(["brew", "install", "pillow"], check=True)
+                print_step("Pillow installed successfully via Homebrew.")
+                # Relaunch to load the newly installed module
                 os.execv(sys.executable, [sys.executable] + sys.argv)
             except subprocess.CalledProcessError:
-                print_step("Pillow installation failed. Please install it manually: brew install Pillow")
-                sys.exit(1)
+                print_step("Homebrew installation failed. Trying pip --user...")
+                try:
+                    subprocess.run([sys.executable, "-m", "pip", "install", "--user", "Pillow"], check=True)
+                    print_step("Pillow installed successfully via pip --user.")
+                    os.execv(sys.executable, [sys.executable] + sys.argv)
+                except subprocess.CalledProcessError:
+                    print_step("Pillow installation failed. You can try manually:")
+                    print("  brew install pillow")
+                    print("  or")
+                    print("  pip install --user Pillow")
+                    print_step("Continuing without Pillow (transparent icon will be used).")
+                    return False
         else:
-            print_step("Pillow is required. Exiting.")
-            sys.exit(1)
+            print_step("Skipping Pillow installation – using transparent icon.")
+            return False
+        return False
 
 def run_cleanup():
     if shutil.which("brew") and BREW_INSTALLED_SOMETHING:
@@ -148,26 +165,32 @@ def dependency_setup():
 
     check_homebrew()
     check_python_and_tk()
-    check_pillow()   # always checked
+    check_pillow_optional()   # optional, non-blocking
     run_cleanup()
 
-    print_step("All dependencies OK. Launching SlimBrave interface…")
+    print_step("All required dependencies OK. Launching SlimBrave interface…")
     time.sleep(1)
 
 # ----------------------------------------------------------------------
-# 2. The actual SlimBrave application
+# 2. The actual SlimBrave application (Pillow is optional)
 # ----------------------------------------------------------------------
 def main():
-    # Import after dependencies are guaranteed
     import tkinter as tk
     from tkinter import ttk, messagebox, filedialog
-    from PIL import Image, ImageTk
     import json
     import datetime
     import base64
     import sys
     import urllib.request
     import io
+
+    # Check if Pillow is available (optional)
+    HAS_PIL = False
+    try:
+        from PIL import Image, ImageTk
+        HAS_PIL = True
+    except ImportError:
+        pass  # Pillow not installed – we'll use the transparent GIF
 
     # --- macOS Configuration & Paths ---
     DOMAIN = "com.brave.Browser"
@@ -191,18 +214,25 @@ def main():
     root.minsize(900, 400)
     root.configure(bg="#191919")
 
-    # --- Load lion icon from web ---
-    try:
-        url = "https://www.pngall.com/wp-content/uploads/13/Lions-Logo-PNG-Image-thumb.webp"
-        with urllib.request.urlopen(url) as response:
-            image_data = response.read()
-        pil_image = Image.open(io.BytesIO(image_data))
-        pil_image = pil_image.resize((64, 64), Image.Resampling.LANCZOS)
-        icon_img = ImageTk.PhotoImage(pil_image)
-        root.iconphoto(False, icon_img)
-        write_log("Lion icon loaded successfully from web.")
-    except Exception as e:
-        write_log(f"Failed to load lion icon: {e}. Using fallback transparent icon.")
+    # --- Load icon: lion if Pillow available, else transparent GIF ---
+    if HAS_PIL:
+        try:
+            url = "https://www.pngall.com/wp-content/uploads/13/Lions-Logo-PNG-Image-thumb.webp"
+            with urllib.request.urlopen(url) as response:
+                image_data = response.read()
+            pil_image = Image.open(io.BytesIO(image_data))
+            pil_image = pil_image.resize((64, 64), Image.Resampling.LANCZOS)
+            icon_img = ImageTk.PhotoImage(pil_image)
+            root.iconphoto(False, icon_img)
+            write_log("Lion icon loaded successfully (Pillow).")
+        except Exception as e:
+            write_log(f"Failed to load lion icon with Pillow: {e}. Using fallback transparent icon.")
+            transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+            icon_img = tk.PhotoImage(master=root, data=base64.b64decode(transparent_gif))
+            root.iconphoto(False, icon_img)
+    else:
+        # Pillow not installed – use transparent GIF
+        write_log("Pillow not installed. Using transparent icon.")
         transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
         icon_img = tk.PhotoImage(master=root, data=base64.b64decode(transparent_gif))
         root.iconphoto(False, icon_img)
@@ -936,5 +966,5 @@ def main():
 # 3. Entry point
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
-    dependency_setup()   # always runs
+    dependency_setup()
     main()
