@@ -1,9 +1,12 @@
+> [!CAUTION]
+> This branch is purely for development and experimental use. Do not attempt to run any scripts from this branch.
+
 <div align="center">
 
 # SlimBrave - Revived
 
   <img src="https://i.postimg.cc/QCyWVFGN/SlimBrave.png" alt="SlimBrave Lion Logo" width="200"/>
-  
+
 A lightweight, GUI-driven PowerShell utility designed to give you ultimate control over your Brave Browser. Lock down telemetry, enforce strict privacy standards, and strip away built-in browser bloatware—all from a single, clean interface.
 </div>
 
