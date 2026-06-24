@@ -147,6 +147,7 @@ def main():
     from tkinter import ttk, messagebox, filedialog
     import json
     import datetime
+    import base64
 
     # --- macOS Configuration & Paths ---
     DOMAIN = "com.brave.Browser"
@@ -163,7 +164,14 @@ def main():
 
     write_log("SlimBrave macOS UI Initializing...")
 
-    # --- Tooltip with 1.5-second hover delay, no flicker ---
+    # --- Transparent icon for the root window (removes Python rocket) ---
+    # 1x1 transparent GIF (base64)
+    transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+    icon_img = tk.PhotoImage(data=base64.b64decode(transparent_gif))
+    root = tk.Tk()
+    root.iconphoto(False, icon_img)   # set transparent icon
+
+    # --- Tooltip with 1-second hover delay, no flicker ---
     class ToolTip:
         def __init__(self, widget, text):
             self.widget = widget
@@ -174,18 +182,14 @@ def main():
             self.widget.bind("<Leave>", self.on_leave)
 
         def on_enter(self, event=None):
-            # cancel any pending hide (though we hide instantly, this is safe)
             if self.show_id:
                 self.widget.after_cancel(self.show_id)
-            # schedule show after 1500 ms
-            self.show_id = self.widget.after(1500, self.show)
+            self.show_id = self.widget.after(1000, self.show)   # 1 second delay
 
         def on_leave(self, event=None):
-            # cancel any pending show
             if self.show_id:
                 self.widget.after_cancel(self.show_id)
                 self.show_id = None
-            # hide immediately
             self.hide()
 
         def show(self):
@@ -210,7 +214,7 @@ def main():
     def create_tooltip(widget, text):
         ToolTip(widget, text)
 
-    # --- Feature Dictionaries ---
+    # --- Feature Dictionaries (unchanged) ---
     telemetry_features = [
         {"Name": "Disable Metrics Reporting", "Key": "MetricsReportingEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops Brave from sending anonymous usage and crash reports.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Safe Browsing Reporting", "Key": "SafeBrowsingExtendedReportingEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops Brave from sending extended Safe Browsing data back to servers.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
@@ -285,25 +289,57 @@ def main():
     ]
 
     # --- UI Setup & Global State ---
-    root = tk.Tk()
     root.title("SlimBrave - Revived v1.0.9 (macOS)")
     root.geometry("1040x550")
-    root.minsize(1040, 550)
+    root.minsize(900, 400)   # allow smaller window, bottom bar always visible
     root.configure(bg="#191919")
 
     style = ttk.Style()
     style.theme_use('clam')
+
+    # Checkbutton style
     style.configure("TCheckbutton", background="#232323", foreground="white", font=("sans-serif", 9))
     style.map("TCheckbutton", background=[('active', '#232323')])
-    style.configure("TCombobox", fieldbackground="#2d2d2d", background="#2d2d2d", foreground="white")
 
-    # Custom orange button style for presets
+    # Darker dropdown (Combobox) style
+    style.configure("Dark.TCombobox",
+                    fieldbackground="#1a1a1a", background="#1a1a1a", foreground="white",
+                    arrowcolor="white", selectbackground="#333333", selectforeground="white")
+
+    # Preset button style (orange, rounded corners via border? we'll use raised ridge)
     style.configure("Orange.TButton",
                     background="#E65100", foreground="white", font=("sans-serif", 10, "bold"),
-                    borderwidth=0, relief="flat")
+                    borderwidth=2, relief="raised")
     style.map("Orange.TButton",
               background=[('active', '#BF360C')],
               foreground=[('active', 'white')])
+
+    # Bottom action button styles (coloured, white bold text)
+    style.configure("Import.TButton",
+                    background="#1976D2", foreground="white", font=("sans-serif", 9, "bold"),
+                    borderwidth=2, relief="raised")
+    style.map("Import.TButton",
+              background=[('active', '#1565C0')])
+    style.configure("Export.TButton",
+                    background="#0D47A1", foreground="white", font=("sans-serif", 9, "bold"),
+                    borderwidth=2, relief="raised")
+    style.map("Export.TButton",
+              background=[('active', '#0A3D91')])
+    style.configure("Pull.TButton",
+                    background="#F57F17", foreground="white", font=("sans-serif", 9, "bold"),
+                    borderwidth=2, relief="raised")
+    style.map("Pull.TButton",
+              background=[('active', '#E65100')])
+    style.configure("Apply.TButton",
+                    background="#2E7D32", foreground="white", font=("sans-serif", 9, "bold"),
+                    borderwidth=2, relief="raised")
+    style.map("Apply.TButton",
+              background=[('active', '#1B5E20')])
+    style.configure("Reset.TButton",
+                    background="#C62828", foreground="white", font=("sans-serif", 9, "bold"),
+                    borderwidth=2, relief="raised")
+    style.map("Reset.TButton",
+              background=[('active', '#B71C1C')])
 
     global_is_dirty = False
     suspend_dirty_tracking = False
@@ -353,42 +389,87 @@ def main():
         except Exception as e:
             write_log(f"Failed to save state baseline: {e}")
 
-    # --- Layout Construction ---
-    # TOP BAR
+    # --- Layout Construction (using grid for permanent bottom bar) ---
+    root.grid_rowconfigure(0, weight=1)   # main area expands
+    root.grid_rowconfigure(1, weight=0)   # bottom bar fixed
+    root.grid_columnconfigure(0, weight=1)
+
+    # TOP BAR (presets)
     top_frame = tk.Frame(root, bg="#191919")
-    top_frame.pack(fill="x", pady=(15, 5))
+    top_frame.grid(row=0, column=0, sticky="nsew", padx=15, pady=(15, 0))
+    top_frame.grid_rowconfigure(0, weight=0)   # top frame inside row 0
+    top_frame.grid_columnconfigure(0, weight=1)
 
     inner_top = tk.Frame(top_frame, bg="#191919")
-    inner_top.pack()
+    inner_top.grid(row=0, column=0, sticky="ew")
+    inner_top.grid_columnconfigure(1, weight=1)
 
-    tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
+    tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").grid(row=0, column=0, padx=(0, 10), sticky="w")
 
-    # Preset buttons – now styled ttk buttons for reliable orange color
     btn_priv = ttk.Button(inner_top, text="High Privacy + Moderate Security", style="Orange.TButton",
                           command=lambda: apply_preset("privacy"))
-    btn_priv.pack(side="left", padx=10)
+    btn_priv.grid(row=0, column=1, padx=10, sticky="w")
     create_tooltip(btn_priv, "Applies the recommended preset for High Privacy and Moderate Security.")
 
     btn_sec = ttk.Button(inner_top, text="High Security + Moderate Privacy", style="Orange.TButton",
                          command=lambda: apply_preset("security"))
-    btn_sec.pack(side="left", padx=10)
+    btn_sec.grid(row=0, column=2, padx=10, sticky="w")
     create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
 
+    save_status_var = tk.StringVar(value="Changes Applied ✔")
+    save_status_label = tk.Label(inner_top, textvariable=save_status_var, bg="#191919",
+                                 fg="#90EE90", font=("sans-serif", 10, "bold"))
+    save_status_label.grid(row=0, column=3, padx=(50, 0), sticky="e")
+
+    # MAIN CONTENT (three panels)
+    main_frame = tk.Frame(root, bg="#191919")
+    main_frame.grid(row=0, column=0, sticky="nsew", padx=15, pady=(5, 5), in_=root)
+    # we need to pack the main_frame inside the top_frame's row? Actually we want top_frame and main_frame inside row 0 of root. We'll use a sub-frame.
+    # Instead, we can place top_frame and main_frame inside a container frame that occupies root row 0.
+    # Let's create a container for row 0 that holds both top_frame and main_frame.
+    # We'll adjust: root grid row 0 will contain a container frame. Inside it, we pack top_frame and main_frame vertically.
+    container = tk.Frame(root, bg="#191919")
+    container.grid(row=0, column=0, sticky="nsew")
+    container.grid_rowconfigure(1, weight=1)  # main area expands
+    container.grid_columnconfigure(0, weight=1)
+
+    # Move top_frame inside container
+    top_frame = tk.Frame(container, bg="#191919")
+    top_frame.grid(row=0, column=0, sticky="ew", padx=15, pady=(15, 0))
+    # ... rebuild top_frame inside container using grid as before (reuse variables)
+    # I'll reconstruct top_frame inside container now.
+
+    # We'll redefine top_frame inside container:
+    inner_top = tk.Frame(top_frame, bg="#191919")
+    inner_top.pack(fill="x")
+    tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
+    btn_priv = ttk.Button(inner_top, text="High Privacy + Moderate Security", style="Orange.TButton",
+                          command=lambda: apply_preset("privacy"))
+    btn_priv.pack(side="left", padx=10)
+    create_tooltip(btn_priv, "Applies the recommended preset for High Privacy and Moderate Security.")
+    btn_sec = ttk.Button(inner_top, text="High Security + Moderate Privacy", style="Orange.TButton",
+                         command=lambda: apply_preset("security"))
+    btn_sec.pack(side="left", padx=10)
+    create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
     save_status_var = tk.StringVar(value="Changes Applied ✔")
     save_status_label = tk.Label(top_frame, textvariable=save_status_var, bg="#191919",
                                  fg="#90EE90", font=("sans-serif", 10, "bold"))
     save_status_label.pack(side="right", padx=30)
 
-    # MAIN CONTENT
-    main_frame = tk.Frame(root, bg="#191919")
-    main_frame.pack(fill="both", expand=True, padx=15, pady=(0, 5))
+    # Main panels inside container
+    main_frame = tk.Frame(container, bg="#191919")
+    main_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=(0, 5))
+    main_frame.grid_rowconfigure(0, weight=1)
+    main_frame.grid_columnconfigure(0, weight=1)
+    main_frame.grid_columnconfigure(1, weight=1)
+    main_frame.grid_columnconfigure(2, weight=1)
 
     left_panel = tk.Frame(main_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
-    left_panel.pack(side="left", fill="both", expand=True, padx=3)
+    left_panel.grid(row=0, column=0, sticky="nsew", padx=3)
     mid_panel = tk.Frame(main_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
-    mid_panel.pack(side="left", fill="both", expand=True, padx=3)
+    mid_panel.grid(row=0, column=1, sticky="nsew", padx=3)
     right_panel = tk.Frame(main_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
-    right_panel.pack(side="left", fill="both", expand=True, padx=3)
+    right_panel.grid(row=0, column=2, sticky="nsew", padx=3)
 
     def populate_checkboxes(parent, title, feature_list):
         tk.Label(parent, text=title, font=("sans-serif", 11, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(8, 4), padx=12)
@@ -416,7 +497,7 @@ def main():
         var = tk.StringVar(value="Not Set")
         all_perm_vars[perm["Key"]] = var
         var.trace_add("write", check_dirty_state)
-        cb = ttk.Combobox(f, textvariable=var, values=perm["Options"], state="readonly", width=10)
+        cb = ttk.Combobox(f, textvariable=var, values=perm["Options"], state="readonly", width=10, style="Dark.TCombobox")
         cb.pack(side="right")
         create_tooltip(cb, perm["ToolTip"])
 
@@ -429,7 +510,7 @@ def main():
     sb_lbl.pack(side="left")
     sb_var = tk.StringVar()
     sb_var.trace_add("write", check_dirty_state)
-    sb_cb = ttk.Combobox(sb_f, textvariable=sb_var, values=["On", "Off"], state="readonly", width=10)
+    sb_cb = ttk.Combobox(sb_f, textvariable=sb_var, values=["On", "Off"], state="readonly", width=10, style="Dark.TCombobox")
     sb_cb.pack(side="left", padx=8)
     sb_tt = "On = Standard Safe Browsing. Off = Disabled entirely.\n\nSuggested Settings for Privacy: Off | Security: On"
     create_tooltip(sb_lbl, sb_tt)
@@ -441,13 +522,13 @@ def main():
     dns_lbl.pack(side="left")
     dns_var = tk.StringVar()
     dns_var.trace_add("write", check_dirty_state)
-    dns_cb = ttk.Combobox(dns_f, textvariable=dns_var, values=["On", "Off"], state="readonly", width=10)
+    dns_cb = ttk.Combobox(dns_f, textvariable=dns_var, values=["On", "Off"], state="readonly", width=10, style="Dark.TCombobox")
     dns_cb.pack(side="left", padx=8)
     dns_tt = "Forces encrypted DNS lookups.\n\nSuggested Settings for Privacy: Off | Security: On"
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
 
-    # --- Backend Communication ---
+    # --- Backend Communication (unchanged) ---
     def run_cmd(cmd):
         return subprocess.run(cmd, capture_output=True, text=True)
 
@@ -516,8 +597,9 @@ def main():
         check_dirty_state()
         if not any_loaded:
             set_status("No Brave settings found – maybe Brave is not installed or has never been configured.")
-            messagebox.showinfo("Pull Settings", "No Brave policy settings were detected.\n\n"
-                                                "This usually means Brave Browser is not installed, or you have never modified its settings via SlimBrave or the command line.")
+            # Show custom dialog with no icon
+            show_custom_info("Pull Settings", "No Brave policy settings were detected.\n\n"
+                                               "This usually means Brave Browser is not installed, or you have never modified its settings via SlimBrave or the command line.")
         else:
             set_status("UI reloaded from current macOS Brave defaults.")
 
@@ -617,27 +699,37 @@ def main():
                 check_dirty_state()
                 set_status("Settings imported. Pending save.")
 
-    # --- BOTTOM OVERLAY (always visible) ---
+    # --- Custom no-icon info dialog ---
+    def show_custom_info(title, message):
+        dialog = tk.Toplevel(root)
+        dialog.title(title)
+        dialog.transient(root)
+        dialog.grab_set()
+        # Use a transparent icon for this dialog as well
+        dialog.iconphoto(False, icon_img)
+        tk.Label(dialog, text=message, font=("sans-serif", 10), padx=20, pady=20).pack()
+        tk.Button(dialog, text="OK", command=dialog.destroy, width=10).pack(pady=10)
+        dialog.update_idletasks()
+        # Center on parent
+        x = root.winfo_rootx() + (root.winfo_width() // 2) - (dialog.winfo_width() // 2)
+        y = root.winfo_rooty() + (root.winfo_height() // 2) - (dialog.winfo_height() // 2)
+        dialog.geometry(f"+{x}+{y}")
+        dialog.wait_window()
+
+    # --- BOTTOM BAR (always visible via grid) ---
     bottom_bar = tk.Frame(root, bg="#2d2d2d", height=70)
-    bottom_bar.pack(side="bottom", fill="x")
-    bottom_bar.pack_propagate(False)
+    bottom_bar.grid(row=1, column=0, sticky="ew")
+    bottom_bar.grid_propagate(False)
 
     btn_frame = tk.Frame(bottom_bar, bg="#2d2d2d")
     btn_frame.pack(side="top", fill="x", pady=5)
 
-    btns = [
-        ("Export Settings", export_settings, "white"),
-        ("Import Settings", import_settings, "white"),
-        ("Pull Settings from Brave", reload_ui_from_registry, "white"),
-        ("Apply Settings", apply_settings, "#90EE90"),
-        ("Reset All Settings", reset_settings, "#F08080")
-    ]
-
-    for text, cmd, color in btns:
-        b = tk.Button(btn_frame, text=text, font=("sans-serif", 9, "bold"), fg=color,
-                      bg="#555555", activebackground="#666666",
-                      relief="flat", bd=0, highlightthickness=0, width=16, command=cmd)
-        b.pack(side="left", expand=True, padx=5)
+    # Colored buttons using ttk styles
+    ttk.Button(btn_frame, text="Export Settings", style="Export.TButton", command=export_settings).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Import Settings", style="Import.TButton", command=import_settings).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Pull Settings from Brave", style="Pull.TButton", command=reload_ui_from_registry).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Apply Settings", style="Apply.TButton", command=apply_settings).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Reset All Settings", style="Reset.TButton", command=reset_settings).pack(side="left", expand=True, padx=5)
 
     status_var = tk.StringVar(value="Ready. Hover over options for details.")
     status_label = tk.Label(bottom_bar, textvariable=status_var, bg="#2d2d2d", fg="#aaaaaa",
