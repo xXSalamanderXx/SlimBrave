@@ -174,14 +174,12 @@ def main():
             self.widget.bind("<Leave>", self.schedule_hide)
 
         def schedule_show(self, event=None):
-            # cancel any pending hide
             if self.hide_id:
                 self.widget.after_cancel(self.hide_id)
                 self.hide_id = None
             self.show(event)
 
         def schedule_hide(self, event=None):
-            # delay hiding – if we enter another widget, show cancels this
             self.hide_id = self.widget.after(200, self.hide)
 
         def show(self, event=None):
@@ -284,7 +282,6 @@ def main():
     # --- UI Setup & Global State ---
     root = tk.Tk()
     root.title("SlimBrave - Revived v1.0.9 (macOS)")
-    # Smaller, 16:9 window
     root.geometry("1040x550")
     root.minsize(1040, 550)
     root.configure(bg="#191919")
@@ -344,7 +341,7 @@ def main():
             write_log(f"Failed to save state baseline: {e}")
 
     # --- Layout Construction ---
-    # TOP BAR (centred preset buttons)
+    # TOP BAR
     top_frame = tk.Frame(root, bg="#191919")
     top_frame.pack(fill="x", pady=(15, 5))
 
@@ -353,7 +350,6 @@ def main():
 
     tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
 
-    # Deep orange preset buttons
     orange_color = "#E65100"
     btn_priv = tk.Button(inner_top, text="High Privacy + Moderate Security",
                          bg=orange_color, fg="white", font=("sans-serif", 10, "bold"),
@@ -371,13 +367,12 @@ def main():
     btn_sec.pack(side="left", padx=10)
     create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
 
-    # Save status label on the right
     save_status_var = tk.StringVar(value="Changes Applied ✔")
     save_status_label = tk.Label(top_frame, textvariable=save_status_var, bg="#191919",
                                  fg="#90EE90", font=("sans-serif", 10, "bold"))
     save_status_label.pack(side="right", padx=30)
 
-    # MAIN CONTENT – three panels
+    # MAIN CONTENT
     main_frame = tk.Frame(root, bg="#191919")
     main_frame.pack(fill="both", expand=True, padx=15, pady=(0, 5))
 
@@ -418,7 +413,6 @@ def main():
         cb.pack(side="right")
         create_tooltip(cb, perm["ToolTip"])
 
-    # Safe Browsing & DNS (inside right panel)
     spacer = tk.Frame(right_panel, bg="#232323", height=8)
     spacer.pack(fill="x")
 
@@ -445,33 +439,6 @@ def main():
     dns_tt = "Forces encrypted DNS lookups.\n\nSuggested Settings for Privacy: Off | Security: On"
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
-
-    # --- BOTTOM OVERLAY (buttons + status) always visible ---
-    bottom_bar = tk.Frame(root, bg="#2d2d2d", height=70)
-    bottom_bar.pack(side="bottom", fill="x")
-    bottom_bar.pack_propagate(False)   # keep height fixed
-
-    btn_frame = tk.Frame(bottom_bar, bg="#2d2d2d")
-    btn_frame.pack(side="top", fill="x", pady=5)
-
-    btns = [
-        ("Export Settings", export_settings, "white"),
-        ("Import Settings", import_settings, "white"),
-        ("Pull Settings from Brave", reload_ui_from_registry, "white"),
-        ("Apply Settings", apply_settings, "#90EE90"),
-        ("Reset All Settings", reset_settings, "#F08080")
-    ]
-
-    for text, cmd, color in btns:
-        b = tk.Button(btn_frame, text=text, font=("sans-serif", 9, "bold"), fg=color,
-                      bg="#555555", activebackground="#666666",
-                      relief="flat", bd=0, highlightthickness=0, width=16, command=cmd)
-        b.pack(side="left", expand=True, padx=5)
-
-    status_var = tk.StringVar(value="Ready. Hover over options for details.")
-    status_label = tk.Label(bottom_bar, textvariable=status_var, bg="#2d2d2d", fg="#aaaaaa",
-                            font=("courier", 10), anchor="w", padx=10)
-    status_label.pack(side="bottom", fill="x")
 
     # --- Backend Communication ---
     def run_cmd(cmd):
@@ -630,6 +597,33 @@ def main():
                 suspend_dirty_tracking = False
                 check_dirty_state()
                 set_status("Settings imported. Pending save.")
+
+    # --- BOTTOM OVERLAY (buttons + status) always visible ---
+    bottom_bar = tk.Frame(root, bg="#2d2d2d", height=70)
+    bottom_bar.pack(side="bottom", fill="x")
+    bottom_bar.pack_propagate(False)
+
+    btn_frame = tk.Frame(bottom_bar, bg="#2d2d2d")
+    btn_frame.pack(side="top", fill="x", pady=5)
+
+    btns = [
+        ("Export Settings", export_settings, "white"),
+        ("Import Settings", import_settings, "white"),
+        ("Pull Settings from Brave", reload_ui_from_registry, "white"),
+        ("Apply Settings", apply_settings, "#90EE90"),
+        ("Reset All Settings", reset_settings, "#F08080")
+    ]
+
+    for text, cmd, color in btns:
+        b = tk.Button(btn_frame, text=text, font=("sans-serif", 9, "bold"), fg=color,
+                      bg="#555555", activebackground="#666666",
+                      relief="flat", bd=0, highlightthickness=0, width=16, command=cmd)
+        b.pack(side="left", expand=True, padx=5)
+
+    status_var = tk.StringVar(value="Ready. Hover over options for details.")
+    status_label = tk.Label(bottom_bar, textvariable=status_var, bg="#2d2d2d", fg="#aaaaaa",
+                            font=("courier", 10), anchor="w", padx=10)
+    status_label.pack(side="bottom", fill="x")
 
     # --- Startup ---
     root.after(100, reload_ui_from_registry)
