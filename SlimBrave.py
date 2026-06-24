@@ -163,26 +163,32 @@ def main():
 
     write_log("SlimBrave macOS UI Initializing...")
 
-    # --- Improved Tooltip (no flicker) ---
+    # --- Tooltip with 1.5-second hover delay, no flicker ---
     class ToolTip:
         def __init__(self, widget, text):
             self.widget = widget
             self.text = text
             self.tooltip_window = None
-            self.hide_id = None
-            self.widget.bind("<Enter>", self.schedule_show)
-            self.widget.bind("<Leave>", self.schedule_hide)
+            self.show_id = None
+            self.widget.bind("<Enter>", self.on_enter)
+            self.widget.bind("<Leave>", self.on_leave)
 
-        def schedule_show(self, event=None):
-            if self.hide_id:
-                self.widget.after_cancel(self.hide_id)
-                self.hide_id = None
-            self.show(event)
+        def on_enter(self, event=None):
+            # cancel any pending hide (though we hide instantly, this is safe)
+            if self.show_id:
+                self.widget.after_cancel(self.show_id)
+            # schedule show after 1500 ms
+            self.show_id = self.widget.after(1500, self.show)
 
-        def schedule_hide(self, event=None):
-            self.hide_id = self.widget.after(200, self.hide)
+        def on_leave(self, event=None):
+            # cancel any pending show
+            if self.show_id:
+                self.widget.after_cancel(self.show_id)
+                self.show_id = None
+            # hide immediately
+            self.hide()
 
-        def show(self, event=None):
+        def show(self):
             if self.tooltip_window:
                 return
             x, y, cx, cy = self.widget.bbox("insert")
@@ -200,7 +206,6 @@ def main():
             if self.tooltip_window:
                 self.tooltip_window.destroy()
                 self.tooltip_window = None
-            self.hide_id = None
 
     def create_tooltip(widget, text):
         ToolTip(widget, text)
@@ -292,6 +297,14 @@ def main():
     style.map("TCheckbutton", background=[('active', '#232323')])
     style.configure("TCombobox", fieldbackground="#2d2d2d", background="#2d2d2d", foreground="white")
 
+    # Custom orange button style for presets
+    style.configure("Orange.TButton",
+                    background="#E65100", foreground="white", font=("sans-serif", 10, "bold"),
+                    borderwidth=0, relief="flat")
+    style.map("Orange.TButton",
+              background=[('active', '#BF360C')],
+              foreground=[('active', 'white')])
+
     global_is_dirty = False
     suspend_dirty_tracking = False
     baseline_state = ""
@@ -350,20 +363,14 @@ def main():
 
     tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
 
-    orange_color = "#E65100"
-    btn_priv = tk.Button(inner_top, text="High Privacy + Moderate Security",
-                         bg=orange_color, fg="white", font=("sans-serif", 10, "bold"),
-                         activebackground="#BF360C", activeforeground="white",
-                         relief="flat", bd=0, highlightthickness=0,
-                         command=lambda: apply_preset("privacy"))
+    # Preset buttons – now styled ttk buttons for reliable orange color
+    btn_priv = ttk.Button(inner_top, text="High Privacy + Moderate Security", style="Orange.TButton",
+                          command=lambda: apply_preset("privacy"))
     btn_priv.pack(side="left", padx=10)
     create_tooltip(btn_priv, "Applies the recommended preset for High Privacy and Moderate Security.")
 
-    btn_sec = tk.Button(inner_top, text="High Security + Moderate Privacy",
-                        bg=orange_color, fg="white", font=("sans-serif", 10, "bold"),
-                        activebackground="#BF360C", activeforeground="white",
-                        relief="flat", bd=0, highlightthickness=0,
-                        command=lambda: apply_preset("security"))
+    btn_sec = ttk.Button(inner_top, text="High Security + Moderate Privacy", style="Orange.TButton",
+                         command=lambda: apply_preset("security"))
     btn_sec.pack(side="left", padx=10)
     create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
 
@@ -468,10 +475,12 @@ def main():
         dns_var.set("")
         
         all_feats = telemetry_features + privacy_features + brave_features + perf_features
+        any_loaded = False
         
         for feat in all_feats:
             val = read_default(feat["Key"])
             if val is not None:
+                any_loaded = True
                 if feat["Type"] == "-array":
                     if val: all_feature_vars[feat["Key"]].set(1)
                 else:
@@ -481,6 +490,7 @@ def main():
         for perm in permission_settings:
             val = read_default(perm["Key"])
             if val is not None:
+                any_loaded = True
                 try:
                     val = int(val)
                     if val == 3: all_perm_vars[perm["Key"]].set("Ask")
@@ -490,17 +500,26 @@ def main():
                 except: pass
                 
         sb_val = read_default("SafeBrowsingProtectionLevel")
-        if sb_val == "1": sb_var.set("On")
-        elif sb_val == "0": sb_var.set("Off")
+        if sb_val:
+            any_loaded = True
+            if sb_val == "1": sb_var.set("On")
+            elif sb_val == "0": sb_var.set("Off")
         
         dns_val = read_default("DnsOverHttpsMode")
-        if dns_val == "automatic": dns_var.set("On")
-        elif dns_val == "off": dns_var.set("Off")
+        if dns_val:
+            any_loaded = True
+            if dns_val == "automatic": dns_var.set("On")
+            elif dns_val == "off": dns_var.set("Off")
         
         suspend_dirty_tracking = False
         update_baseline()
         check_dirty_state()
-        set_status("UI reloaded from current macOS Brave defaults.")
+        if not any_loaded:
+            set_status("No Brave settings found – maybe Brave is not installed or has never been configured.")
+            messagebox.showinfo("Pull Settings", "No Brave policy settings were detected.\n\n"
+                                                "This usually means Brave Browser is not installed, or you have never modified its settings via SlimBrave or the command line.")
+        else:
+            set_status("UI reloaded from current macOS Brave defaults.")
 
     def apply_settings():
         ans = messagebox.askyesno("Backup Settings", "Would you like to export your current Brave policies to a .plist file on your Desktop before applying changes? (Recommended)")
@@ -598,7 +617,7 @@ def main():
                 check_dirty_state()
                 set_status("Settings imported. Pending save.")
 
-    # --- BOTTOM OVERLAY (buttons + status) always visible ---
+    # --- BOTTOM OVERLAY (always visible) ---
     bottom_bar = tk.Frame(root, bg="#2d2d2d", height=70)
     bottom_bar.pack(side="bottom", fill="x")
     bottom_bar.pack_propagate(False)
