@@ -1,12 +1,3 @@
-I've got you covered. Error 3840 is infamous on macOS—it means "Unexpected Character," and it happens because of a quirk in how macOS handles `.plist` files.
-
-When your previous script created the backup using `defaults read > backup.plist`, it exported the file in an archaic Apple format called NeXTSTEP. When `defaults import` tries to read that format back in, it chokes and throws Error 3840. The fix is to change the backup command to `defaults export`, which creates a perfectly formatted, standard XML file that macOS can read flawlessly.
-
-As for the **Reset All Settings** button: I have completely rewritten it. Instead of blindly nuking the entire `com.brave.Browser` domain (which macOS hates and causes crashes), it now acts as a **Surgical Repair**. It actively loops through every single policy SlimBrave knows about and deletes *only* those specific keys. Your standard macOS window layouts and personal Brave data stay untouched, but SlimBrave's footprint is completely erased.
-
-Here is the fully patched, complete `v1.0.9` script. You can replace your entire current script with this:
-
-```python
 #!/usr/bin/env python3
 # Slimbrave - Revived - v1.0.9 (macOS Edition)
 # Includes Strict Chromium Booleans, Safe UI Parsing, XML Plist Export/Import, and Surgical Repair Reset.
@@ -931,5 +922,3 @@ def main():
 if __name__ == "__main__":
     dependency_setup()
     main()
-
-```
