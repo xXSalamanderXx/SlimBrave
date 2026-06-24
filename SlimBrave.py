@@ -186,6 +186,7 @@ def main():
 
     # Check if Pillow is available (optional)
     HAS_PIL = False
+    icon_imgs = None
     try:
         from PIL import Image, ImageTk
         HAS_PIL = True
@@ -221,21 +222,28 @@ def main():
             with urllib.request.urlopen(url) as response:
                 image_data = response.read()
             pil_image = Image.open(io.BytesIO(image_data))
-            pil_image = pil_image.resize((64, 64), Image.Resampling.LANCZOS)
-            icon_img = ImageTk.PhotoImage(pil_image)
-            root.iconphoto(False, icon_img)
+            # Window icon (64x64)
+            window_icon = pil_image.resize((64, 64), Image.Resampling.LANCZOS)
+            icon_img_window = ImageTk.PhotoImage(window_icon)
+            root.iconphoto(False, icon_img_window)
+            # Top‑bar icon (32x32)
+            topbar_icon = pil_image.resize((32, 32), Image.Resampling.LANCZOS)
+            icon_img_topbar = ImageTk.PhotoImage(topbar_icon)
+            icon_imgs = (icon_img_window, icon_img_topbar)
             write_log("Lion icon loaded successfully (Pillow).")
         except Exception as e:
             write_log(f"Failed to load lion icon with Pillow: {e}. Using fallback transparent icon.")
             transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
             icon_img = tk.PhotoImage(master=root, data=base64.b64decode(transparent_gif))
             root.iconphoto(False, icon_img)
+            icon_imgs = None
     else:
         # Pillow not installed – use transparent GIF
         write_log("Pillow not installed. Using transparent icon.")
         transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
         icon_img = tk.PhotoImage(master=root, data=base64.b64decode(transparent_gif))
         root.iconphoto(False, icon_img)
+        icon_imgs = None
 
     # --- Tooltip with 1-second hover delay, no flicker ---
     class ToolTip:
@@ -487,57 +495,63 @@ def main():
     container.grid_rowconfigure(1, weight=1)
     container.grid_columnconfigure(0, weight=1)
 
-    # TOP BAR – increased bottom padding (now 15px gap)
+    # --- TOP BAR – restructured for icon on the right ---
     top_frame = tk.Frame(container, bg="#191919")
     top_frame.grid(row=0, column=0, sticky="ew", padx=15, pady=(15, 15))
     inner_top = tk.Frame(top_frame, bg="#191919")
     inner_top.pack(fill="x")
 
-    tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
+    # Left side: "Quick Toggles:" + preset buttons
+    left_frame = tk.Frame(inner_top, bg="#191919")
+    left_frame.pack(side="left", fill="x", expand=True)
 
-    # Preset buttons (ttk with Orange.TButton style)
-    btn_priv = ttk.Button(inner_top, text="High Privacy + Moderate Security", style="Orange.TButton",
+    tk.Label(left_frame, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
+
+    btn_priv = ttk.Button(left_frame, text="High Privacy + Moderate Security", style="Orange.TButton",
                           command=lambda: apply_preset("privacy"))
     btn_priv.pack(side="left", padx=10)
     create_tooltip(btn_priv, "Applies the recommended preset for High Privacy and Moderate Security.")
 
-    btn_sec = ttk.Button(inner_top, text="High Security + Moderate Privacy", style="Orange.TButton",
+    btn_sec = ttk.Button(left_frame, text="High Security + Moderate Privacy", style="Orange.TButton",
                          command=lambda: apply_preset("security"))
     btn_sec.pack(side="left", padx=10)
     create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
 
-    save_status_var = tk.StringVar(value="Changes Applied ✔")
-    save_status_label = tk.Label(inner_top, textvariable=save_status_var, bg="#191919",
-                                 fg="#90EE90", font=("sans-serif", 10, "bold"))
-    save_status_label.pack(side="right", padx=(50, 0))
+    # Right side: status label + (optional) icon
+    right_frame = tk.Frame(inner_top, bg="#191919")
+    right_frame.pack(side="right", fill="x")
 
-    # --- FIXED ScrollableFrame with root‑level binding for full‑width scrolling ---
+    save_status_var = tk.StringVar(value="Changes Applied ✔")
+    save_status_label = tk.Label(right_frame, textvariable=save_status_var, bg="#191919",
+                                 fg="#90EE90", font=("sans-serif", 10, "bold"))
+    save_status_label.pack(side="left", padx=(0, 10))
+
+    # Add icon if available
+    if HAS_PIL and icon_imgs is not None:
+        icon_label = tk.Label(right_frame, image=icon_imgs[1], bg="#191919")
+        icon_label.pack(side="left", padx=(0, 5))
+        # Keep a reference to avoid garbage collection
+        right_frame.icon_ref = icon_imgs[1]
+
+    # --- ScrollableFrame (unchanged) ---
     class ScrollableFrame(tk.Frame):
         def __init__(self, parent, bg, **kwargs):
             super().__init__(parent, bg=bg, **kwargs)
 
-            # Canvas and scrollbar
             self.canvas = tk.Canvas(self, bg=bg, highlightthickness=0, bd=0)
             self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview,
                                            style="Dark.Vertical.TScrollbar")
             self.inner_frame = tk.Frame(self.canvas, bg=bg)
 
-            # Connect canvas to scrollbar
             self.canvas.configure(yscrollcommand=self.scrollbar.set)
-
-            # Put the inner frame onto the canvas
             self.canvas_window = self.canvas.create_window((0, 0), window=self.inner_frame, anchor="nw")
 
-            # Update scrollregion when inner frame changes size
             self.inner_frame.bind("<Configure>", self._on_inner_configure)
-            # Make inner frame fill canvas width
             self.canvas.bind("<Configure>", self._on_canvas_configure)
 
-            # Layout
             self.scrollbar.pack(side="right", fill="y")
             self.canvas.pack(side="left", fill="both", expand=True)
 
-            # Recursively bind mousewheel events to all children (fallback)
             self._bind_mousewheel(self.canvas)
             self._bind_mousewheel(self.inner_frame)
 
@@ -548,9 +562,7 @@ def main():
             self.canvas.itemconfig(self.canvas_window, width=event.width)
 
         def _bind_mousewheel(self, widget):
-            """Recursively bind scroll events to widget and all its children."""
             def on_mousewheel(event):
-                # Determine scroll amount
                 if event.num == 4:
                     delta = -1
                 elif event.num == 5:
@@ -565,14 +577,12 @@ def main():
                 self._bind_mousewheel(child)
 
         def bind_children(self):
-            """Bind scroll events to all children of inner_frame."""
             self._bind_mousewheel(self.inner_frame)
 
         def scroll(self, delta):
-            """Public method for root‑level binding to scroll this frame."""
             self.canvas.yview_scroll(int(-delta), "units")
 
-    # --- Main content columns ---
+    # --- Main content columns (unchanged) ---
     main_frame = tk.Frame(container, bg="#191919")
     main_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=(0, 5))
     main_frame.grid_columnconfigure(0, weight=1)
@@ -594,7 +604,6 @@ def main():
     right_panel = tk.Frame(right_scroll.inner_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
     right_panel.pack(fill="both", expand=True)
 
-    # --- Populate panels (unchanged) ---
     def populate_checkboxes(parent, title, feature_list):
         tk.Label(parent, text=title, font=("sans-serif", 11, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(8, 4), padx=12)
         for feat in feature_list:
@@ -651,21 +660,17 @@ def main():
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
 
-    # Bind scroll events to all widgets inside scrollable frames
     left_scroll.bind_children()
     mid_scroll.bind_children()
     right_scroll.bind_children()
 
-    # --- **CRITICAL: Root‑level mouse‑wheel binding for full‑column scrolling** ---
+    # --- Root‑level mouse‑wheel binding (unchanged) ---
     def on_root_mousewheel(event):
-        # Find the widget under the cursor
         widget = root.winfo_containing(event.x_root, event.y_root)
         if not widget:
             return
-        # Walk up the parent chain to find a ScrollableFrame
         while widget:
             if isinstance(widget, ScrollableFrame):
-                # Determine scroll delta
                 if event.num == 4:
                     delta = -1
                 elif event.num == 5:
@@ -676,7 +681,6 @@ def main():
                 return
             widget = widget.master
 
-    # Bind to root for all three event types
     for ev in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
         root.bind(ev, on_root_mousewheel)
 
@@ -865,16 +869,13 @@ def main():
         dialog.geometry(f"+{x}+{y}")
         dialog.wait_window()
 
-    # --- IMPLEMENTED PRESETS (ported from Windows script) ---
     def apply_preset(preset_type):
         global suspend_dirty_tracking
         suspend_dirty_tracking = True
 
-        # First, uncheck all checkboxes
         for var in all_feature_vars.values():
             var.set(0)
 
-        # Set permissions to default (Block for most, with exceptions)
         for perm in permission_settings:
             name = perm["Name"]
             if name == "JavaScript":
@@ -884,14 +885,12 @@ def main():
             elif name == "Images":
                 all_perm_vars[perm["Key"]].set("Not Set")
             else:
-                # For all others, try to set to Block if available
                 if "Block" in perm["Options"]:
                     all_perm_vars[perm["Key"]].set("Block")
                 else:
                     all_perm_vars[perm["Key"]].set("Not Set")
 
         if preset_type == "privacy":
-            # Privacy preset: tick these features
             privacy_keys = [
                 "MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled",
                 "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled",
@@ -915,7 +914,6 @@ def main():
             set_status("Loaded: High Privacy + Moderate Security preset.")
 
         elif preset_type == "security":
-            # Security preset: tick these features
             security_keys = [
                 "MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled",
                 "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled",
@@ -939,7 +937,7 @@ def main():
         suspend_dirty_tracking = False
         check_dirty_state()
 
-    # --- BOTTOM BAR (ttk buttons with custom styles) ---
+    # --- BOTTOM BAR (unchanged) ---
     bottom_bar = tk.Frame(root, bg="#2d2d2d", height=70)
     bottom_bar.grid(row=1, column=0, sticky="ew")
     bottom_bar.grid_propagate(False)
@@ -958,7 +956,6 @@ def main():
                             font=("courier", 10), anchor="w", padx=10)
     status_label.pack(side="bottom", fill="x")
 
-    # --- Startup ---
     root.after(100, reload_ui_from_registry)
     root.mainloop()
 
