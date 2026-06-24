@@ -164,12 +164,17 @@ def main():
 
     write_log("SlimBrave macOS UI Initializing...")
 
-    # --- Transparent icon for the root window (removes Python rocket) ---
-    # 1x1 transparent GIF (base64)
-    transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-    icon_img = tk.PhotoImage(data=base64.b64decode(transparent_gif))
+    # Create root window FIRST
     root = tk.Tk()
-    root.iconphoto(False, icon_img)   # set transparent icon
+    root.title("SlimBrave - Revived v1.0.9 (macOS)")
+    root.geometry("1040x550")
+    root.minsize(900, 400)
+    root.configure(bg="#191919")
+
+    # Transparent icon (removes Python rocket)
+    transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+    icon_img = tk.PhotoImage(master=root, data=base64.b64decode(transparent_gif))
+    root.iconphoto(False, icon_img)
 
     # --- Tooltip with 1-second hover delay, no flicker ---
     class ToolTip:
@@ -184,7 +189,7 @@ def main():
         def on_enter(self, event=None):
             if self.show_id:
                 self.widget.after_cancel(self.show_id)
-            self.show_id = self.widget.after(1000, self.show)   # 1 second delay
+            self.show_id = self.widget.after(1000, self.show)
 
         def on_leave(self, event=None):
             if self.show_id:
@@ -214,7 +219,7 @@ def main():
     def create_tooltip(widget, text):
         ToolTip(widget, text)
 
-    # --- Feature Dictionaries (unchanged) ---
+    # --- Feature Dictionaries (unchanged for brevity) ---
     telemetry_features = [
         {"Name": "Disable Metrics Reporting", "Key": "MetricsReportingEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops Brave from sending anonymous usage and crash reports.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Safe Browsing Reporting", "Key": "SafeBrowsingExtendedReportingEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops Brave from sending extended Safe Browsing data back to servers.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
@@ -289,24 +294,16 @@ def main():
     ]
 
     # --- UI Setup & Global State ---
-    root.title("SlimBrave - Revived v1.0.9 (macOS)")
-    root.geometry("1040x550")
-    root.minsize(900, 400)   # allow smaller window, bottom bar always visible
-    root.configure(bg="#191919")
-
     style = ttk.Style()
     style.theme_use('clam')
 
-    # Checkbutton style
     style.configure("TCheckbutton", background="#232323", foreground="white", font=("sans-serif", 9))
     style.map("TCheckbutton", background=[('active', '#232323')])
 
-    # Darker dropdown (Combobox) style
     style.configure("Dark.TCombobox",
                     fieldbackground="#1a1a1a", background="#1a1a1a", foreground="white",
                     arrowcolor="white", selectbackground="#333333", selectforeground="white")
 
-    # Preset button style (orange, rounded corners via border? we'll use raised ridge)
     style.configure("Orange.TButton",
                     background="#E65100", foreground="white", font=("sans-serif", 10, "bold"),
                     borderwidth=2, relief="raised")
@@ -314,7 +311,6 @@ def main():
               background=[('active', '#BF360C')],
               foreground=[('active', 'white')])
 
-    # Bottom action button styles (coloured, white bold text)
     style.configure("Import.TButton",
                     background="#1976D2", foreground="white", font=("sans-serif", 9, "bold"),
                     borderwidth=2, relief="raised")
@@ -389,74 +385,37 @@ def main():
         except Exception as e:
             write_log(f"Failed to save state baseline: {e}")
 
-    # --- Layout Construction (using grid for permanent bottom bar) ---
-    root.grid_rowconfigure(0, weight=1)   # main area expands
-    root.grid_rowconfigure(1, weight=0)   # bottom bar fixed
+    # --- Layout Construction ---
+    root.grid_rowconfigure(0, weight=1)
+    root.grid_rowconfigure(1, weight=0)
     root.grid_columnconfigure(0, weight=1)
 
-    # TOP BAR (presets)
-    top_frame = tk.Frame(root, bg="#191919")
-    top_frame.grid(row=0, column=0, sticky="nsew", padx=15, pady=(15, 0))
-    top_frame.grid_rowconfigure(0, weight=0)   # top frame inside row 0
-    top_frame.grid_columnconfigure(0, weight=1)
-
-    inner_top = tk.Frame(top_frame, bg="#191919")
-    inner_top.grid(row=0, column=0, sticky="ew")
-    inner_top.grid_columnconfigure(1, weight=1)
-
-    tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").grid(row=0, column=0, padx=(0, 10), sticky="w")
-
-    btn_priv = ttk.Button(inner_top, text="High Privacy + Moderate Security", style="Orange.TButton",
-                          command=lambda: apply_preset("privacy"))
-    btn_priv.grid(row=0, column=1, padx=10, sticky="w")
-    create_tooltip(btn_priv, "Applies the recommended preset for High Privacy and Moderate Security.")
-
-    btn_sec = ttk.Button(inner_top, text="High Security + Moderate Privacy", style="Orange.TButton",
-                         command=lambda: apply_preset("security"))
-    btn_sec.grid(row=0, column=2, padx=10, sticky="w")
-    create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
-
-    save_status_var = tk.StringVar(value="Changes Applied ✔")
-    save_status_label = tk.Label(inner_top, textvariable=save_status_var, bg="#191919",
-                                 fg="#90EE90", font=("sans-serif", 10, "bold"))
-    save_status_label.grid(row=0, column=3, padx=(50, 0), sticky="e")
-
-    # MAIN CONTENT (three panels)
-    main_frame = tk.Frame(root, bg="#191919")
-    main_frame.grid(row=0, column=0, sticky="nsew", padx=15, pady=(5, 5), in_=root)
-    # we need to pack the main_frame inside the top_frame's row? Actually we want top_frame and main_frame inside row 0 of root. We'll use a sub-frame.
-    # Instead, we can place top_frame and main_frame inside a container frame that occupies root row 0.
-    # Let's create a container for row 0 that holds both top_frame and main_frame.
-    # We'll adjust: root grid row 0 will contain a container frame. Inside it, we pack top_frame and main_frame vertically.
     container = tk.Frame(root, bg="#191919")
     container.grid(row=0, column=0, sticky="nsew")
-    container.grid_rowconfigure(1, weight=1)  # main area expands
+    container.grid_rowconfigure(1, weight=1)
     container.grid_columnconfigure(0, weight=1)
 
-    # Move top_frame inside container
     top_frame = tk.Frame(container, bg="#191919")
     top_frame.grid(row=0, column=0, sticky="ew", padx=15, pady=(15, 0))
-    # ... rebuild top_frame inside container using grid as before (reuse variables)
-    # I'll reconstruct top_frame inside container now.
-
-    # We'll redefine top_frame inside container:
     inner_top = tk.Frame(top_frame, bg="#191919")
     inner_top.pack(fill="x")
     tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
+
     btn_priv = ttk.Button(inner_top, text="High Privacy + Moderate Security", style="Orange.TButton",
                           command=lambda: apply_preset("privacy"))
     btn_priv.pack(side="left", padx=10)
     create_tooltip(btn_priv, "Applies the recommended preset for High Privacy and Moderate Security.")
+
     btn_sec = ttk.Button(inner_top, text="High Security + Moderate Privacy", style="Orange.TButton",
                          command=lambda: apply_preset("security"))
     btn_sec.pack(side="left", padx=10)
     create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
+
     save_status_var = tk.StringVar(value="Changes Applied ✔")
     save_status_label = tk.Label(top_frame, textvariable=save_status_var, bg="#191919",
                                  fg="#90EE90", font=("sans-serif", 10, "bold"))
     save_status_label.pack(side="right", padx=30)
 
-    # Main panels inside container
     main_frame = tk.Frame(container, bg="#191919")
     main_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=(0, 5))
     main_frame.grid_rowconfigure(0, weight=1)
@@ -528,7 +487,7 @@ def main():
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
 
-    # --- Backend Communication (unchanged) ---
+    # --- Backend Communication ---
     def run_cmd(cmd):
         return subprocess.run(cmd, capture_output=True, text=True)
 
@@ -597,7 +556,6 @@ def main():
         check_dirty_state()
         if not any_loaded:
             set_status("No Brave settings found – maybe Brave is not installed or has never been configured.")
-            # Show custom dialog with no icon
             show_custom_info("Pull Settings", "No Brave policy settings were detected.\n\n"
                                                "This usually means Brave Browser is not installed, or you have never modified its settings via SlimBrave or the command line.")
         else:
@@ -699,18 +657,15 @@ def main():
                 check_dirty_state()
                 set_status("Settings imported. Pending save.")
 
-    # --- Custom no-icon info dialog ---
     def show_custom_info(title, message):
         dialog = tk.Toplevel(root)
         dialog.title(title)
         dialog.transient(root)
         dialog.grab_set()
-        # Use a transparent icon for this dialog as well
         dialog.iconphoto(False, icon_img)
         tk.Label(dialog, text=message, font=("sans-serif", 10), padx=20, pady=20).pack()
         tk.Button(dialog, text="OK", command=dialog.destroy, width=10).pack(pady=10)
         dialog.update_idletasks()
-        # Center on parent
         x = root.winfo_rootx() + (root.winfo_width() // 2) - (dialog.winfo_width() // 2)
         y = root.winfo_rooty() + (root.winfo_height() // 2) - (dialog.winfo_height() // 2)
         dialog.geometry(f"+{x}+{y}")
@@ -724,7 +679,6 @@ def main():
     btn_frame = tk.Frame(bottom_bar, bg="#2d2d2d")
     btn_frame.pack(side="top", fill="x", pady=5)
 
-    # Colored buttons using ttk styles
     ttk.Button(btn_frame, text="Export Settings", style="Export.TButton", command=export_settings).pack(side="left", expand=True, padx=5)
     ttk.Button(btn_frame, text="Import Settings", style="Import.TButton", command=import_settings).pack(side="left", expand=True, padx=5)
     ttk.Button(btn_frame, text="Pull Settings from Brave", style="Pull.TButton", command=reload_ui_from_registry).pack(side="left", expand=True, padx=5)
