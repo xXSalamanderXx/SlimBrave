@@ -6,6 +6,8 @@ import sys
 import os
 import shutil
 import time
+import io
+import urllib.request
 
 # ----------------------------------------------------------------------
 # 1. Dependency checks and self‑repair (runs before anything else)
@@ -149,6 +151,9 @@ def main():
     import datetime
     import base64
     import sys
+    from PIL import Image, ImageTk
+    import urllib.request
+    import io
 
     # --- macOS Configuration & Paths ---
     DOMAIN = "com.brave.Browser"
@@ -172,10 +177,26 @@ def main():
     root.minsize(900, 400)
     root.configure(bg="#191919")
 
-    # Transparent icon (removes Python rocket)
-    transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-    icon_img = tk.PhotoImage(master=root, data=base64.b64decode(transparent_gif))
-    root.iconphoto(False, icon_img)
+    # --- Load lion icon from web ---
+    try:
+        # Fetch the WebP image from the URL
+        url = "https://www.pngall.com/wp-content/uploads/13/Lions-Logo-PNG-Image-thumb.webp"
+        with urllib.request.urlopen(url) as response:
+            image_data = response.read()
+        
+        # Use PIL to open the WebP and convert to PhotoImage
+        pil_image = Image.open(io.BytesIO(image_data))
+        # Resize to a reasonable icon size (e.g., 64x64)
+        pil_image = pil_image.resize((64, 64), Image.Resampling.LANCZOS)
+        icon_img = ImageTk.PhotoImage(pil_image)
+        root.iconphoto(False, icon_img)
+        write_log("Lion icon loaded successfully from web.")
+    except Exception as e:
+        # Fallback to transparent GIF if loading fails
+        write_log(f"Failed to load lion icon from web: {e}. Using fallback transparent icon.")
+        transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        icon_img = tk.PhotoImage(master=root, data=base64.b64decode(transparent_gif))
+        root.iconphoto(False, icon_img)
 
     # --- Tooltip with 1-second hover delay, no flicker ---
     class ToolTip:
@@ -318,6 +339,57 @@ def main():
     style.map("Dark.Vertical.TScrollbar",
               background=[('active', '#555555')])
 
+    # --- BUTTON STYLES (square, no border, taller via padding) ---
+    button_padding = (15, 8)  # horizontal, vertical padding to make buttons taller
+    style.configure("Orange.TButton",
+                    background="#E65100", foreground="white",
+                    font=("sans-serif", 10, "bold"),
+                    borderwidth=0, relief="flat",
+                    padding=button_padding)
+    style.map("Orange.TButton",
+              background=[('active', '#BF360C')],
+              foreground=[('active', 'white')])
+
+    style.configure("Export.TButton",
+                    background="#0D47A1", foreground="white",
+                    font=("sans-serif", 9, "bold"),
+                    borderwidth=0, relief="flat",
+                    padding=button_padding)
+    style.map("Export.TButton",
+              background=[('active', '#0A3D91')])
+
+    style.configure("Import.TButton",
+                    background="#1976D2", foreground="white",
+                    font=("sans-serif", 9, "bold"),
+                    borderwidth=0, relief="flat",
+                    padding=button_padding)
+    style.map("Import.TButton",
+              background=[('active', '#1565C0')])
+
+    style.configure("Pull.TButton",
+                    background="#F57F17", foreground="white",
+                    font=("sans-serif", 9, "bold"),
+                    borderwidth=0, relief="flat",
+                    padding=button_padding)
+    style.map("Pull.TButton",
+              background=[('active', '#E65100')])
+
+    style.configure("Apply.TButton",
+                    background="#2E7D32", foreground="white",
+                    font=("sans-serif", 9, "bold"),
+                    borderwidth=0, relief="flat",
+                    padding=button_padding)
+    style.map("Apply.TButton",
+              background=[('active', '#1B5E20')])
+
+    style.configure("Reset.TButton",
+                    background="#C62828", foreground="white",
+                    font=("sans-serif", 9, "bold"),
+                    borderwidth=0, relief="flat",
+                    padding=button_padding)
+    style.map("Reset.TButton",
+              background=[('active', '#B71C1C')])
+
     global_is_dirty = False
     suspend_dirty_tracking = False
     baseline_state = ""
@@ -384,18 +456,14 @@ def main():
 
     tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
 
-    # --- Use tk.Button instead of ttk.Button for clean square corners ---
-    btn_priv = tk.Button(inner_top, text="High Privacy + Moderate Security",
-                         bg="#E65100", fg="white", font=("sans-serif", 10, "bold"),
-                         bd=0, highlightthickness=0, relief="flat",
-                         command=lambda: apply_preset("privacy"))
+    # Preset buttons (ttk with Orange.TButton style)
+    btn_priv = ttk.Button(inner_top, text="High Privacy + Moderate Security", style="Orange.TButton",
+                          command=lambda: apply_preset("privacy"))
     btn_priv.pack(side="left", padx=10)
     create_tooltip(btn_priv, "Applies the recommended preset for High Privacy and Moderate Security.")
 
-    btn_sec = tk.Button(inner_top, text="High Security + Moderate Privacy",
-                        bg="#E65100", fg="white", font=("sans-serif", 10, "bold"),
-                        bd=0, highlightthickness=0, relief="flat",
-                        command=lambda: apply_preset("security"))
+    btn_sec = ttk.Button(inner_top, text="High Security + Moderate Privacy", style="Orange.TButton",
+                         command=lambda: apply_preset("security"))
     btn_sec.pack(side="left", padx=10)
     create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
 
@@ -832,7 +900,7 @@ def main():
         suspend_dirty_tracking = False
         check_dirty_state()
 
-    # --- BOTTOM BAR - replace ttk buttons with tk buttons for square corners ---
+    # --- BOTTOM BAR (ttk buttons with custom styles) ---
     bottom_bar = tk.Frame(root, bg="#2d2d2d", height=70)
     bottom_bar.grid(row=1, column=0, sticky="ew")
     bottom_bar.grid_propagate(False)
@@ -840,26 +908,12 @@ def main():
     btn_frame = tk.Frame(bottom_bar, bg="#2d2d2d")
     btn_frame.pack(side="top", fill="x", pady=5)
 
-    # Define helper to create square buttons
-    def make_square_button(parent, text, bg_color, command, tooltip_text):
-        btn = tk.Button(parent, text=text, bg=bg_color, fg="white",
-                        font=("sans-serif", 9, "bold"),
-                        bd=0, highlightthickness=0, relief="flat",
-                        command=command)
-        btn.pack(side="left", expand=True, padx=5, fill="x")
-        create_tooltip(btn, tooltip_text)
-        return btn
-
-    make_square_button(btn_frame, "Export Settings", "#0D47A1", export_settings,
-                       "Export the current UI configuration to a JSON file.")
-    make_square_button(btn_frame, "Import Settings", "#1976D2", import_settings,
-                       "Import a JSON configuration file into the UI.")
-    make_square_button(btn_frame, "Pull Settings from Brave", "#F57F17", reload_ui_from_registry,
-                       "Pull / Reload the current Brave settings from defaults into the SlimBrave UI.")
-    make_square_button(btn_frame, "Apply Settings", "#2E7D32", apply_settings,
-                       "Apply the current UI configuration directly to macOS defaults.")
-    make_square_button(btn_frame, "Reset All Settings", "#C62828", reset_settings,
-                       "Erase all Brave policy settings and restore to default.")
+    # Use ttk buttons with the styles defined above
+    ttk.Button(btn_frame, text="Export Settings", style="Export.TButton", command=export_settings).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Import Settings", style="Import.TButton", command=import_settings).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Pull Settings from Brave", style="Pull.TButton", command=reload_ui_from_registry).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Apply Settings", style="Apply.TButton", command=apply_settings).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Reset All Settings", style="Reset.TButton", command=reset_settings).pack(side="left", expand=True, padx=5)
 
     status_var = tk.StringVar(value="Ready. Hover over options for details.")
     status_label = tk.Label(bottom_bar, textvariable=status_var, bg="#2d2d2d", fg="#aaaaaa",
