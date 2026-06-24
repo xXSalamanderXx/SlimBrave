@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Slimbrave - Revived - v1.0.9 (macOS Edition)
+# Slimbrave - Revived - v1.0.9 (macOS Edition) – robust reset & import plist
 
 import subprocess
 import sys
@@ -128,7 +128,6 @@ def dependency_setup():
 
     check_homebrew()
     check_python_and_tk()
-    # Pillow is NOT checked – it's not needed
     run_cleanup()
 
     print_step("All required dependencies OK. Launching SlimBrave interface…")
@@ -172,7 +171,7 @@ def main():
     icon_img = tk.PhotoImage(master=root, data=base64.b64decode(transparent_gif))
     root.iconphoto(False, icon_img)
 
-    # --- Tooltip (unchanged) ---
+    # --- Tooltip ---
     class ToolTip:
         def __init__(self, widget, text):
             self.widget = widget
@@ -215,13 +214,14 @@ def main():
     def create_tooltip(widget, text):
         ToolTip(widget, text)
 
-    # --- Feature Dictionaries (unchanged) ---
+    # --- Feature Dictionaries (FIXED: P3A and Talk are now -int) ---
     telemetry_features = [
         {"Name": "Disable Metrics Reporting", "Key": "MetricsReportingEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops Brave from sending anonymous usage and crash reports.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Safe Browsing Reporting", "Key": "SafeBrowsingExtendedReportingEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops Brave from sending extended Safe Browsing data back to servers.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable URL Data Collection", "Key": "UrlKeyedAnonymizedDataCollectionEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops sending anonymized URLs to help improve the browser.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Feedback Surveys", "Key": "FeedbackSurveysEnabled", "Value": 0, "Type": "-int", "ToolTip": "Disables proactive feedback survey prompts.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
-        {"Name": "Disable P3A Telemetry", "Key": "BraveP3AEnabled", "Value": "Disabled", "Type": "-string", "ToolTip": "Disables Privacy-Preserving Product Analytics completely.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
+        # FIXED: use -int 0 instead of -string "Disabled"
+        {"Name": "Disable P3A Telemetry", "Key": "BraveP3AEnabled", "Value": 0, "Type": "-int", "ToolTip": "Disables Privacy-Preserving Product Analytics completely.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Daily Stats Ping", "Key": "BraveStatsPingEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops the daily active user ping.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Web Discovery", "Key": "BraveWebDiscoveryEnabled", "Value": 0, "Type": "-int", "ToolTip": "Prevents anonymous search/browsing data from being sent to Brave Search.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"}
     ]
@@ -251,7 +251,8 @@ def main():
         {"Name": "Disable Tor", "Key": "TorDisabled", "Value": 1, "Type": "-int", "ToolTip": "Disables built-in Tor window support.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Sync", "Key": "SyncDisabled", "Value": 1, "Type": "-int", "ToolTip": "Disables Brave Sync functionality across devices.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked"},
         {"Name": "Disable Brave News", "Key": "BraveNewsDisabled", "Value": 1, "Type": "-int", "ToolTip": "Removes the Brave News feed bloat from the New Tab page.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
-        {"Name": "Disable Brave Talk", "Key": "BraveTalkDisabled", "Value": "Disabled", "Type": "-string", "ToolTip": "Removes the built-in video calling integration.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
+        # FIXED: BraveTalkDisabled should be -int 1
+        {"Name": "Disable Brave Talk", "Key": "BraveTalkDisabled", "Value": 1, "Type": "-int", "ToolTip": "Removes the built-in video calling integration.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Speedreader", "Key": "BraveSpeedreaderEnabled", "Value": 0, "Type": "-int", "ToolTip": "Completely disables the Speedreader feature, reader mode, and automatic prompts.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Wayback Machine Prompts", "Key": "BraveWaybackMachineEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops Brave from asking to search the Internet Archive when you hit a 404 error.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"}
     ]
@@ -311,7 +312,7 @@ def main():
     style.map("Dark.Vertical.TScrollbar",
               background=[('active', '#555555')])
 
-    # Button styles – square, flat, with padding for height
+    # Button styles
     button_padding = (15, 8)
     style.configure("Orange.TButton",
                     background="#E65100", foreground="white",
@@ -361,6 +362,15 @@ def main():
                     padding=button_padding)
     style.map("Reset.TButton",
               background=[('active', '#B71C1C')])
+
+    # New style for Import Plist button (different shade)
+    style.configure("Plist.TButton",
+                    background="#6A1B9A", foreground="white",
+                    font=("sans-serif", 9, "bold"),
+                    borderwidth=0, relief="flat",
+                    padding=button_padding)
+    style.map("Plist.TButton",
+              background=[('active', '#4A148C')])
 
     global_is_dirty = False
     suspend_dirty_tracking = False
@@ -668,6 +678,96 @@ def main():
         else:
             set_status("UI reloaded from current macOS Brave defaults.")
 
+    # --- FIXED: Reset All Settings – thoroughly removes all traces ---
+    def reset_settings():
+        if messagebox.askyesno("Confirm Reset", "Warning: This will erase ALL Brave policy settings and remove all preference files.\n"
+                                                "Your browser profile (bookmarks, extensions, etc.) will NOT be affected.\n"
+                                                "Continue?"):
+            set_status("Resetting all settings...")
+            try:
+                # 1. Delete defaults domain
+                run_cmd(["defaults", "delete", DOMAIN])
+                write_log("defaults delete executed.")
+
+                # 2. Remove the plist file
+                plist_path = os.path.expanduser(f"~/Library/Preferences/{DOMAIN}.plist")
+                if os.path.exists(plist_path):
+                    os.remove(plist_path)
+                    write_log(f"Removed {plist_path}")
+
+                # 3. Remove managed preferences (if any)
+                managed_path = os.path.expanduser(f"~/Library/Managed Preferences/{DOMAIN}.plist")
+                if os.path.exists(managed_path):
+                    os.remove(managed_path)
+                    write_log(f"Removed {managed_path}")
+
+                # 4. Restart cfprefsd to flush cache
+                run_cmd(["killall", "cfprefsd"])
+                write_log("cfprefsd restarted.")
+
+                # 5. Reload UI
+                reload_ui_from_registry()
+                set_status("All settings reset. UI cleared.")
+                messagebox.showinfo("Reset Successful", "All Brave policies and preference files have been removed.\n"
+                                                        "Brave should now launch normally. You may need to restart it.")
+            except Exception as e:
+                write_log(f"Reset error: {e}")
+                messagebox.showerror("Reset Failed", f"An error occurred during reset:\n{e}")
+
+    # --- Import Plist function ---
+    def import_plist():
+        f = filedialog.askopenfilename(filetypes=[("Property List files", "*.plist"), ("All files", "*.*")])
+        if f:
+            try:
+                # Use defaults import to load the plist
+                result = run_cmd(["defaults", "import", DOMAIN, f])
+                if result.returncode != 0:
+                    raise Exception(result.stderr)
+                write_log(f"Imported plist from {f}")
+                set_status("Plist imported, click Apply to apply changes...")
+                # Reload UI to reflect imported settings
+                reload_ui_from_registry()
+                # Mark as dirty so user can apply (save state)
+                set_dirty_state(True)
+                messagebox.showinfo("Import Successful", "Plist imported successfully.\nClick 'Apply Settings' to save the state in SlimBrave.")
+            except Exception as e:
+                write_log(f"Import plist failed: {e}")
+                messagebox.showerror("Import Failed", f"Failed to import plist:\n{e}")
+
+    # --- Existing export/import functions ---
+    def export_settings():
+        f = filedialog.asksaveasfilename(defaultextension=".json", initialfile="SlimBraveSettings.json")
+        if f:
+            with open(f, "w") as file:
+                json.dump(get_ui_snapshot(), file, indent=4)
+            set_status(f"Settings exported to {f}")
+
+    def import_settings():
+        f = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
+        if f:
+            with open(f, "r") as file:
+                data = json.load(file)
+                global suspend_dirty_tracking
+                suspend_dirty_tracking = True
+
+                for var in all_feature_vars.values(): var.set(0)
+                if "Features" in data:
+                    for key in data["Features"]:
+                        if key in all_feature_vars: all_feature_vars[key].set(1)
+
+                for var in all_perm_vars.values(): var.set("Not Set")
+                if "Permissions" in data:
+                    for k, v in data["Permissions"].items():
+                        if k in all_perm_vars: all_perm_vars[k].set(v)
+
+                if "SafeBrowsing" in data: sb_var.set(data["SafeBrowsing"])
+                if "DnsMode" in data: dns_var.set(data["DnsMode"])
+
+                suspend_dirty_tracking = False
+                check_dirty_state()
+                set_status("Settings imported. Pending save.")
+
+    # --- Apply settings (unchanged) ---
     def apply_settings():
         ans = messagebox.askyesno("Backup Settings", "Would you like to export your current Brave policies to a .plist file on your Desktop before applying changes? (Recommended)")
         if ans:
@@ -725,45 +825,6 @@ def main():
             show_custom_info("SlimBrave", "Settings applied successfully! Open Brave to see changes.")
             set_status("Settings applied successfully.")
 
-    def reset_settings():
-        if messagebox.askyesno("Confirm Reset", "Warning: This will erase ALL Brave policy settings. Continue?"):
-            set_status("Resetting all settings to default...")
-            run_cmd(["defaults", "delete", DOMAIN])
-            reload_ui_from_registry()
-            messagebox.showinfo("Reset Successful", "All Brave policies wiped.")
-
-    def export_settings():
-        f = filedialog.asksaveasfilename(defaultextension=".json", initialfile="SlimBraveSettings.json")
-        if f:
-            with open(f, "w") as file:
-                json.dump(get_ui_snapshot(), file, indent=4)
-            set_status(f"Settings exported to {f}")
-
-    def import_settings():
-        f = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
-        if f:
-            with open(f, "r") as file:
-                data = json.load(file)
-                global suspend_dirty_tracking
-                suspend_dirty_tracking = True
-
-                for var in all_feature_vars.values(): var.set(0)
-                if "Features" in data:
-                    for key in data["Features"]:
-                        if key in all_feature_vars: all_feature_vars[key].set(1)
-
-                for var in all_perm_vars.values(): var.set("Not Set")
-                if "Permissions" in data:
-                    for k, v in data["Permissions"].items():
-                        if k in all_perm_vars: all_perm_vars[k].set(v)
-
-                if "SafeBrowsing" in data: sb_var.set(data["SafeBrowsing"])
-                if "DnsMode" in data: dns_var.set(data["DnsMode"])
-
-                suspend_dirty_tracking = False
-                check_dirty_state()
-                set_status("Settings imported. Pending save.")
-
     def show_custom_info(title, message):
         dialog = tk.Toplevel(root)
         dialog.title(title)
@@ -778,7 +839,7 @@ def main():
         dialog.geometry(f"+{x}+{y}")
         dialog.wait_window()
 
-    # --- Presets ---
+    # --- Presets (unchanged) ---
     def apply_preset(preset_type):
         global suspend_dirty_tracking
         suspend_dirty_tracking = True
@@ -856,10 +917,12 @@ def main():
     btn_frame.pack(side="top", fill="x", pady=5)
 
     ttk.Button(btn_frame, text="Export Settings", style="Export.TButton", command=export_settings).pack(side="left", expand=True, padx=5)
-    ttk.Button(btn_frame, text="Import Settings", style="Import.TButton", command=import_settings).pack(side="left", expand=True, padx=5)
-    ttk.Button(btn_frame, text="Pull Settings from Brave", style="Pull.TButton", command=reload_ui_from_registry).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Import JSON", style="Import.TButton", command=import_settings).pack(side="left", expand=True, padx=5)
+    # New: Import Plist button
+    ttk.Button(btn_frame, text="Import Plist", style="Plist.TButton", command=import_plist).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Pull Settings", style="Pull.TButton", command=reload_ui_from_registry).pack(side="left", expand=True, padx=5)
     ttk.Button(btn_frame, text="Apply Settings", style="Apply.TButton", command=apply_settings).pack(side="left", expand=True, padx=5)
-    ttk.Button(btn_frame, text="Reset All Settings", style="Reset.TButton", command=reset_settings).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Reset All", style="Reset.TButton", command=reset_settings).pack(side="left", expand=True, padx=5)
 
     status_var = tk.StringVar(value="Ready. Hover over options for details.")
     status_label = tk.Label(bottom_bar, textvariable=status_var, bg="#2d2d2d", fg="#aaaaaa",
