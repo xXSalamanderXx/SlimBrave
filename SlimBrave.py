@@ -644,9 +644,9 @@ def main():
         update_baseline()
         check_dirty_state()
         if not any_loaded:
-            set_status("No Brave settings found – maybe Brave is not installed or has never been configured.")
+            set_status("No Brave policy settings found – SlimBrave hasn't been configured on this System before, or Brave isn't installed.")
             show_custom_info("Pull Settings", "No Brave policy settings were detected.\n\n"
-                                              "This usually means Brave Browser is not installed, or you have never modified its settings via SlimBrave or the command line.")
+                                              "This usually means SlimBrave hasn't been configured on this System before, or Brave isn't installed.")
         else:
             set_status("UI reloaded from current macOS Brave defaults.")
 
