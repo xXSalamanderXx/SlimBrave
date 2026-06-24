@@ -126,11 +126,11 @@ def check_pillow():
         print_step("Pillow (PIL) is required for the application icon.")
         if prompt_yes_no("Install Pillow via pip now?"):
             try:
-                subprocess.run([sys.executable, "-m", "pip", "install", "Pillow"], check=True)
+                subprocess.run([sys.executable, "brew", "install", "Pillow"], check=True)
                 print_step("Pillow installed successfully. Relaunching...")
                 os.execv(sys.executable, [sys.executable] + sys.argv)
             except subprocess.CalledProcessError:
-                print_step("Pillow installation failed. Please install it manually: pip install Pillow")
+                print_step("Pillow installation failed. Please install it manually: brew install Pillow")
                 sys.exit(1)
         else:
             print_step("Pillow is required. Exiting.")
