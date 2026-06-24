@@ -121,9 +121,6 @@ def run_cleanup():
     if shutil.which("brew") and BREW_INSTALLED_SOMETHING:
         print_step("Running brew cleanup…")
         subprocess.run(["brew", "cleanup"], check=False)
-    else:
-        # cleanup not needed
-        pass
 
 def dependency_setup():
     if os.environ.get("SLIMBRAVE_DEPENDENCIES_CHECKED") == "1":
@@ -166,16 +163,30 @@ def main():
 
     write_log("SlimBrave macOS UI Initializing...")
 
-    # --- Tooltip Implementation ---
+    # --- Improved Tooltip (no flicker) ---
     class ToolTip:
         def __init__(self, widget, text):
             self.widget = widget
             self.text = text
             self.tooltip_window = None
-            self.widget.bind("<Enter>", self.show)
-            self.widget.bind("<Leave>", self.hide)
+            self.hide_id = None
+            self.widget.bind("<Enter>", self.schedule_show)
+            self.widget.bind("<Leave>", self.schedule_hide)
+
+        def schedule_show(self, event=None):
+            # cancel any pending hide
+            if self.hide_id:
+                self.widget.after_cancel(self.hide_id)
+                self.hide_id = None
+            self.show(event)
+
+        def schedule_hide(self, event=None):
+            # delay hiding – if we enter another widget, show cancels this
+            self.hide_id = self.widget.after(200, self.hide)
 
         def show(self, event=None):
+            if self.tooltip_window:
+                return
             x, y, cx, cy = self.widget.bbox("insert")
             x += self.widget.winfo_rootx() + 25
             y += self.widget.winfo_rooty() + 25
@@ -187,10 +198,11 @@ def main():
                              font=("sans-serif", 10, "normal"), padx=8, pady=6, wraplength=400)
             label.pack(ipadx=1)
 
-        def hide(self, event=None):
+        def hide(self):
             if self.tooltip_window:
                 self.tooltip_window.destroy()
                 self.tooltip_window = None
+            self.hide_id = None
 
     def create_tooltip(widget, text):
         ToolTip(widget, text)
@@ -272,14 +284,14 @@ def main():
     # --- UI Setup & Global State ---
     root = tk.Tk()
     root.title("SlimBrave - Revived v1.0.9 (macOS)")
-    # Smaller 16:9 window: 1040x585
-    root.geometry("1040x585")
-    root.minsize(1040, 585)
+    # Smaller, 16:9 window
+    root.geometry("1040x550")
+    root.minsize(1040, 550)
     root.configure(bg="#191919")
 
     style = ttk.Style()
     style.theme_use('clam')
-    style.configure("TCheckbutton", background="#232323", foreground="white", font=("sans-serif", 10))
+    style.configure("TCheckbutton", background="#232323", foreground="white", font=("sans-serif", 9))
     style.map("TCheckbutton", background=[('active', '#232323')])
     style.configure("TCombobox", fieldbackground="#2d2d2d", background="#2d2d2d", foreground="white")
 
@@ -332,85 +344,58 @@ def main():
             write_log(f"Failed to save state baseline: {e}")
 
     # --- Layout Construction ---
+    # TOP BAR (centred preset buttons)
     top_frame = tk.Frame(root, bg="#191919")
-    top_frame.pack(fill="x", pady=15)   # slightly reduced padding
+    top_frame.pack(fill="x", pady=(15, 5))
 
-    # Center preset buttons
     inner_top = tk.Frame(top_frame, bg="#191919")
     inner_top.pack()
 
     tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
 
-    def apply_preset(preset_type):
-        global suspend_dirty_tracking
-        suspend_dirty_tracking = True
-        
-        for var in all_feature_vars.values(): var.set(0)
-        for var in all_perm_vars.values(): var.set("Not Set")
-        
-        if preset_type == "privacy":
-            keys = ["MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "AutofillAddressEnabled", "AutofillCreditCardEnabled", "PasswordManagerEnabled", "BrowserSignin", "WebRtcIPHandling", "BlockThirdPartyCookies", "EnableDoNotTrack", "IPFSEnabled", "PromptForDownloadLocation", "ClearBrowsingDataOnExitList", "HttpsOnlyMode", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled", "AlwaysOpenPdfExternally", "PromotionsEnabled", "SearchSuggestEnabled", "DefaultBrowserSettingEnabled", "BravePlaylistEnabled"]
-            for k in keys:
-                if k in all_feature_vars: all_feature_vars[k].set(1)
-            
-            for k, var in all_perm_vars.items():
-                if k == "DefaultJavaScriptSetting": var.set("Allow")
-                elif k in ["DefaultVideoCaptureSetting", "DefaultAudioCaptureSetting"]: var.set("Ask")
-                elif k == "DefaultImagesSetting": var.set("Not Set")
-                else: var.set("Block")
-                
-            sb_var.set("Off")
-            dns_var.set("Off")
-            set_status("Loaded: High Privacy + Moderate Security preset.")
-            
-        elif preset_type == "security":
-            keys = ["MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "WebRtcIPHandling", "QuicAllowed", "BlockThirdPartyCookies", "EnableDoNotTrack", "ForceGoogleSafeSearch", "IPFSEnabled", "PromptForDownloadLocation", "HttpsOnlyMode", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "SyncDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BackgroundModeEnabled", "AlwaysOpenPdfExternally", "DeveloperToolsDisabled", "BravePlaylistEnabled"]
-            for k in keys:
-                if k in all_feature_vars: all_feature_vars[k].set(1)
-                
-            for k, var in all_perm_vars.items():
-                if k == "DefaultJavaScriptSetting": var.set("Allow")
-                elif k in ["DefaultWebUsbGuardSetting", "DefaultSerialGuardSetting", "DefaultWebHidGuardSetting", "DefaultFileSystemReadGuardSetting", "DefaultWindowPlacementSetting", "PaymentMethodQueryEnabled"]: var.set("Block")
-                elif k in ["DefaultVideoCaptureSetting", "DefaultAudioCaptureSetting", "DefaultGeolocationSetting", "DefaultClipboardSetting", "DefaultLocalFontsSetting"]: var.set("Ask")
-                else: var.set("Not Set")
-                
-            sb_var.set("On")
-            dns_var.set("On")
-            set_status("Loaded: High Security + Moderate Privacy preset.")
-
-        suspend_dirty_tracking = False
-        check_dirty_state()
-
-    btn_priv = tk.Button(inner_top, text="High Privacy + Moderate Security", bg="#3c3c3c", fg="white", highlightbackground="#191919", command=lambda: apply_preset("privacy"))
+    # Deep orange preset buttons
+    orange_color = "#E65100"
+    btn_priv = tk.Button(inner_top, text="High Privacy + Moderate Security",
+                         bg=orange_color, fg="white", font=("sans-serif", 10, "bold"),
+                         activebackground="#BF360C", activeforeground="white",
+                         relief="flat", bd=0, highlightthickness=0,
+                         command=lambda: apply_preset("privacy"))
     btn_priv.pack(side="left", padx=10)
     create_tooltip(btn_priv, "Applies the recommended preset for High Privacy and Moderate Security.")
 
-    btn_sec = tk.Button(inner_top, text="High Security + Moderate Privacy", bg="#3c3c3c", fg="white", highlightbackground="#191919", command=lambda: apply_preset("security"))
+    btn_sec = tk.Button(inner_top, text="High Security + Moderate Privacy",
+                        bg=orange_color, fg="white", font=("sans-serif", 10, "bold"),
+                        activebackground="#BF360C", activeforeground="white",
+                        relief="flat", bd=0, highlightthickness=0,
+                        command=lambda: apply_preset("security"))
     btn_sec.pack(side="left", padx=10)
     create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
 
+    # Save status label on the right
     save_status_var = tk.StringVar(value="Changes Applied ✔")
-    save_status_label = tk.Label(top_frame, textvariable=save_status_var, bg="#121212", fg="#90EE90", font=("sans-serif", 10, "bold"), width=30)
-    save_status_label.pack(side="right", padx=50)   # reduced padx
+    save_status_label = tk.Label(top_frame, textvariable=save_status_var, bg="#191919",
+                                 fg="#90EE90", font=("sans-serif", 10, "bold"))
+    save_status_label.pack(side="right", padx=30)
 
+    # MAIN CONTENT – three panels
     main_frame = tk.Frame(root, bg="#191919")
-    main_frame.pack(fill="both", expand=True, padx=15, pady=(0, 10))
+    main_frame.pack(fill="both", expand=True, padx=15, pady=(0, 5))
 
     left_panel = tk.Frame(main_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
-    left_panel.pack(side="left", fill="both", expand=True, padx=5)
+    left_panel.pack(side="left", fill="both", expand=True, padx=3)
     mid_panel = tk.Frame(main_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
-    mid_panel.pack(side="left", fill="both", expand=True, padx=5)
+    mid_panel.pack(side="left", fill="both", expand=True, padx=3)
     right_panel = tk.Frame(main_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
-    right_panel.pack(side="left", fill="both", expand=True, padx=5)
+    right_panel.pack(side="left", fill="both", expand=True, padx=3)
 
     def populate_checkboxes(parent, title, feature_list):
-        tk.Label(parent, text=title, font=("sans-serif", 11, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(10, 5), padx=15)
+        tk.Label(parent, text=title, font=("sans-serif", 11, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(8, 4), padx=12)
         for feat in feature_list:
             var = tk.IntVar()
             all_feature_vars[feat["Key"]] = var
             var.trace_add("write", check_dirty_state)
             cb = ttk.Checkbutton(parent, text=feat["Name"], variable=var)
-            cb.pack(anchor="w", padx=20, pady=1)
+            cb.pack(anchor="w", padx=16, pady=1)
             create_tooltip(cb, feat["ToolTip"])
 
     populate_checkboxes(left_panel, "Telemetry and Reporting", telemetry_features)
@@ -418,11 +403,11 @@ def main():
     populate_checkboxes(mid_panel, "Brave Features", brave_features)
     populate_checkboxes(mid_panel, "Performance and Bloat", perf_features)
 
-    tk.Label(right_panel, text="Site Permissions", font=("sans-serif", 11, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(10, 10), padx=15)
+    tk.Label(right_panel, text="Site Permissions", font=("sans-serif", 11, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(8, 6), padx=12)
     for perm in permission_settings:
         f = tk.Frame(right_panel, bg="#232323")
-        f.pack(fill="x", padx=20, pady=2)
-        lbl = tk.Label(f, text=perm["Name"], fg="white", bg="#232323", width=18, anchor="w")
+        f.pack(fill="x", padx=16, pady=1)
+        lbl = tk.Label(f, text=perm["Name"], fg="white", bg="#232323", width=16, anchor="w", font=("sans-serif", 9))
         lbl.pack(side="left")
         create_tooltip(lbl, perm["ToolTip"])
         
@@ -433,31 +418,60 @@ def main():
         cb.pack(side="right")
         create_tooltip(cb, perm["ToolTip"])
 
-    tk.Frame(right_panel, bg="#232323", height=10).pack()
+    # Safe Browsing & DNS (inside right panel)
+    spacer = tk.Frame(right_panel, bg="#232323", height=8)
+    spacer.pack(fill="x")
 
     sb_f = tk.Frame(right_panel, bg="#232323")
-    sb_f.pack(fill="x", padx=20, pady=6)
-    sb_lbl = tk.Label(sb_f, text="Safe Browsing:", fg="white", bg="#232323", width=13, anchor="w")
+    sb_f.pack(fill="x", padx=16, pady=2)
+    sb_lbl = tk.Label(sb_f, text="Safe Browsing:", fg="white", bg="#232323", width=12, anchor="w", font=("sans-serif", 9))
     sb_lbl.pack(side="left")
     sb_var = tk.StringVar()
     sb_var.trace_add("write", check_dirty_state)
     sb_cb = ttk.Combobox(sb_f, textvariable=sb_var, values=["On", "Off"], state="readonly", width=10)
-    sb_cb.pack(side="left", padx=10)
+    sb_cb.pack(side="left", padx=8)
     sb_tt = "On = Standard Safe Browsing. Off = Disabled entirely.\n\nSuggested Settings for Privacy: Off | Security: On"
     create_tooltip(sb_lbl, sb_tt)
     create_tooltip(sb_cb, sb_tt)
 
     dns_f = tk.Frame(right_panel, bg="#232323")
-    dns_f.pack(fill="x", padx=20, pady=6)
-    dns_lbl = tk.Label(dns_f, text="DNS Over HTTPS:", fg="white", bg="#232323", width=13, anchor="w")
+    dns_f.pack(fill="x", padx=16, pady=2)
+    dns_lbl = tk.Label(dns_f, text="DNS Over HTTPS:", fg="white", bg="#232323", width=12, anchor="w", font=("sans-serif", 9))
     dns_lbl.pack(side="left")
     dns_var = tk.StringVar()
     dns_var.trace_add("write", check_dirty_state)
     dns_cb = ttk.Combobox(dns_f, textvariable=dns_var, values=["On", "Off"], state="readonly", width=10)
-    dns_cb.pack(side="left", padx=10)
+    dns_cb.pack(side="left", padx=8)
     dns_tt = "Forces encrypted DNS lookups.\n\nSuggested Settings for Privacy: Off | Security: On"
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
+
+    # --- BOTTOM OVERLAY (buttons + status) always visible ---
+    bottom_bar = tk.Frame(root, bg="#2d2d2d", height=70)
+    bottom_bar.pack(side="bottom", fill="x")
+    bottom_bar.pack_propagate(False)   # keep height fixed
+
+    btn_frame = tk.Frame(bottom_bar, bg="#2d2d2d")
+    btn_frame.pack(side="top", fill="x", pady=5)
+
+    btns = [
+        ("Export Settings", export_settings, "white"),
+        ("Import Settings", import_settings, "white"),
+        ("Pull Settings from Brave", reload_ui_from_registry, "white"),
+        ("Apply Settings", apply_settings, "#90EE90"),
+        ("Reset All Settings", reset_settings, "#F08080")
+    ]
+
+    for text, cmd, color in btns:
+        b = tk.Button(btn_frame, text=text, font=("sans-serif", 9, "bold"), fg=color,
+                      bg="#555555", activebackground="#666666",
+                      relief="flat", bd=0, highlightthickness=0, width=16, command=cmd)
+        b.pack(side="left", expand=True, padx=5)
+
+    status_var = tk.StringVar(value="Ready. Hover over options for details.")
+    status_label = tk.Label(bottom_bar, textvariable=status_var, bg="#2d2d2d", fg="#aaaaaa",
+                            font=("courier", 10), anchor="w", padx=10)
+    status_label.pack(side="bottom", fill="x")
 
     # --- Backend Communication ---
     def run_cmd(cmd):
@@ -616,25 +630,6 @@ def main():
                 suspend_dirty_tracking = False
                 check_dirty_state()
                 set_status("Settings imported. Pending save.")
-
-    # --- Bottom Buttons ---
-    btn_frame = tk.Frame(root, bg="#191919")
-    btn_frame.pack(side="bottom", fill="x", pady=10)
-
-    btns = [
-        ("Export Settings", export_settings, "white"),
-        ("Import Settings", import_settings, "white"),
-        ("Pull Settings from Brave", reload_ui_from_registry, "white"),
-        ("Apply Settings", apply_settings, "#90EE90"),
-        ("Reset All Settings", reset_settings, "#F08080")
-    ]
-
-    for text, cmd, color in btns:
-        b = tk.Button(btn_frame, text=text, font=("sans-serif", 10, "bold"), fg=color, bg="#666666", highlightbackground="#191919", width=18, command=cmd)
-        b.pack(side="left", expand=True, padx=8)
-
-    status_var = tk.StringVar(value="Ready. Hover over options for details.")
-    tk.Label(root, textvariable=status_var, bg="#141414", fg="gray", font=("courier", 11), height=2).pack(side="bottom", fill="x")
 
     # --- Startup ---
     root.after(100, reload_ui_from_registry)
