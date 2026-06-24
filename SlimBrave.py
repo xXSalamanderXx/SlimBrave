@@ -10,6 +10,8 @@ import time
 # ----------------------------------------------------------------------
 # 1. Dependency checks and self‑repair (runs before anything else)
 # ----------------------------------------------------------------------
+BREW_INSTALLED_SOMETHING = False   # tracks if we installed/upgraded via brew
+
 def print_step(msg):
     print(f"\n[SlimBrave] {msg}")
 
@@ -23,7 +25,6 @@ def prompt_yes_no(question):
         print("Please answer 'y' or 'n'.")
 
 def get_brew_prefix():
-    # Apple Silicon Macs use /opt/homebrew; Intel uses /usr/local
     if os.path.exists("/opt/homebrew/bin/brew"):
         return "/opt/homebrew"
     elif os.path.exists("/usr/local/bin/brew"):
@@ -31,6 +32,7 @@ def get_brew_prefix():
     return None
 
 def check_homebrew():
+    global BREW_INSTALLED_SOMETHING
     if shutil.which("brew"):
         print_step("Homebrew found.")
         return True
@@ -46,12 +48,12 @@ def check_homebrew():
         except subprocess.CalledProcessError:
             print_step("Homebrew installation failed. Please install it manually from https://brew.sh")
             sys.exit(1)
-        # After install, the brew command may not be in PATH yet – add it
         brew_prefix = get_brew_prefix()
         if brew_prefix:
             os.environ["PATH"] = f"{brew_prefix}/bin:{os.environ['PATH']}"
         if shutil.which("brew"):
             print_step("Homebrew installed successfully.")
+            BREW_INSTALLED_SOMETHING = True
             return True
         else:
             print_step("Homebrew still not available. Exiting.")
@@ -74,34 +76,32 @@ def get_tk_version():
         return 0
 
 def check_python_and_tk():
+    global BREW_INSTALLED_SOMETHING
     brew_prefix = get_brew_prefix()
     if not brew_prefix:
-        return  # Should not happen, Homebrew checked earlier
+        return   # should not happen
 
     current_python = sys.executable
     print_step(f"Current Python: {current_python}")
 
-    # Are we already on a Homebrew Python?
     if not is_homebrew_python():
         print_step("You are using the system Python, which ships with a deprecated Tcl/Tk.")
         print("SlimBrave needs a modern Tk that doesn’t throw deprecation warnings.")
         if prompt_yes_no("Install Homebrew Python with Tkinter now?"):
             print_step("Installing Homebrew Python + Tk (python-tk)…")
             subprocess.run(["brew", "install", "python-tk"], check=True)
-            # Relaunch with the new Homebrew Python
+            BREW_INSTALLED_SOMETHING = True
             new_python = f"{brew_prefix}/bin/python3"
             if not os.path.exists(new_python):
                 print_step("Installation succeeded but could not find new Python. Exiting.")
                 sys.exit(1)
             print_step(f"Relaunching with {new_python} …")
             os.environ["SLIMBRAVE_DEPENDENCIES_CHECKED"] = "1"
-            # execv replaces the current process with the new interpreter
             os.execv(new_python, [new_python] + sys.argv)
         else:
             print_step("A modern Python is required. Exiting.")
             sys.exit(1)
 
-    # We are on a Homebrew Python – check Tk version
     tk_ver = get_tk_version()
     print_step(f"Tk version: {tk_ver}")
     if tk_ver < 8.6:
@@ -109,7 +109,7 @@ def check_python_and_tk():
         if prompt_yes_no("Install/upgrade python-tk via Homebrew?"):
             print_step("Installing python-tk…")
             subprocess.run(["brew", "install", "python-tk"], check=True)
-            # Relaunch to pick up the new Tk
+            BREW_INSTALLED_SOMETHING = True
             print_step("Relaunching to use the updated Tk…")
             os.environ["SLIMBRAVE_DEPENDENCIES_CHECKED"] = "1"
             os.execv(sys.executable, [sys.executable] + sys.argv)
@@ -118,12 +118,14 @@ def check_python_and_tk():
             sys.exit(1)
 
 def run_cleanup():
-    if shutil.which("brew"):
+    if shutil.which("brew") and BREW_INSTALLED_SOMETHING:
         print_step("Running brew cleanup…")
         subprocess.run(["brew", "cleanup"], check=False)
+    else:
+        # cleanup not needed
+        pass
 
 def dependency_setup():
-    # If the script already relaunched itself after fixing deps, skip checks
     if os.environ.get("SLIMBRAVE_DEPENDENCIES_CHECKED") == "1":
         print_step("Dependencies already checked. Proceeding to GUI…")
         return
@@ -136,14 +138,12 @@ def dependency_setup():
     check_python_and_tk()
     run_cleanup()
 
-    # Mark that we’ve finished so future relaunches (e.g., after install) skip
     os.environ["SLIMBRAVE_DEPENDENCIES_CHECKED"] = "1"
     print_step("All dependencies OK. Launching SlimBrave interface…")
-    time.sleep(1)  # Brief pause so the user can read the success message
+    time.sleep(1)
 
 # ----------------------------------------------------------------------
-# 2. The actual SlimBrave application (unchanged from original, except
-#    for the rendering fix and a slight layout tweak)
+# 2. The actual SlimBrave application
 # ----------------------------------------------------------------------
 def main():
     import tkinter as tk
@@ -195,7 +195,7 @@ def main():
     def create_tooltip(widget, text):
         ToolTip(widget, text)
 
-    # --- Feature Dictionaries (Mirrored from v1.0.9 PS1) ---
+    # --- Feature Dictionaries ---
     telemetry_features = [
         {"Name": "Disable Metrics Reporting", "Key": "MetricsReportingEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops Brave from sending anonymous usage and crash reports.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Safe Browsing Reporting", "Key": "SafeBrowsingExtendedReportingEnabled", "Value": 0, "Type": "-int", "ToolTip": "Stops Brave from sending extended Safe Browsing data back to servers.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
@@ -272,8 +272,9 @@ def main():
     # --- UI Setup & Global State ---
     root = tk.Tk()
     root.title("SlimBrave - Revived v1.0.9 (macOS)")
-    root.geometry("1300x850")
-    root.minsize(1300, 850)
+    # Smaller 16:9 window: 1040x585
+    root.geometry("1040x585")
+    root.minsize(1040, 585)
     root.configure(bg="#191919")
 
     style = ttk.Style()
@@ -299,10 +300,10 @@ def main():
         global_is_dirty = is_dirty
         if is_dirty:
             save_status_var.set("Changes Need To Be Saved.....")
-            save_status_label.config(fg="#FFD700") # Gold
+            save_status_label.config(fg="#FFD700")
         else:
             save_status_var.set("Changes Applied ✔")
-            save_status_label.config(fg="#90EE90") # LightGreen
+            save_status_label.config(fg="#90EE90")
 
     def get_ui_snapshot():
         snap = {
@@ -332,9 +333,9 @@ def main():
 
     # --- Layout Construction ---
     top_frame = tk.Frame(root, bg="#191919")
-    top_frame.pack(fill="x", pady=20)
+    top_frame.pack(fill="x", pady=15)   # slightly reduced padding
 
-    # Center the preset buttons (cosmetic improvement)
+    # Center preset buttons
     inner_top = tk.Frame(top_frame, bg="#191919")
     inner_top.pack()
 
@@ -390,26 +391,26 @@ def main():
 
     save_status_var = tk.StringVar(value="Changes Applied ✔")
     save_status_label = tk.Label(top_frame, textvariable=save_status_var, bg="#121212", fg="#90EE90", font=("sans-serif", 10, "bold"), width=30)
-    save_status_label.pack(side="right", padx=100)
+    save_status_label.pack(side="right", padx=50)   # reduced padx
 
     main_frame = tk.Frame(root, bg="#191919")
-    main_frame.pack(fill="both", expand=True, padx=20)
+    main_frame.pack(fill="both", expand=True, padx=15, pady=(0, 10))
 
     left_panel = tk.Frame(main_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
-    left_panel.pack(side="left", fill="both", expand=True, padx=10)
+    left_panel.pack(side="left", fill="both", expand=True, padx=5)
     mid_panel = tk.Frame(main_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
-    mid_panel.pack(side="left", fill="both", expand=True, padx=10)
+    mid_panel.pack(side="left", fill="both", expand=True, padx=5)
     right_panel = tk.Frame(main_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
-    right_panel.pack(side="left", fill="both", expand=True, padx=10)
+    right_panel.pack(side="left", fill="both", expand=True, padx=5)
 
     def populate_checkboxes(parent, title, feature_list):
-        tk.Label(parent, text=title, font=("sans-serif", 12, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(15, 10), padx=20)
+        tk.Label(parent, text=title, font=("sans-serif", 11, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(10, 5), padx=15)
         for feat in feature_list:
             var = tk.IntVar()
             all_feature_vars[feat["Key"]] = var
             var.trace_add("write", check_dirty_state)
             cb = ttk.Checkbutton(parent, text=feat["Name"], variable=var)
-            cb.pack(anchor="w", padx=25, pady=2)
+            cb.pack(anchor="w", padx=20, pady=1)
             create_tooltip(cb, feat["ToolTip"])
 
     populate_checkboxes(left_panel, "Telemetry and Reporting", telemetry_features)
@@ -417,48 +418,48 @@ def main():
     populate_checkboxes(mid_panel, "Brave Features", brave_features)
     populate_checkboxes(mid_panel, "Performance and Bloat", perf_features)
 
-    tk.Label(right_panel, text="Site Permissions", font=("sans-serif", 12, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(15, 15), padx=20)
+    tk.Label(right_panel, text="Site Permissions", font=("sans-serif", 11, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(10, 10), padx=15)
     for perm in permission_settings:
         f = tk.Frame(right_panel, bg="#232323")
-        f.pack(fill="x", padx=25, pady=4)
-        lbl = tk.Label(f, text=perm["Name"], fg="white", bg="#232323", width=20, anchor="w")
+        f.pack(fill="x", padx=20, pady=2)
+        lbl = tk.Label(f, text=perm["Name"], fg="white", bg="#232323", width=18, anchor="w")
         lbl.pack(side="left")
         create_tooltip(lbl, perm["ToolTip"])
         
         var = tk.StringVar(value="Not Set")
         all_perm_vars[perm["Key"]] = var
         var.trace_add("write", check_dirty_state)
-        cb = ttk.Combobox(f, textvariable=var, values=perm["Options"], state="readonly", width=12)
+        cb = ttk.Combobox(f, textvariable=var, values=perm["Options"], state="readonly", width=10)
         cb.pack(side="right")
         create_tooltip(cb, perm["ToolTip"])
 
-    tk.Frame(right_panel, bg="#232323", height=20).pack()
+    tk.Frame(right_panel, bg="#232323", height=10).pack()
 
     sb_f = tk.Frame(right_panel, bg="#232323")
-    sb_f.pack(fill="x", padx=25, pady=10)
-    sb_lbl = tk.Label(sb_f, text="Safe Browsing:", fg="white", bg="#232323", width=15, anchor="w")
+    sb_f.pack(fill="x", padx=20, pady=6)
+    sb_lbl = tk.Label(sb_f, text="Safe Browsing:", fg="white", bg="#232323", width=13, anchor="w")
     sb_lbl.pack(side="left")
     sb_var = tk.StringVar()
     sb_var.trace_add("write", check_dirty_state)
-    sb_cb = ttk.Combobox(sb_f, textvariable=sb_var, values=["On", "Off"], state="readonly", width=12)
+    sb_cb = ttk.Combobox(sb_f, textvariable=sb_var, values=["On", "Off"], state="readonly", width=10)
     sb_cb.pack(side="left", padx=10)
     sb_tt = "On = Standard Safe Browsing. Off = Disabled entirely.\n\nSuggested Settings for Privacy: Off | Security: On"
     create_tooltip(sb_lbl, sb_tt)
     create_tooltip(sb_cb, sb_tt)
 
     dns_f = tk.Frame(right_panel, bg="#232323")
-    dns_f.pack(fill="x", padx=25, pady=10)
-    dns_lbl = tk.Label(dns_f, text="DNS Over HTTPS:", fg="white", bg="#232323", width=15, anchor="w")
+    dns_f.pack(fill="x", padx=20, pady=6)
+    dns_lbl = tk.Label(dns_f, text="DNS Over HTTPS:", fg="white", bg="#232323", width=13, anchor="w")
     dns_lbl.pack(side="left")
     dns_var = tk.StringVar()
     dns_var.trace_add("write", check_dirty_state)
-    dns_cb = ttk.Combobox(dns_f, textvariable=dns_var, values=["On", "Off"], state="readonly", width=12)
+    dns_cb = ttk.Combobox(dns_f, textvariable=dns_var, values=["On", "Off"], state="readonly", width=10)
     dns_cb.pack(side="left", padx=10)
     dns_tt = "Forces encrypted DNS lookups.\n\nSuggested Settings for Privacy: Off | Security: On"
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
 
-    # --- Backend Communication (macOS defaults) ---
+    # --- Backend Communication ---
     def run_cmd(cmd):
         return subprocess.run(cmd, capture_output=True, text=True)
 
@@ -618,7 +619,7 @@ def main():
 
     # --- Bottom Buttons ---
     btn_frame = tk.Frame(root, bg="#191919")
-    btn_frame.pack(side="bottom", fill="x", pady=20)
+    btn_frame.pack(side="bottom", fill="x", pady=10)
 
     btns = [
         ("Export Settings", export_settings, "white"),
@@ -629,19 +630,18 @@ def main():
     ]
 
     for text, cmd, color in btns:
-        b = tk.Button(btn_frame, text=text, font=("sans-serif", 10, "bold"), fg=color, bg="#666666", highlightbackground="#191919", width=20, command=cmd)
-        b.pack(side="left", expand=True, padx=10)
+        b = tk.Button(btn_frame, text=text, font=("sans-serif", 10, "bold"), fg=color, bg="#666666", highlightbackground="#191919", width=18, command=cmd)
+        b.pack(side="left", expand=True, padx=8)
 
     status_var = tk.StringVar(value="Ready. Hover over options for details.")
-    tk.Label(root, textvariable=status_var, bg="#141414", fg="gray", font=("courier", 12), height=2).pack(side="bottom", fill="x")
+    tk.Label(root, textvariable=status_var, bg="#141414", fg="gray", font=("courier", 11), height=2).pack(side="bottom", fill="x")
 
     # --- Startup ---
-    # Schedule the reload to run after the main loop starts, fixing blank GUI
     root.after(100, reload_ui_from_registry)
     root.mainloop()
 
 # ----------------------------------------------------------------------
-# 3. Entry point: first fix dependencies, then launch the GUI
+# 3. Entry point
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
     dependency_setup()
