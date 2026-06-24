@@ -343,6 +343,13 @@ def main():
     style.map("Reset.TButton",
               background=[('active', '#B71C1C')])
 
+    # Custom scrollbar style – dark trough, visible handle
+    style.configure("Dark.Vertical.TScrollbar",
+                    background="#333333", troughcolor="#1a1a1a", bordercolor="#1a1a1a",
+                    arrowcolor="white", relief="flat")
+    style.map("Dark.Vertical.TScrollbar",
+              background=[('active', '#555555')])
+
     global_is_dirty = False
     suspend_dirty_tracking = False
     baseline_state = ""
@@ -396,15 +403,14 @@ def main():
     root.grid_rowconfigure(1, weight=0)
     root.grid_columnconfigure(0, weight=1)
 
-    # Container for top bar + main area
     container = tk.Frame(root, bg="#191919")
     container.grid(row=0, column=0, sticky="nsew")
     container.grid_rowconfigure(1, weight=1)
     container.grid_columnconfigure(0, weight=1)
 
-    # TOP BAR – single row with presets and save status inline
+    # TOP BAR – with a little more bottom margin to separate from columns
     top_frame = tk.Frame(container, bg="#191919")
-    top_frame.grid(row=0, column=0, sticky="ew", padx=15, pady=(15, 0))
+    top_frame.grid(row=0, column=0, sticky="ew", padx=15, pady=(15, 8))  # 8px bottom gap
     inner_top = tk.Frame(top_frame, bg="#191919")
     inner_top.pack(fill="x")
 
@@ -420,38 +426,51 @@ def main():
     btn_sec.pack(side="left", padx=10)
     create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
 
-    # Save status label – now on the same row, right‑aligned
     save_status_var = tk.StringVar(value="Changes Applied ✔")
     save_status_label = tk.Label(inner_top, textvariable=save_status_var, bg="#191919",
                                  fg="#90EE90", font=("sans-serif", 10, "bold"))
     save_status_label.pack(side="right", padx=(50, 0))
 
-    # --- Scrollable columns area (fixed scrolling, original spacing) ---
+    # --- Scrollable columns area with native-feeling scrolling ---
     class ScrollableFrame(tk.Frame):
         def __init__(self, parent, bg, **kwargs):
             super().__init__(parent, bg=bg, **kwargs)
             self.canvas = tk.Canvas(self, bg=bg, highlightthickness=0, bd=0)
-            self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+            # Use the custom scrollbar style
+            self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview,
+                                           style="Dark.Vertical.TScrollbar")
             self.inner_frame = tk.Frame(self.canvas, bg=bg)
 
             self.canvas_window = self.canvas.create_window((0, 0), window=self.inner_frame, anchor="nw")
             self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-            self.inner_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+            self.inner_frame.bind("<Configure>", self._on_inner_configure)
             self.canvas.bind("<Configure>", self._on_canvas_configure)
 
-            # Mousewheel scrolling bound to inner frame (works over all widgets)
-            self.inner_frame.bind("<MouseWheel>", self._on_mousewheel)
+            # Bind scrolling events everywhere
+            self._bind_scroll(self.canvas)
+            self._bind_scroll(self.inner_frame)
 
             self.canvas.pack(side="left", fill="both", expand=True)
             self.scrollbar.pack(side="right", fill="y")
 
+        def _on_inner_configure(self, event):
+            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
         def _on_canvas_configure(self, event):
-            # Resize inner frame width to canvas width
+            # Keep inner frame width equal to canvas width
             self.canvas.itemconfig(self.canvas_window, width=event.width)
 
+        def _bind_scroll(self, widget):
+            # Bind to widget itself
+            widget.bind("<MouseWheel>", self._on_mousewheel)
+            # Recursively bind to all children
+            for child in widget.winfo_children():
+                self._bind_scroll(child)
+
         def _on_mousewheel(self, event):
-            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            # macOS trackpad delta is event.delta
+            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     main_frame = tk.Frame(container, bg="#191919")
     main_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=(0, 5))
@@ -460,7 +479,6 @@ def main():
     main_frame.grid_columnconfigure(2, weight=1)
     main_frame.grid_rowconfigure(0, weight=1)
 
-    # Create three scrollable panels with the same column spacing as before (padx=3)
     left_scroll = ScrollableFrame(main_frame, bg="#191919")
     left_scroll.grid(row=0, column=0, sticky="nsew", padx=3)
     mid_scroll = ScrollableFrame(main_frame, bg="#191919")
@@ -468,7 +486,6 @@ def main():
     right_scroll = ScrollableFrame(main_frame, bg="#191919")
     right_scroll.grid(row=0, column=2, sticky="nsew", padx=3)
 
-    # Put the original panels inside the inner_frame of each scrollable frame
     left_panel = tk.Frame(left_scroll.inner_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
     left_panel.pack(fill="both", expand=True)
     mid_panel = tk.Frame(mid_scroll.inner_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
