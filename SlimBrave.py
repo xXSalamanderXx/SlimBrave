@@ -148,6 +148,7 @@ def main():
     import json
     import datetime
     import base64
+    import sys
 
     # --- macOS Configuration & Paths ---
     DOMAIN = "com.brave.Browser"
@@ -248,7 +249,7 @@ def main():
     ]
 
     brave_features = [
-        {"Name": "Disable Rewards and Sponsored Elements", "Key": "BraveRewardsDisabled", "Value": 1, "Type": "-int", "ToolTip": "Completely disables the Brave Crypto Rewards system and disables sponsored backgrounds on the New Tab page.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
+        {"Name": "Disable Brave Rewards and Sponsored Elements", "Key": "BraveRewardsDisabled", "Value": 1, "Type": "-int", "ToolTip": "Completely disables the Brave Crypto Rewards system and disables sponsored backgrounds on the New Tab page.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Brave Wallet", "Key": "BraveWalletDisabled", "Value": 1, "Type": "-int", "ToolTip": "Disables the built-in Brave Crypto Wallet.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Brave VPN", "Key": "BraveVPNDisabled", "Value": 1, "Type": "-int", "ToolTip": "Removes the Brave VPN integration and prompts.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Brave AI Chat", "Key": "BraveAIChatEnabled", "Value": 0, "Type": "-int", "ToolTip": "Disables Brave Leo (AI Chat) integration.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
@@ -309,39 +310,6 @@ def main():
               background=[('readonly', '#161616')],
               selectbackground=[('readonly', '#333333')],
               selectforeground=[('readonly', 'white')])
-
-    style.configure("Orange.TButton",
-                    background="#E65100", foreground="white", font=("sans-serif", 10, "bold"),
-                    borderwidth=2, relief="raised")
-    style.map("Orange.TButton",
-              background=[('active', '#BF360C')],
-              foreground=[('active', 'white')])
-
-    style.configure("Import.TButton",
-                    background="#1976D2", foreground="white", font=("sans-serif", 9, "bold"),
-                    borderwidth=2, relief="raised")
-    style.map("Import.TButton",
-              background=[('active', '#1565C0')])
-    style.configure("Export.TButton",
-                    background="#0D47A1", foreground="white", font=("sans-serif", 9, "bold"),
-                    borderwidth=2, relief="raised")
-    style.map("Export.TButton",
-              background=[('active', '#0A3D91')])
-    style.configure("Pull.TButton",
-                    background="#F57F17", foreground="white", font=("sans-serif", 9, "bold"),
-                    borderwidth=2, relief="raised")
-    style.map("Pull.TButton",
-              background=[('active', '#E65100')])
-    style.configure("Apply.TButton",
-                    background="#2E7D32", foreground="white", font=("sans-serif", 9, "bold"),
-                    borderwidth=2, relief="raised")
-    style.map("Apply.TButton",
-              background=[('active', '#1B5E20')])
-    style.configure("Reset.TButton",
-                    background="#C62828", foreground="white", font=("sans-serif", 9, "bold"),
-                    borderwidth=2, relief="raised")
-    style.map("Reset.TButton",
-              background=[('active', '#B71C1C')])
 
     # Custom scrollbar style – dark trough, visible handle
     style.configure("Dark.Vertical.TScrollbar",
@@ -416,13 +384,18 @@ def main():
 
     tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
 
-    btn_priv = ttk.Button(inner_top, text="High Privacy + Moderate Security", style="Orange.TButton",
-                          command=lambda: apply_preset("privacy"))
+    # --- Use tk.Button instead of ttk.Button for clean square corners ---
+    btn_priv = tk.Button(inner_top, text="High Privacy + Moderate Security",
+                         bg="#E65100", fg="white", font=("sans-serif", 10, "bold"),
+                         bd=0, highlightthickness=0, relief="flat",
+                         command=lambda: apply_preset("privacy"))
     btn_priv.pack(side="left", padx=10)
     create_tooltip(btn_priv, "Applies the recommended preset for High Privacy and Moderate Security.")
 
-    btn_sec = ttk.Button(inner_top, text="High Security + Moderate Privacy", style="Orange.TButton",
-                         command=lambda: apply_preset("security"))
+    btn_sec = tk.Button(inner_top, text="High Security + Moderate Privacy",
+                        bg="#E65100", fg="white", font=("sans-serif", 10, "bold"),
+                        bd=0, highlightthickness=0, relief="flat",
+                        command=lambda: apply_preset("security"))
     btn_sec.pack(side="left", padx=10)
     create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
 
@@ -571,7 +544,7 @@ def main():
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
 
-    # Bind scroll events to all widgets inside scrollable frames (fallback)
+    # Bind scroll events to all widgets inside scrollable frames
     left_scroll.bind_children()
     mid_scroll.bind_children()
     right_scroll.bind_children()
@@ -785,13 +758,81 @@ def main():
         dialog.geometry(f"+{x}+{y}")
         dialog.wait_window()
 
-    # --- Placeholder for preset function ---
+    # --- IMPLEMENTED PRESETS (ported from Windows script) ---
     def apply_preset(preset_type):
-        # This is a stub; you can implement actual preset logic here.
-        set_status(f"Preset '{preset_type}' selected – not yet implemented.")
-        messagebox.showinfo("Preset", f"Preset '{preset_type}' is a placeholder.\nAdd your own logic in the apply_preset function.")
+        global suspend_dirty_tracking
+        suspend_dirty_tracking = True
 
-    # --- BOTTOM BAR ---
+        # First, uncheck all checkboxes
+        for var in all_feature_vars.values():
+            var.set(0)
+
+        # Set permissions to default (Block for most, with exceptions)
+        for perm in permission_settings:
+            name = perm["Name"]
+            if name == "JavaScript":
+                all_perm_vars[perm["Key"]].set("Allow")
+            elif name in ["Camera", "Microphone"]:
+                all_perm_vars[perm["Key"]].set("Ask")
+            elif name == "Images":
+                all_perm_vars[perm["Key"]].set("Not Set")
+            else:
+                # For all others, try to set to Block if available
+                if "Block" in perm["Options"]:
+                    all_perm_vars[perm["Key"]].set("Block")
+                else:
+                    all_perm_vars[perm["Key"]].set("Not Set")
+
+        if preset_type == "privacy":
+            # Privacy preset: tick these features
+            privacy_keys = [
+                "MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled",
+                "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled",
+                "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled",
+                "AutofillAddressEnabled", "AutofillCreditCardEnabled", "PasswordManagerEnabled",
+                "BrowserSignin", "WebRtcIPHandling", "BlockThirdPartyCookies",
+                "EnableDoNotTrack", "IPFSEnabled", "PromptForDownloadLocation",
+                "ClearBrowsingDataOnExitList", "HttpsOnlyMode",
+                "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled",
+                "BraveAIChatEnabled", "TorDisabled", "BraveNewsDisabled",
+                "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled",
+                "BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled",
+                "AlwaysOpenPdfExternally", "PromotionsEnabled", "SearchSuggestEnabled",
+                "DefaultBrowserSettingEnabled", "BravePlaylistEnabled"
+            ]
+            for key in privacy_keys:
+                if key in all_feature_vars:
+                    all_feature_vars[key].set(1)
+            sb_var.set("Off")
+            dns_var.set("Off")
+            set_status("Loaded: High Privacy + Moderate Security preset.")
+
+        elif preset_type == "security":
+            # Security preset: tick these features
+            security_keys = [
+                "MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled",
+                "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled",
+                "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled",
+                "WebRtcIPHandling", "QuicAllowed", "BlockThirdPartyCookies",
+                "EnableDoNotTrack", "ForceGoogleSafeSearch", "IPFSEnabled",
+                "PromptForDownloadLocation", "HttpsOnlyMode",
+                "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled",
+                "BraveAIChatEnabled", "TorDisabled", "SyncDisabled",
+                "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled",
+                "BraveWaybackMachineEnabled", "BackgroundModeEnabled",
+                "AlwaysOpenPdfExternally", "DeveloperToolsDisabled", "BravePlaylistEnabled"
+            ]
+            for key in security_keys:
+                if key in all_feature_vars:
+                    all_feature_vars[key].set(1)
+            sb_var.set("On")
+            dns_var.set("On")
+            set_status("Loaded: High Security + Moderate Privacy preset.")
+
+        suspend_dirty_tracking = False
+        check_dirty_state()
+
+    # --- BOTTOM BAR - replace ttk buttons with tk buttons for square corners ---
     bottom_bar = tk.Frame(root, bg="#2d2d2d", height=70)
     bottom_bar.grid(row=1, column=0, sticky="ew")
     bottom_bar.grid_propagate(False)
@@ -799,11 +840,26 @@ def main():
     btn_frame = tk.Frame(bottom_bar, bg="#2d2d2d")
     btn_frame.pack(side="top", fill="x", pady=5)
 
-    ttk.Button(btn_frame, text="Export Settings", style="Export.TButton", command=export_settings).pack(side="left", expand=True, padx=5)
-    ttk.Button(btn_frame, text="Import Settings", style="Import.TButton", command=import_settings).pack(side="left", expand=True, padx=5)
-    ttk.Button(btn_frame, text="Pull Settings from Brave", style="Pull.TButton", command=reload_ui_from_registry).pack(side="left", expand=True, padx=5)
-    ttk.Button(btn_frame, text="Apply Settings", style="Apply.TButton", command=apply_settings).pack(side="left", expand=True, padx=5)
-    ttk.Button(btn_frame, text="Reset All Settings", style="Reset.TButton", command=reset_settings).pack(side="left", expand=True, padx=5)
+    # Define helper to create square buttons
+    def make_square_button(parent, text, bg_color, command, tooltip_text):
+        btn = tk.Button(parent, text=text, bg=bg_color, fg="white",
+                        font=("sans-serif", 9, "bold"),
+                        bd=0, highlightthickness=0, relief="flat",
+                        command=command)
+        btn.pack(side="left", expand=True, padx=5, fill="x")
+        create_tooltip(btn, tooltip_text)
+        return btn
+
+    make_square_button(btn_frame, "Export Settings", "#0D47A1", export_settings,
+                       "Export the current UI configuration to a JSON file.")
+    make_square_button(btn_frame, "Import Settings", "#1976D2", import_settings,
+                       "Import a JSON configuration file into the UI.")
+    make_square_button(btn_frame, "Pull Settings from Brave", "#F57F17", reload_ui_from_registry,
+                       "Pull / Reload the current Brave settings from defaults into the SlimBrave UI.")
+    make_square_button(btn_frame, "Apply Settings", "#2E7D32", apply_settings,
+                       "Apply the current UI configuration directly to macOS defaults.")
+    make_square_button(btn_frame, "Reset All Settings", "#C62828", reset_settings,
+                       "Erase all Brave policy settings and restore to default.")
 
     status_var = tk.StringVar(value="Ready. Hover over options for details.")
     status_label = tk.Label(bottom_bar, textvariable=status_var, bg="#2d2d2d", fg="#aaaaaa",
