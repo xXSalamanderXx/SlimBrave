@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-# Slimbrave - Revived - v1.0.9 (macOS Edition) with auto-dependency handling
+# Slimbrave - Revived - v1.0.9 (macOS Edition)
 
 import subprocess
 import sys
 import os
 import shutil
 import time
-import io
-import urllib.request
+import base64
 
 # ----------------------------------------------------------------------
 # 1. Dependency checks – only Homebrew and Python/Tk are required
@@ -117,42 +116,6 @@ def check_python_and_tk():
             print_step("Cannot run without a working Tk. Exiting.")
             sys.exit(1)
 
-def check_pillow_optional():
-    """Optional Pillow check: if installed, use it; else offer to install (purely aesthetic)."""
-    try:
-        import PIL
-        print_step("Pillow found – using lion icon.")
-        return True
-    except ImportError:
-        print_step("Pillow (PIL) is not installed.")
-        print("Pillow is optional – it only provides a nicer application icon (lion logo).")
-        print("If you skip, a transparent icon will be used instead.")
-        if prompt_yes_no("Would you like to install Pillow now? (recommended for aesthetics)"):
-            try:
-                # Try Homebrew first
-                print_step("Attempting to install Pillow via Homebrew...")
-                subprocess.run(["brew", "install", "pillow"], check=True)
-                print_step("Pillow installed successfully via Homebrew.")
-                # Relaunch to load the newly installed module
-                os.execv(sys.executable, [sys.executable] + sys.argv)
-            except subprocess.CalledProcessError:
-                print_step("Homebrew installation failed. Trying pip --user...")
-                try:
-                    subprocess.run([sys.executable, "-m", "pip", "install", "--user", "Pillow"], check=True)
-                    print_step("Pillow installed successfully via pip --user.")
-                    os.execv(sys.executable, [sys.executable] + sys.argv)
-                except subprocess.CalledProcessError:
-                    print_step("Pillow installation failed. You can try manually:")
-                    print("  brew install pillow")
-                    print("  or")
-                    print("  pip install --user Pillow")
-                    print_step("Continuing without Pillow (transparent icon will be used).")
-                    return False
-        else:
-            print_step("Skipping Pillow installation – using transparent icon.")
-            return False
-        return False
-
 def run_cleanup():
     if shutil.which("brew") and BREW_INSTALLED_SOMETHING:
         print_step("Running brew cleanup…")
@@ -165,14 +128,13 @@ def dependency_setup():
 
     check_homebrew()
     check_python_and_tk()
-    check_pillow_optional()   # optional, non-blocking
     run_cleanup()
 
     print_step("All required dependencies OK. Launching SlimBrave interface…")
     time.sleep(1)
 
 # ----------------------------------------------------------------------
-# 2. The actual SlimBrave application (Pillow is optional)
+# 2. The actual SlimBrave application
 # ----------------------------------------------------------------------
 def main():
     import tkinter as tk
@@ -181,17 +143,6 @@ def main():
     import datetime
     import base64
     import sys
-    import urllib.request
-    import io
-
-    # Check if Pillow is available (optional)
-    HAS_PIL = False
-    icon_imgs = None
-    try:
-        from PIL import Image, ImageTk
-        HAS_PIL = True
-    except ImportError:
-        pass  # Pillow not installed – we'll use the transparent GIF
 
     # --- macOS Configuration & Paths ---
     DOMAIN = "com.brave.Browser"
@@ -208,44 +159,19 @@ def main():
 
     write_log("SlimBrave macOS UI Initializing...")
 
-    # --- Create root window FIRST ---
+    # --- Create root window ---
     root = tk.Tk()
     root.title("SlimBrave - Revived v1.0.9 (macOS)")
     root.geometry("1040x550")
     root.minsize(900, 400)
     root.configure(bg="#191919")
 
-    # --- Load icon: lion if Pillow available, else transparent GIF ---
-    if HAS_PIL:
-        try:
-            url = "https://www.pngall.com/wp-content/uploads/13/Lions-Logo-PNG-Image-thumb.webp"
-            with urllib.request.urlopen(url) as response:
-                image_data = response.read()
-            pil_image = Image.open(io.BytesIO(image_data))
-            # Window icon (64x64)
-            window_icon = pil_image.resize((64, 64), Image.Resampling.LANCZOS)
-            icon_img_window = ImageTk.PhotoImage(window_icon)
-            root.iconphoto(False, icon_img_window)
-            # Top‑bar icon (32x32)
-            topbar_icon = pil_image.resize((32, 32), Image.Resampling.LANCZOS)
-            icon_img_topbar = ImageTk.PhotoImage(topbar_icon)
-            icon_imgs = (icon_img_window, icon_img_topbar)
-            write_log("Lion icon loaded successfully (Pillow).")
-        except Exception as e:
-            write_log(f"Failed to load lion icon with Pillow: {e}. Using fallback transparent icon.")
-            transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-            icon_img = tk.PhotoImage(master=root, data=base64.b64decode(transparent_gif))
-            root.iconphoto(False, icon_img)
-            icon_imgs = None
-    else:
-        # Pillow not installed – use transparent GIF
-        write_log("Pillow not installed. Using transparent icon.")
-        transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-        icon_img = tk.PhotoImage(master=root, data=base64.b64decode(transparent_gif))
-        root.iconphoto(False, icon_img)
-        icon_imgs = None
+    # Transparent icon (removes Python rocket)
+    transparent_gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+    icon_img = tk.PhotoImage(master=root, data=base64.b64decode(transparent_gif))
+    root.iconphoto(False, icon_img)
 
-    # --- Tooltip with 1-second hover delay, no flicker ---
+    # --- Tooltip (unchanged) ---
     class ToolTip:
         def __init__(self, widget, text):
             self.widget = widget
@@ -369,7 +295,6 @@ def main():
     style.configure("TCheckbutton", background="#232323", foreground="white", font=("sans-serif", 9))
     style.map("TCheckbutton", background=[('active', '#232323')])
 
-    # Darker dropdown – 15% darker than previous (#1a1a1a → #161616), no blue on select
     style.configure("Dark.TCombobox",
                     fieldbackground="#161616", background="#161616", foreground="white",
                     arrowcolor="white", selectbackground="#333333", selectforeground="white")
@@ -379,15 +304,14 @@ def main():
               selectbackground=[('readonly', '#333333')],
               selectforeground=[('readonly', 'white')])
 
-    # Custom scrollbar style – dark trough, visible handle
     style.configure("Dark.Vertical.TScrollbar",
                     background="#333333", troughcolor="#1a1a1a", bordercolor="#1a1a1a",
                     arrowcolor="white", relief="flat")
     style.map("Dark.Vertical.TScrollbar",
               background=[('active', '#555555')])
 
-    # --- BUTTON STYLES (square, no border, taller via padding) ---
-    button_padding = (15, 8)  # horizontal, vertical padding to make buttons taller
+    # Button styles – square, flat, with padding for height
+    button_padding = (15, 8)
     style.configure("Orange.TButton",
                     background="#E65100", foreground="white",
                     font=("sans-serif", 10, "bold"),
@@ -495,49 +419,33 @@ def main():
     container.grid_rowconfigure(1, weight=1)
     container.grid_columnconfigure(0, weight=1)
 
-    # --- TOP BAR – restructured for icon on the right ---
+    # --- TOP BAR ---
     top_frame = tk.Frame(container, bg="#191919")
     top_frame.grid(row=0, column=0, sticky="ew", padx=15, pady=(15, 15))
     inner_top = tk.Frame(top_frame, bg="#191919")
     inner_top.pack(fill="x")
 
-    # Left side: "Quick Toggles:" + preset buttons
-    left_frame = tk.Frame(inner_top, bg="#191919")
-    left_frame.pack(side="left", fill="x", expand=True)
+    tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
 
-    tk.Label(left_frame, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
-
-    btn_priv = ttk.Button(left_frame, text="High Privacy + Moderate Security", style="Orange.TButton",
+    btn_priv = ttk.Button(inner_top, text="High Privacy + Moderate Security", style="Orange.TButton",
                           command=lambda: apply_preset("privacy"))
     btn_priv.pack(side="left", padx=10)
     create_tooltip(btn_priv, "Applies the recommended preset for High Privacy and Moderate Security.")
 
-    btn_sec = ttk.Button(left_frame, text="High Security + Moderate Privacy", style="Orange.TButton",
+    btn_sec = ttk.Button(inner_top, text="High Security + Moderate Privacy", style="Orange.TButton",
                          command=lambda: apply_preset("security"))
     btn_sec.pack(side="left", padx=10)
     create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
 
-    # Right side: status label + (optional) icon
-    right_frame = tk.Frame(inner_top, bg="#191919")
-    right_frame.pack(side="right", fill="x")
-
     save_status_var = tk.StringVar(value="Changes Applied ✔")
-    save_status_label = tk.Label(right_frame, textvariable=save_status_var, bg="#191919",
+    save_status_label = tk.Label(inner_top, textvariable=save_status_var, bg="#191919",
                                  fg="#90EE90", font=("sans-serif", 10, "bold"))
-    save_status_label.pack(side="left", padx=(0, 10))
+    save_status_label.pack(side="right", padx=(50, 0))
 
-    # Add icon if available
-    if HAS_PIL and icon_imgs is not None:
-        icon_label = tk.Label(right_frame, image=icon_imgs[1], bg="#191919")
-        icon_label.pack(side="left", padx=(0, 5))
-        # Keep a reference to avoid garbage collection
-        right_frame.icon_ref = icon_imgs[1]
-
-    # --- ScrollableFrame (unchanged) ---
+    # --- ScrollableFrame (macOS‑ready) ---
     class ScrollableFrame(tk.Frame):
         def __init__(self, parent, bg, **kwargs):
             super().__init__(parent, bg=bg, **kwargs)
-
             self.canvas = tk.Canvas(self, bg=bg, highlightthickness=0, bd=0)
             self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview,
                                            style="Dark.Vertical.TScrollbar")
@@ -582,7 +490,7 @@ def main():
         def scroll(self, delta):
             self.canvas.yview_scroll(int(-delta), "units")
 
-    # --- Main content columns (unchanged) ---
+    # --- Main content columns ---
     main_frame = tk.Frame(container, bg="#191919")
     main_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=(0, 5))
     main_frame.grid_columnconfigure(0, weight=1)
@@ -664,7 +572,7 @@ def main():
     mid_scroll.bind_children()
     right_scroll.bind_children()
 
-    # --- Root‑level mouse‑wheel binding (unchanged) ---
+    # --- Root‑level mouse‑wheel binding ---
     def on_root_mousewheel(event):
         widget = root.winfo_containing(event.x_root, event.y_root)
         if not widget:
@@ -684,7 +592,7 @@ def main():
     for ev in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
         root.bind(ev, on_root_mousewheel)
 
-    # --- Backend functions (unchanged) ---
+    # --- Backend functions ---
     def run_cmd(cmd):
         return subprocess.run(cmd, capture_output=True, text=True)
 
@@ -813,7 +721,8 @@ def main():
                 root.after(2000, lambda: run_cmd(["open", "-a", "Brave Browser"]))
                 set_status("Brave restarted successfully.")
         else:
-            messagebox.showinfo("SlimBrave", "Settings applied successfully! Open Brave to see changes.")
+            # Use custom info popup for success message
+            show_custom_info("SlimBrave", "Settings applied successfully! Open Brave to see changes.")
             set_status("Settings applied successfully.")
 
     def reset_settings():
@@ -869,6 +778,7 @@ def main():
         dialog.geometry(f"+{x}+{y}")
         dialog.wait_window()
 
+    # --- Presets (from Windows version) ---
     def apply_preset(preset_type):
         global suspend_dirty_tracking
         suspend_dirty_tracking = True
@@ -937,7 +847,7 @@ def main():
         suspend_dirty_tracking = False
         check_dirty_state()
 
-    # --- BOTTOM BAR (unchanged) ---
+    # --- BOTTOM BAR ---
     bottom_bar = tk.Frame(root, bg="#2d2d2d", height=70)
     bottom_bar.grid(row=1, column=0, sticky="ew")
     bottom_bar.grid_propagate(False)
@@ -956,6 +866,7 @@ def main():
                             font=("courier", 10), anchor="w", padx=10)
     status_label.pack(side="bottom", fill="x")
 
+    # --- Startup ---
     root.after(100, reload_ui_from_registry)
     root.mainloop()
 
