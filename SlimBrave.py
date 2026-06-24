@@ -431,28 +431,35 @@ def main():
                                  fg="#90EE90", font=("sans-serif", 10, "bold"))
     save_status_label.pack(side="right", padx=(50, 0))
 
-    # --- Scrollable columns with proper scroll binding (FIXED for macOS) ---
+    # --- FIXED ScrollableFrame (macOS‑ready) ---
     class ScrollableFrame(tk.Frame):
         def __init__(self, parent, bg, **kwargs):
             super().__init__(parent, bg=bg, **kwargs)
+
+            # Canvas and scrollbar
             self.canvas = tk.Canvas(self, bg=bg, highlightthickness=0, bd=0)
             self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview,
                                            style="Dark.Vertical.TScrollbar")
             self.inner_frame = tk.Frame(self.canvas, bg=bg)
 
-            self.canvas_window = self.canvas.create_window((0, 0), window=self.inner_frame, anchor="nw")
+            # Connect canvas to scrollbar
             self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-            # Bind mouse wheel events - support both macOS and other platforms
-            for ev in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
-                self.canvas.bind(ev, self._on_mousewheel)
-                self.inner_frame.bind(ev, self._on_mousewheel)
+            # Put the inner frame onto the canvas
+            self.canvas_window = self.canvas.create_window((0, 0), window=self.inner_frame, anchor="nw")
 
+            # Update scrollregion when inner frame size changes
             self.inner_frame.bind("<Configure>", self._on_inner_configure)
+            # Make inner frame fill canvas width
             self.canvas.bind("<Configure>", self._on_canvas_configure)
 
-            self.canvas.pack(side="left", fill="both", expand=True)
+            # Layout
             self.scrollbar.pack(side="right", fill="y")
+            self.canvas.pack(side="left", fill="both", expand=True)
+
+            # Recursively bind mousewheel events to all children
+            self._bind_mousewheel(self.canvas)
+            self._bind_mousewheel(self.inner_frame)
 
         def _on_inner_configure(self, event):
             self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -460,26 +467,32 @@ def main():
         def _on_canvas_configure(self, event):
             self.canvas.itemconfig(self.canvas_window, width=event.width)
 
-        def _on_mousewheel(self, event):
-            # Determine scroll amount
-            if event.num == 4:
-                delta = -1
-            elif event.num == 5:
-                delta = 1
-            else:
-                # On macOS, event.delta is already in "units" (1 or -1)
-                delta = event.delta if sys.platform == "darwin" else event.delta / 120
-            self.canvas.yview_scroll(int(-delta), "units")
+        def _bind_mousewheel(self, widget):
+            """Recursively bind scroll events to widget and all its children."""
+            def on_mousewheel(event):
+                # Determine scroll amount
+                if event.num == 4:
+                    delta = -1
+                elif event.num == 5:
+                    delta = 1
+                else:
+                    # macOS: delta is already in "units"; others divide by 120
+                    delta = event.delta if sys.platform == "darwin" else event.delta / 120
+                self.canvas.yview_scroll(int(-delta), "units")
+
+            # Bind to the widget itself
+            for ev in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+                widget.bind(ev, on_mousewheel)
+
+            # Recursively bind to all children
+            for child in widget.winfo_children():
+                self._bind_mousewheel(child)
 
         def bind_children(self):
-            """Recursively bind all widgets inside inner_frame to the scroll events."""
-            def _bind(widget):
-                for ev in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
-                    widget.bind(ev, self._on_mousewheel)
-                for child in widget.winfo_children():
-                    _bind(child)
-            _bind(self.inner_frame)
+            """Bind scroll events to all children of inner_frame."""
+            self._bind_mousewheel(self.inner_frame)
 
+    # --- Main content columns ---
     main_frame = tk.Frame(container, bg="#191919")
     main_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=(0, 5))
     main_frame.grid_columnconfigure(0, weight=1)
@@ -487,7 +500,6 @@ def main():
     main_frame.grid_columnconfigure(2, weight=1)
     main_frame.grid_rowconfigure(0, weight=1)
 
-    # Increased column spacing (padx=6) to make room for scrollbars
     left_scroll = ScrollableFrame(main_frame, bg="#191919")
     left_scroll.grid(row=0, column=0, sticky="nsew", padx=6)
     mid_scroll = ScrollableFrame(main_frame, bg="#191919")
@@ -502,6 +514,7 @@ def main():
     right_panel = tk.Frame(right_scroll.inner_frame, bg="#232323", bd=0, highlightthickness=1, highlightbackground="#3c3c3c")
     right_panel.pack(fill="both", expand=True)
 
+    # --- Populate panels (unchanged) ---
     def populate_checkboxes(parent, title, feature_list):
         tk.Label(parent, text=title, font=("sans-serif", 11, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(8, 4), padx=12)
         for feat in feature_list:
@@ -524,7 +537,6 @@ def main():
         lbl = tk.Label(f, text=perm["Name"], fg="white", bg="#232323", width=16, anchor="w", font=("sans-serif", 9))
         lbl.pack(side="left")
         create_tooltip(lbl, perm["ToolTip"])
-
         var = tk.StringVar(value="Not Set")
         all_perm_vars[perm["Key"]] = var
         var.trace_add("write", check_dirty_state)
@@ -559,12 +571,12 @@ def main():
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
 
-    # Bind scroll to all children now that all widgets are created
+    # Bind scroll events to all widgets inside scrollable frames
     left_scroll.bind_children()
     mid_scroll.bind_children()
     right_scroll.bind_children()
 
-    # --- Backend Communication (unchanged) ---
+    # --- Backend functions (unchanged) ---
     def run_cmd(cmd):
         return subprocess.run(cmd, capture_output=True, text=True)
 
@@ -748,13 +760,13 @@ def main():
         dialog.geometry(f"+{x}+{y}")
         dialog.wait_window()
 
+    # --- Placeholder for preset function ---
     def apply_preset(preset_type):
-        # Define preset values (unchanged from original)
-        # This is a placeholder; you can fill in as needed.
-        # For brevity, I'll keep it as a stub, but you can implement it.
-        set_status(f"Preset '{preset_type}' applied (stub)")
+        # This is a stub; you can implement actual preset logic here.
+        set_status(f"Preset '{preset_type}' selected – not yet implemented.")
+        messagebox.showinfo("Preset", f"Preset '{preset_type}' is a placeholder.\nAdd your own logic in the apply_preset function.")
 
-    # --- BOTTOM BAR (always visible via grid) ---
+    # --- BOTTOM BAR ---
     bottom_bar = tk.Frame(root, bg="#2d2d2d", height=70)
     bottom_bar.grid(row=1, column=0, sticky="ew")
     bottom_bar.grid_propagate(False)
