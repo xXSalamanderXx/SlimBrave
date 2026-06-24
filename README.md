@@ -44,6 +44,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 
 ## Run the command below in PowerShell:
 *Tip: Better if you run Powershell as Administrator*
+> [!CAUTION]
+> This branch is purely for development and experimental use. Do not attempt to run any scripts from this branch.
 ```ps1
 iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
 ```
