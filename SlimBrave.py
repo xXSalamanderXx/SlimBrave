@@ -10,7 +10,7 @@ import io
 import urllib.request
 
 # ----------------------------------------------------------------------
-# 1. Dependency checks and self‑repair (runs before anything else)
+# 1. Dependency checks and self‑repair (runs every time)
 # ----------------------------------------------------------------------
 BREW_INSTALLED_SOMETHING = False   # tracks if we installed/upgraded via brew
 
@@ -98,7 +98,6 @@ def check_python_and_tk():
                 print_step("Installation succeeded but could not find new Python. Exiting.")
                 sys.exit(1)
             print_step(f"Relaunching with {new_python} …")
-            os.environ["SLIMBRAVE_DEPENDENCIES_CHECKED"] = "1"
             os.execv(new_python, [new_python] + sys.argv)
         else:
             print_step("A modern Python is required. Exiting.")
@@ -113,7 +112,6 @@ def check_python_and_tk():
             subprocess.run(["brew", "install", "python-tk"], check=True)
             BREW_INSTALLED_SOMETHING = True
             print_step("Relaunching to use the updated Tk…")
-            os.environ["SLIMBRAVE_DEPENDENCIES_CHECKED"] = "1"
             os.execv(sys.executable, [sys.executable] + sys.argv)
         else:
             print_step("Cannot run without a working Tk. Exiting.")
@@ -129,9 +127,7 @@ def check_pillow():
         if prompt_yes_no("Install Pillow via pip now?"):
             try:
                 subprocess.run([sys.executable, "-m", "pip", "install", "Pillow"], check=True)
-                print_step("Pillow installed successfully.")
-                # Relaunch with dependencies checked flag to avoid re-prompting
-                os.environ["SLIMBRAVE_DEPENDENCIES_CHECKED"] = "1"
+                print_step("Pillow installed successfully. Relaunching...")
                 os.execv(sys.executable, [sys.executable] + sys.argv)
             except subprocess.CalledProcessError:
                 print_step("Pillow installation failed. Please install it manually: pip install Pillow")
@@ -146,20 +142,15 @@ def run_cleanup():
         subprocess.run(["brew", "cleanup"], check=False)
 
 def dependency_setup():
-    if os.environ.get("SLIMBRAVE_DEPENDENCIES_CHECKED") == "1":
-        print_step("Dependencies already checked. Proceeding to GUI…")
-        return
-
     print("=" * 60)
     print(" SlimBrave – Dependency Check")
     print("=" * 60)
 
     check_homebrew()
     check_python_and_tk()
-    check_pillow()   # added Pillow check
+    check_pillow()   # always checked
     run_cleanup()
 
-    os.environ["SLIMBRAVE_DEPENDENCIES_CHECKED"] = "1"
     print_step("All dependencies OK. Launching SlimBrave interface…")
     time.sleep(1)
 
@@ -167,13 +158,14 @@ def dependency_setup():
 # 2. The actual SlimBrave application
 # ----------------------------------------------------------------------
 def main():
+    # Import after dependencies are guaranteed
     import tkinter as tk
     from tkinter import ttk, messagebox, filedialog
+    from PIL import Image, ImageTk
     import json
     import datetime
     import base64
     import sys
-    from PIL import Image, ImageTk
     import urllib.request
     import io
 
@@ -944,5 +936,5 @@ def main():
 # 3. Entry point
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
-    dependency_setup()
+    dependency_setup()   # always runs
     main()
