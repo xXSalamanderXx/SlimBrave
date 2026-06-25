@@ -7,7 +7,9 @@
 
   <img src="https://i.postimg.cc/QCyWVFGN/SlimBrave.png" alt="SlimBrave Lion Logo" width="200"/>
 
-A lightweight utility designed to give you ultimate control over your Brave Browser. Lock down telemetry, enforce strict privacy standards, and strip away built-in browser bloatware—all from a single, clean interface. Supported on Windows and MacOS.
+A lightweight utility designed to give you ultimate control over your Brave Browser. Lock down telemetry, enforce strict privacy standards, and strip away built-in browser bloatware—all from a single, clean interface.
+
+Supported on Windows and MacOS!
 </div>
 
 <br>
