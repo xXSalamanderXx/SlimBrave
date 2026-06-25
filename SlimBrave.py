@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SlimBrave - Revived - v1.0.0 (macOS) (Pre-Release Use At Own Risk)
+# SlimBrave - Revived - v1.0.9 (macOS) (Pre-Release Use At Own Risk)
 
 import subprocess
 import sys
@@ -288,7 +288,7 @@ def main():
     }
 
     root = tk.Tk()
-    root.title("SlimBrave - Revived v1.0.0 (macOS) (Pre-Release Use At Own Risk)")
+    root.title("SlimBrave - Revived v1.0.9 (macOS) (Pre-Release Use At Own Risk)")
     root.geometry("1040x550")
     root.minsize(900, 400)
     root.configure(bg="#191919")
