@@ -21,7 +21,7 @@ Supported on Windows and MacOS!
 
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://buymeacoffee.com/SinZZzz)
 
-> [!TIP]
+> [!IMPORTANT]
 > This tool is currently not built for Linux.
 > On Linux, it is recommended to use Brave Origin. Brave Origin is free to use on Linux and debloats Brave out of the box.
 
@@ -61,9 +61,11 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 ## (Windows)
 
 ## Run the command below in PowerShell:
-*Tip: Better if you run Powershell as Administrator*
 > [!CAUTION]
 > This branch is purely for development and experimental use. Do not attempt to run any scripts from this branch.
+
+> [!TIP]
+> Better if you run Powershell as Administrator
 ```ps1
 iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
 ```
