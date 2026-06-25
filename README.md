@@ -21,7 +21,7 @@ Supported on Windows and MacOS!
 
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://buymeacoffee.com/SinZZzz)
 
-> [!WARNING]
+> [!NOTE]
 > This tool is currently not built for Linux.
 > On Linux, it is recommended to use Brave Origin. Brave Origin is free to use on Linux and debloats Brave out of the box.
 
