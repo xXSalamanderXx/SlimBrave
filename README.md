@@ -28,23 +28,15 @@ Supported on Windows and MacOS!
 <details>
 <summary> Requirements </summary>
 
-Windows Requirements:
+
+## Windows Requirements:
+
 - Windows 10/11
 - PowerShell
 - Administrator privileges
 
-MacOS Requiremens:
-- Homebrew
-- Python (python via Homebrew)
-
-(Homebrew and Python will be automatically installed if you agree to the auto-installation upon running Slimbrave)
-
-</details>
-
 <details>
-<summary> Error "Running Scripts is Disabled on this System"</summary>
-
-Windows:
+<summary> Powershell Error "Running Scripts is Disabled on this System"</summary>
 
 ### Run this command in PowerShell:
 
@@ -53,6 +45,16 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 ```
 
 </details>
+
+## MacOS Requiremens:
+
+- Homebrew
+- Python (python via Homebrew)
+
+(Homebrew and Python will be automatically installed if you agree to the auto-installation upon running Slimbrave)
+
+</details>
+
 
 ## 🚀 How to Use
 
