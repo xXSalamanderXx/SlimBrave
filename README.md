@@ -50,6 +50,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 
 - Homebrew
 - Python (python via Homebrew)
+- Python Tkinter
 
 (Homebrew and Python will be automatically installed if you agree to the auto-installation upon running Slimbrave)
 
@@ -83,6 +84,12 @@ iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimB
 ## Run the command below in Terminal:
 > [!CAUTION]
 > This branch is purely for development and experimental use. Do not attempt to run any scripts from this branch.
+
+> [!IMPORTANT]
+> It's preferred if you install the macOS dependencies prior to running; however, Slimbrave will attempt to auto-install these dependencies:
+> 1. Install Homebrew: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
+> 2. Install Python: `brew install python`
+> 3. Install Tkinter support: `brew install python-tk`
 ```
 curl -sO https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave.py && python3 SlimBrave.py
 ```
@@ -91,7 +98,7 @@ curl -sO https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/S
 
 > [!IMPORTANT]
 > Presets are now built in, so using the presets below is no longer recommended.
-> They still work, but they are deprecated and not updated for the new options available in 2026+.
+> They still work, but they are deprecated and not updated for the new options available.
 ## 📂 How to Use Presets
 Instead of manually checking boxes, you can instantly load a pre-configured setup:
 1. Download your desired preset `.json` file from the `Presets` folder in this repository.
