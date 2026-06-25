@@ -7,7 +7,7 @@
 
   <img src="https://i.postimg.cc/QCyWVFGN/SlimBrave.png" alt="SlimBrave Lion Logo" width="200"/>
 
-A lightweight, GUI-driven PowerShell utility designed to give you ultimate control over your Brave Browser. Lock down telemetry, enforce strict privacy standards, and strip away built-in browser bloatware—all from a single, clean interface.
+A lightweight utility designed to give you ultimate control over your Brave Browser. Lock down telemetry, enforce strict privacy standards, and strip away built-in browser bloatware—all from a single, clean interface. Supported on Windows and MacOS.
 </div>
 
 <br>
@@ -17,7 +17,7 @@ A lightweight, GUI-driven PowerShell utility designed to give you ultimate contr
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://buymeacoffee.com/SinZZzz)
 
 > [!WARNING]
-> This tool is currently not built for MacOS or Linux.
+> This tool is currently not built for Linux.
 > On Linux, it is recommended to use Brave Origin. Brave Origin is free to use on Linux and debloats Brave out of the box.
 
 <details>
@@ -60,6 +60,14 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 ```ps1
 iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
 ```
+## or
+
+1. Download the `SlimBrave.ps1` script from the [Releases](https://github.com/xXSalamanderXx/SlimBrave/releases) page.
+2. Right-click the file and select **Run with PowerShell**.
+3. Accept the UAC prompt (Administrator privileges are required to modify registry policies).
+4. Check the boxes for the features you wish to disable/enable.
+5. Click **Apply Settings** and restart your Brave Browser.
+
 
 ## (MacOS)
 
@@ -69,15 +77,6 @@ iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimB
 ```
 curl -sO https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave.py && python3 SlimBrave.py
 ```
-
-
-## or
-
-1. Download the `SlimBrave.ps1` script from the [Releases](https://github.com/xXSalamanderXx/SlimBrave/releases) page.
-2. Right-click the file and select **Run with PowerShell**.
-3. Accept the UAC prompt (Administrator privileges are required to modify registry policies).
-4. Check the boxes for the features you wish to disable/enable.
-5. Click **Apply Settings** and restart your Brave Browser.
 
 ##
 
