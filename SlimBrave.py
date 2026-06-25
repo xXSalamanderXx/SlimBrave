@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-# SlimBrave - Revived - v1.2.0 (macOS Edition)
-# Major fixes:
-# - Stops using the live com.brave.Browser domain as the primary managed policy store
-# - Writes SlimBrave-managed policies to ~/Library/Managed Preferences/com.brave.Browser.plist
-# - Strips legacy SlimBrave keys from the live domain during apply/restore/repair
-# - Deep de-crash repair with progress bar and on-screen diagnostics
-# - Quarantines the full Brave user-data folder during aggressive repair
-# - Safe plist restore: filters to SlimBrave-managed keys only
-# - UI reload reads managed prefs first, then legacy live-domain keys only for migration visibility
+# SlimBrave - Revived - v1.3.0 (macOS Edition)
 
 import subprocess
 import sys
@@ -48,7 +40,7 @@ def check_homebrew():
         return True
 
     print_step("Homebrew not found.")
-    print("Homebrew is required if SlimBrave needs to bootstrap a modern Python/Tk environment.")
+    print("Homebrew is required if SlimBrave needs to install a modern Python/Tk environment.")
     if not prompt_yes_no("Install Homebrew now?"):
         print_step("Cannot continue without Homebrew. Exiting.")
         sys.exit(1)
@@ -160,7 +152,6 @@ def main():
     RESTORE_STAGING_DIR = os.path.join(CONFIG_DIR, "restore-staging")
     STATE_FILE = os.path.join(CONFIG_DIR, "SlimBraveState.json")
     LOG_FILE = os.path.join(CONFIG_DIR, "SlimBrave.log")
-    SNAPSHOT_FILE = os.path.join(CONFIG_DIR, "BraveOriginalDomainBackup.plist")
 
     USER_MANAGED_PREFS_DIR = os.path.expanduser("~/Library/Managed Preferences")
     USER_MANAGED_PREFS_FILE = os.path.join(USER_MANAGED_PREFS_DIR, f"{DOMAIN}.plist")
@@ -184,7 +175,7 @@ def main():
     def timestamp_slug():
         return datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    write_log("SlimBrave macOS UI Initializing...")
+    write_log("SlimBrave UI started.")
 
     telemetry_features = [
         {"Name": "Disable Metrics Reporting", "Key": "MetricsReportingEnabled", "Value": False, "Type": "bool", "ToolTip": "Stops Brave from sending anonymous usage and crash reports.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
@@ -297,7 +288,7 @@ def main():
     }
 
     root = tk.Tk()
-    root.title("SlimBrave - Revived v1.2.0 (macOS)")
+    root.title("SlimBrave - Revived v1.3.0 (macOS)")
     root.geometry("1040x550")
     root.minsize(900, 400)
     root.configure(bg="#191919")
@@ -392,19 +383,19 @@ def main():
 
     button_padding = (15, 8)
     button_styles = {
-        "Orange.TButton": "#E65100",
+        "Preset.TButton": "#E65100",
         "Export.TButton": "#0D47A1",
         "Import.TButton": "#1976D2",
-        "Pull.TButton": "#F57F17",
+        "Reload.TButton": "#F57F17",
         "Apply.TButton": "#2E7D32",
         "Reset.TButton": "#C62828",
         "Plist.TButton": "#6A1B9A",
     }
     active_styles = {
-        "Orange.TButton": "#BF360C",
+        "Preset.TButton": "#BF360C",
         "Export.TButton": "#0A3D91",
         "Import.TButton": "#1565C0",
-        "Pull.TButton": "#E65100",
+        "Reload.TButton": "#E65100",
         "Apply.TButton": "#1B5E20",
         "Reset.TButton": "#B71C1C",
         "Plist.TButton": "#4A148C",
@@ -415,7 +406,7 @@ def main():
             sty,
             background=color,
             foreground="white",
-            font=("sans-serif", 9 if sty != "Orange.TButton" else 10, "bold"),
+            font=("sans-serif", 9 if sty != "Preset.TButton" else 10, "bold"),
             borderwidth=0,
             relief="flat",
             padding=button_padding,
@@ -428,8 +419,8 @@ def main():
     all_feature_vars = {}
     all_perm_vars = {}
 
-    status_var = tk.StringVar(value="Ready. Hover over options for details.")
-    save_status_var = tk.StringVar(value="Changes Applied ✔")
+    status_var = tk.StringVar(value="Ready.")
+    save_status_var = tk.StringVar(value="Saved")
 
     def set_status(msg):
         status_var.set(msg)
@@ -442,10 +433,10 @@ def main():
             return
         global_is_dirty = is_dirty
         if is_dirty:
-            save_status_var.set("Changes Need To Be Saved.....")
+            save_status_var.set("Unsaved")
             save_status_label.config(fg="#FFD700")
         else:
-            save_status_var.set("Changes Applied ✔")
+            save_status_var.set("Saved")
             save_status_label.config(fg="#90EE90")
 
     def get_ui_snapshot():
@@ -470,9 +461,9 @@ def main():
         try:
             with open(STATE_FILE, "w", encoding="utf-8") as f:
                 json.dump(get_ui_snapshot(), f, indent=4)
-            write_log(f"State baseline saved to {STATE_FILE}")
+            write_log(f"State saved to {STATE_FILE}")
         except Exception as e:
-            write_log(f"Failed to save state baseline: {e}")
+            write_log(f"State save failed: {e}")
 
     def run_cmd(cmd, check=False):
         return subprocess.run(cmd, capture_output=True, text=True, check=check)
@@ -491,7 +482,7 @@ def main():
         return None
 
     class ProgressDialog:
-        def __init__(self, parent, title="SlimBrave Progress"):
+        def __init__(self, parent, title="Working"):
             self.top = tk.Toplevel(parent)
             self.top.title(title)
             self.top.transient(parent)
@@ -526,7 +517,7 @@ def main():
             btns = tk.Frame(outer, bg="#1f1f1f")
             btns.pack(fill="x", pady=(10, 0))
 
-            self.close_btn = tk.Button(btns, text="Close", state="disabled", command=self.top.destroy, width=12)
+            self.close_btn = tk.Button(btns, text="OK", state="disabled", command=self.top.destroy, width=10)
             self.close_btn.pack(side="right")
 
             self.top.update_idletasks()
@@ -575,8 +566,50 @@ def main():
         txt.insert("1.0", "\n".join(lines))
         txt.configure(state="disabled")
 
-        tk.Button(outer, text="Close", command=win.destroy, width=12).pack(side="right", pady=(10, 0))
+        tk.Button(outer, text="OK", command=win.destroy, width=10).pack(side="right", pady=(10, 0))
         win.update_idletasks()
+
+    def choose_reset_mode():
+        result = {"value": None}
+
+        win = tk.Toplevel(root)
+        win.title("Reset")
+        win.transient(root)
+        win.grab_set()
+        win.configure(bg="#1f1f1f")
+        win.geometry("520x280")
+        win.minsize(480, 260)
+        win.iconphoto(False, icon_img)
+
+        outer = tk.Frame(win, bg="#1f1f1f")
+        outer.pack(fill="both", expand=True, padx=18, pady=16)
+
+        tk.Label(outer, text="Choose reset mode", bg="#1f1f1f", fg="#87CEFA", font=("sans-serif", 13, "bold")).pack(anchor="w", pady=(0, 10))
+
+        msg = (
+            "Light Reset\n"
+            "Removes SlimBrave settings and clears needed caches.\n"
+            "Keeps your Brave profile.\n\n"
+            "Hard Reset\n"
+            "Does everything above and starts Brave with a fresh profile.\n"
+            "Your old profile is moved to a backup folder."
+        )
+        tk.Label(outer, text=msg, bg="#1f1f1f", fg="white", justify="left", anchor="w", font=("sans-serif", 10)).pack(fill="x", pady=(0, 18))
+
+        btns = tk.Frame(outer, bg="#1f1f1f")
+        btns.pack(side="bottom", fill="x")
+
+        def pick(value):
+            result["value"] = value
+            win.destroy()
+
+        tk.Button(btns, text="Light Reset", command=lambda: pick("light"), width=12).pack(side="left")
+        tk.Button(btns, text="Hard Reset", command=lambda: pick("hard"), width=12).pack(side="left", padx=8)
+        tk.Button(btns, text="Cancel", command=lambda: pick(None), width=10).pack(side="right")
+
+        win.protocol("WM_DELETE_WINDOW", lambda: pick(None))
+        win.wait_window()
+        return result["value"]
 
     def plist_load_any(path):
         with open(path, "rb") as f:
@@ -618,7 +651,7 @@ def main():
 
     def normalize_restore_root(data):
         if not isinstance(data, dict):
-            raise Exception("Selected plist is not a dictionary plist.")
+            raise Exception("Selected file is not a valid plist.")
 
         if "__SlimBrave__" in data and isinstance(data.get("Payload"), dict):
             return data["Payload"], f"wrapped:{data['__SlimBrave__'].get('kind', 'unknown')}"
@@ -642,7 +675,7 @@ def main():
             if key in BOOL_POLICY_KEYS:
                 b = coerce_bool(value)
                 if b is None:
-                    warnings.append(f"Skipped {key}: expected bool, got {type(value).__name__}")
+                    warnings.append(f"Skipped {key}: expected bool")
                     continue
                 cleaned[key] = b
                 continue
@@ -655,14 +688,14 @@ def main():
                 if isinstance(value, list):
                     cleaned[key] = [str(x) for x in value]
                 else:
-                    warnings.append(f"Skipped {key}: expected array, got {type(value).__name__}")
+                    warnings.append(f"Skipped {key}: expected array")
                 continue
 
             if key in INT_POLICY_KEYS:
                 try:
                     cleaned[key] = int(value)
                 except Exception:
-                    warnings.append(f"Skipped {key}: expected int, got {type(value).__name__}")
+                    warnings.append(f"Skipped {key}: expected int")
                 continue
 
             if key in CONTENT_SETTING_KEYS:
@@ -671,9 +704,9 @@ def main():
                     if iv in (1, 2, 3):
                         cleaned[key] = iv
                     else:
-                        warnings.append(f"Skipped {key}: invalid content-setting value {iv}")
+                        warnings.append(f"Skipped {key}: invalid value {iv}")
                 except Exception:
-                    warnings.append(f"Skipped {key}: invalid content-setting type {type(value).__name__}")
+                    warnings.append(f"Skipped {key}: invalid value")
                 continue
 
             if key == "PaymentMethodQueryEnabled":
@@ -684,7 +717,7 @@ def main():
                     except Exception:
                         b = None
                 if b is None:
-                    warnings.append(f"Skipped {key}: expected bool-compatible value, got {type(value).__name__}")
+                    warnings.append(f"Skipped {key}: invalid value")
                 else:
                     cleaned[key] = b
                 continue
@@ -697,7 +730,7 @@ def main():
                     else:
                         warnings.append(f"Skipped {key}: invalid value {iv}")
                 except Exception:
-                    warnings.append(f"Skipped {key}: expected int 0/1")
+                    warnings.append(f"Skipped {key}: invalid value")
                 continue
 
             if key == "DnsOverHttpsMode":
@@ -705,7 +738,7 @@ def main():
                 if s in {"automatic", "off"}:
                     cleaned[key] = s
                 else:
-                    warnings.append(f"Skipped {key}: invalid value {value!r}")
+                    warnings.append(f"Skipped {key}: invalid value")
                 continue
 
             cleaned[key] = value
@@ -739,7 +772,7 @@ def main():
     def write_user_managed_prefs_dict(payload):
         os.makedirs(USER_MANAGED_PREFS_DIR, exist_ok=True)
         plist_dump_xml(USER_MANAGED_PREFS_FILE, payload)
-        write_log(f"Wrote managed preferences to {USER_MANAGED_PREFS_FILE}")
+        write_log(f"Wrote managed prefs: {USER_MANAGED_PREFS_FILE}")
 
     def remove_managed_pref_files():
         removed = []
@@ -748,15 +781,15 @@ def main():
                 try:
                     os.remove(path)
                     removed.append(path)
-                    write_log(f"Removed managed preferences file: {path}")
+                    write_log(f"Removed managed prefs file: {path}")
                 except Exception as e:
                     write_log(f"Failed removing managed prefs file {path}: {e}")
         return removed
 
     def strip_legacy_policy_keys_from_live_domain():
         domain_data = defaults_export_domain_dict()
-        if not isinstance(domain_data, dict):
-            domain_data = {}
+        if not isinstance(domain_data, dict) or not domain_data:
+            return []
 
         removed = []
         for key in list(domain_data.keys()):
@@ -764,7 +797,9 @@ def main():
                 removed.append(key)
                 domain_data.pop(key, None)
 
-        defaults_import_domain_dict(domain_data)
+        if removed:
+            defaults_import_domain_dict(domain_data)
+
         return sorted(removed)
 
     def build_managed_payload_from_ui():
@@ -936,7 +971,7 @@ def main():
 
         still_running = pgrep_any("Brave")
         if progress:
-            progress.log("Brave running after stop attempt: yes" if still_running else "Brave fully stopped.")
+            progress.log("Brave is still running." if still_running else "Brave is closed.")
         return not still_running
 
     def flush_pref_cache():
@@ -996,7 +1031,7 @@ def main():
                 if isinstance(raw, dict):
                     user_payload = raw
             except Exception as e:
-                lines.append(f"User managed prefs read error: {e}")
+                lines.append(f"User policy file read error: {e}")
 
         if os.path.exists(SYSTEM_MANAGED_PREFS_FILE):
             try:
@@ -1004,87 +1039,72 @@ def main():
                 if isinstance(raw, dict):
                     system_payload = raw
             except Exception as e:
-                lines.append(f"System managed prefs read error: {e}")
+                lines.append(f"System policy file read error: {e}")
 
         try:
             legacy_payload = defaults_export_domain_dict()
         except Exception as e:
-            lines.append(f"Live domain export error: {e}")
+            lines.append(f"Live domain read error: {e}")
 
         user_managed_keys = sorted(k for k in user_payload.keys() if k in managed_keys)
         system_managed_keys = sorted(k for k in system_payload.keys() if k in managed_keys)
         legacy_managed_keys = sorted(k for k in legacy_payload.keys() if k in managed_keys) if isinstance(legacy_payload, dict) else []
 
-        lines.append(f"User managed prefs file exists: {'yes' if os.path.exists(USER_MANAGED_PREFS_FILE) else 'no'}")
-        lines.append(f"System managed prefs file exists: {'yes' if os.path.exists(SYSTEM_MANAGED_PREFS_FILE) else 'no'}")
-        lines.append(f"Managed keys found in user managed prefs: {len(user_managed_keys)}")
-        lines.append(f"Managed keys found in system managed prefs: {len(system_managed_keys)}")
-        lines.append(f"Legacy managed keys found in live com.brave.Browser domain: {len(legacy_managed_keys)}")
-
-        if legacy_managed_keys:
-            lines.append("")
-            lines.append("High-risk legacy keys still present in the live Brave domain:")
-            lines.extend([f" - {k}" for k in legacy_managed_keys])
+        lines.append(f"User policy file: {'found' if os.path.exists(USER_MANAGED_PREFS_FILE) else 'not found'}")
+        lines.append(f"System policy file: {'found' if os.path.exists(SYSTEM_MANAGED_PREFS_FILE) else 'not found'}")
+        lines.append(f"User policy keys: {len(user_managed_keys)}")
+        lines.append(f"System policy keys: {len(system_managed_keys)}")
+        lines.append(f"Legacy live-domain keys: {len(legacy_managed_keys)}")
 
         risky_live_permission_keys = [k for k in legacy_managed_keys if k in CONTENT_SETTING_KEYS or k == "PaymentMethodQueryEnabled"]
         if risky_live_permission_keys:
             lines.append("")
-            lines.append("Likely crash-risk keys found in live domain (these should not stay there):")
+            lines.append("Legacy keys found in live domain:")
             lines.extend([f" - {k}" for k in risky_live_permission_keys])
 
         for scope_name, payload in (
-            ("user managed prefs", user_payload),
-            ("system managed prefs", system_payload),
+            ("user policy file", user_payload),
+            ("system policy file", system_payload),
             ("live domain", legacy_payload if isinstance(legacy_payload, dict) else {}),
         ):
             if "PaymentMethodQueryEnabled" in payload and not isinstance(payload["PaymentMethodQueryEnabled"], bool):
-                lines.append(f"Suspicious type in {scope_name}: PaymentMethodQueryEnabled = {type(payload['PaymentMethodQueryEnabled']).__name__}")
+                lines.append(f"Suspicious type in {scope_name}: PaymentMethodQueryEnabled")
 
-        lines.append(f"Local State exists: {'yes' if os.path.exists(BRAVE_LOCAL_STATE_FILE) else 'no'}")
-        lines.append(f"Default/Preferences exists: {'yes' if os.path.exists(os.path.join(BRAVE_DEFAULT_PROFILE_DIR, 'Preferences')) else 'no'}")
+        lines.append(f"Local State: {'found' if os.path.exists(BRAVE_LOCAL_STATE_FILE) else 'not found'}")
+        lines.append(f"Default/Preferences: {'found' if os.path.exists(os.path.join(BRAVE_DEFAULT_PROFILE_DIR, 'Preferences')) else 'not found'}")
 
         return lines
-
-    def ensure_snapshot_exists():
-        if os.path.exists(SNAPSHOT_FILE):
-            return
-        try:
-            data = defaults_export_domain_dict()
-            plist_dump_xml(SNAPSHOT_FILE, data if isinstance(data, dict) else {})
-            write_log(f"Created original Brave domain snapshot at {SNAPSHOT_FILE}")
-        except Exception as e:
-            write_log(f"Could not create original Brave domain snapshot: {e}")
 
     def check_and_close_brave():
         if not pgrep_any("Brave"):
             return True
 
         ok = messagebox.askokcancel(
-            "Close Brave Required",
-            "Brave is currently running.\n\nSlimBrave must fully close Brave and its helpers before applying, restoring, or repairing settings."
+            "Close Brave",
+            "Brave is open.\n\nClose it now to continue?"
         )
         if not ok:
-            set_status("Operation cancelled by user.")
+            set_status("Cancelled.")
             return False
 
         progress = ProgressDialog(root, "Closing Brave")
-        progress.step(20, "Sending Brave a normal quit request...")
+        progress.step(20, "Closing Brave...")
         stopped = kill_brave_family(progress)
         if not stopped:
-            progress.finish("Brave could not be fully stopped. Close it manually and retry.")
-            messagebox.showerror("Brave Still Running", "SlimBrave could not stop every Brave process. Please close Brave manually and try again.")
+            progress.finish("Brave is still open.")
+            messagebox.showerror("Brave", "Could not close Brave.\n\nPlease close it and try again.")
             return False
 
-        progress.finish("Brave closed successfully.")
+        progress.finish("Brave is closed.")
         return True
 
     def reload_ui_from_registry():
         payload = merged_policy_source_for_ui()
         apply_payload_to_ui(payload)
         if payload:
-            set_status("UI reloaded from managed prefs plus any legacy SlimBrave keys still found in the live domain.")
+            set_status("Settings loaded.")
         else:
-            set_status("No SlimBrave-managed Brave policy settings found.")
+            set_status("No SlimBrave settings found.")
 
     def export_settings():
         f = filedialog.asksaveasfilename(defaultextension=".json", initialfile="SlimBraveSettings.json")
@@ -1092,7 +1112,7 @@ def main():
             return
         with open(f, "w", encoding="utf-8") as file:
             json.dump(get_ui_snapshot(), file, indent=4)
-        set_status(f"Settings exported to {f}")
+        set_status("Settings exported.")
 
     def import_settings():
         f = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
@@ -1123,66 +1143,65 @@ def main():
 
         suspend_dirty_tracking = False
         check_dirty_state()
-        set_status("Settings imported from JSON. Pending save.")
+        set_status("JSON loaded.")
 
     def apply_settings():
         if not check_and_close_brave():
             return
 
-        ensure_snapshot_exists()
         payload = build_managed_payload_from_ui()
         cleaned_payload, warnings = sanitize_managed_payload(payload)
 
-        progress = ProgressDialog(root, "Applying SlimBrave Settings")
+        progress = ProgressDialog(root, "Apply")
         try:
-            progress.step(10, "Building managed policy payload from the UI...")
-            progress.log(f"Managed keys selected: {len(cleaned_payload)}")
+            progress.step(10, "Preparing settings...")
+            progress.log(f"Keys selected: {len(cleaned_payload)}")
 
-            progress.step(30, "Removing legacy SlimBrave keys from the live Brave domain...")
+            progress.step(30, "Removing old live-domain keys...")
             removed = strip_legacy_policy_keys_from_live_domain()
-            progress.log(f"Legacy keys removed from com.brave.Browser: {len(removed)}")
+            progress.log(f"Removed: {len(removed)}")
 
-            progress.step(55, "Writing the managed policy plist only...")
+            progress.step(55, "Writing policy file...")
             if cleaned_payload:
                 write_user_managed_prefs_dict(cleaned_payload)
-                progress.log(f"Wrote {len(cleaned_payload)} managed keys to {USER_MANAGED_PREFS_FILE}")
+                progress.log(f"Wrote: {USER_MANAGED_PREFS_FILE}")
             else:
                 if os.path.exists(USER_MANAGED_PREFS_FILE):
                     os.remove(USER_MANAGED_PREFS_FILE)
-                progress.log("No keys selected; removed user managed policy plist if present.")
+                progress.log("No policy file needed.")
 
-            progress.step(75, "Flushing macOS preference cache...")
+            progress.step(75, "Refreshing macOS cache...")
             flush_pref_cache()
 
-            progress.step(90, "Refreshing UI state...")
+            progress.step(90, "Refreshing app...")
             save_current_state()
             reload_ui_from_registry()
             set_dirty_state(False)
 
             if warnings:
                 progress.log("")
-                progress.log("Sanitizer warnings:")
+                progress.log("Warnings:")
                 for w in warnings:
                     progress.log(f" - {w}")
 
-            progress.finish("Settings applied safely.")
+            progress.finish("Done.")
             show_text_report(
-                "Apply Diagnostics",
+                "Apply Summary",
                 [
-                    "SlimBrave now writes policy to the managed-preferences plist only.",
-                    f"Managed plist path: {USER_MANAGED_PREFS_FILE}",
-                    f"Managed keys written: {len(cleaned_payload)}",
-                    f"Legacy live-domain keys removed: {len(removed)}",
+                    "Apply finished.",
+                    f"Policy file: {USER_MANAGED_PREFS_FILE}",
+                    f"Keys written: {len(cleaned_payload)}",
+                    f"Old live-domain keys removed: {len(removed)}",
                     "",
                     "Warnings:" if warnings else "Warnings: none",
                     *([f" - {w}" for w in warnings] if warnings else []),
                 ],
             )
-            set_status("Settings applied safely.")
+            set_status("Settings applied.")
         except Exception as e:
             write_log(f"Apply failed: {e}")
-            progress.finish("Apply failed.")
-            messagebox.showerror("Apply Failed", f"An error occurred while applying settings:\n{e}")
+            progress.finish("Failed.")
+            messagebox.showerror("Apply", f"Apply failed.\n\n{e}")
 
     def import_plist():
         f = filedialog.askopenfilename(filetypes=[("Property List / XML", "*.plist *.xml"), ("All files", "*.*")])
@@ -1192,47 +1211,48 @@ def main():
         if not check_and_close_brave():
             return
 
-        progress = ProgressDialog(root, "Restoring SlimBrave Plist")
+        progress = ProgressDialog(root, "Restore Plist")
         try:
-            progress.step(10, "Reading the selected plist...")
+            progress.step(10, "Reading file...")
             staged = os.path.join(RESTORE_STAGING_DIR, f"{timestamp_slug()}-{os.path.basename(f)}")
             shutil.copy2(f, staged)
             raw = plist_load_any(staged)
 
-            progress.step(25, "Normalizing the plist payload...")
+            progress.step(25, "Checking data...")
             payload, container_kind = normalize_restore_root(raw)
-            progress.log(f"Detected container type: {container_kind}")
+            progress.log(f"Type: {container_kind}")
 
-            progress.step(45, "Filtering to SlimBrave-managed keys only...")
+            progress.step(45, "Filtering SlimBrave keys...")
             cleaned_payload, warnings = sanitize_managed_payload(payload)
             skipped_count = len(payload.keys()) - len(cleaned_payload.keys()) if isinstance(payload, dict) else 0
-            progress.log(f"Managed keys restored from file: {len(cleaned_payload)}")
-            progress.log(f"Non-managed or invalid keys skipped: {skipped_count}")
+            progress.log(f"Keys restored: {len(cleaned_payload)}")
+            progress.log(f"Keys skipped: {skipped_count}")
 
             if not cleaned_payload:
-                raise Exception("The selected plist did not contain any valid SlimBrave-managed keys after filtering.")
+                raise Exception("No valid SlimBrave keys were found in this file.")
 
-            progress.step(65, "Stripping old legacy keys from the live Brave domain...")
+            progress.step(65, "Removing old live-domain keys...")
             removed = strip_legacy_policy_keys_from_live_domain()
-            progress.log(f"Legacy live-domain keys removed: {len(removed)}")
+            progress.log(f"Removed: {len(removed)}")
 
-            progress.step(80, "Writing the cleaned managed policy plist...")
+            progress.step(80, "Writing policy file...")
             write_user_managed_prefs_dict(cleaned_payload)
 
-            progress.step(92, "Flushing caches and refreshing UI...")
+            progress.step(92, "Refreshing app...")
             flush_pref_cache()
             clear_brave_runtime_caches()
             reload_ui_from_registry()
             set_dirty_state(False)
 
-            progress.finish("Restore completed safely.")
+            progress.finish("Done.")
             report = [
+                "Restore finished.",
                 f"Selected file: {f}",
-                f"Staged copy: {staged}",
-                f"Detected container type: {container_kind}",
-                f"Managed keys restored: {len(cleaned_payload)}",
-                f"Legacy live-domain keys removed: {len(removed)}",
-                f"Managed prefs target: {USER_MANAGED_PREFS_FILE}",
+                f"Copy used: {staged}",
+                f"Type: {container_kind}",
+                f"Keys restored: {len(cleaned_payload)}",
+                f"Old live-domain keys removed: {len(removed)}",
+                f"Policy file: {USER_MANAGED_PREFS_FILE}",
                 "",
                 "Restored keys:",
                 *[f" - {k}" for k in sorted(cleaned_payload.keys())],
@@ -1240,111 +1260,150 @@ def main():
                 "Warnings:" if warnings else "Warnings: none",
                 *([f" - {w}" for w in warnings] if warnings else []),
             ]
-            show_text_report("Restore Diagnostics", report)
-            set_status("Plist restored safely into managed preferences.")
+            show_text_report("Restore Summary", report)
+            set_status("Plist restored.")
         except Exception as e:
             write_log(f"Plist restore failed: {e}")
-            progress.finish("Restore failed.")
-            messagebox.showerror(
-                "Restore Failed",
-                "The selected plist could not be restored safely.\n\n"
-                f"{e}\n\n"
-                "This restore path only writes SlimBrave-managed keys and will not re-import the whole Brave domain."
-            )
+            progress.finish("Failed.")
+            messagebox.showerror("Restore", f"Restore failed.\n\n{e}")
 
-    def reset_settings():
-        proceed = messagebox.askyesno(
-            "Aggressive De-Crash Repair",
-            "This repair is aggressive on purpose.\n\n"
-            "It will:\n"
-            " - fully stop Brave and helper processes\n"
-            " - diagnose legacy policy locations\n"
-            " - remove user/system managed policy plists\n"
-            " - strip old SlimBrave keys from the live com.brave.Browser domain\n"
-            " - flush cfprefsd and clear Brave caches\n"
-            " - quarantine the ENTIRE Brave user-data folder into a timestamped backup\n"
-            " - recreate a fresh Brave profile directory\n\n"
-            "This is the closest safe way to de-crash Brave from policy/profile corruption.\n\n"
-            "Continue?"
-        )
-        if not proceed:
-            return
-
-        progress = ProgressDialog(root, "Deep Brave Repair")
+    def do_light_reset():
+        progress = ProgressDialog(root, "Light Reset")
         try:
-            progress.step(5, "Stopping Brave and all helper processes...")
+            progress.step(5, "Closing Brave...")
             stopped = kill_brave_family(progress)
             if not stopped:
-                raise Exception("Brave could not be stopped completely.")
+                raise Exception("Brave could not be closed.")
 
-            progress.step(15, "Diagnosing current policy sources...")
+            progress.step(20, "Checking current settings...")
             diagnosis_lines = diagnose_policy_sources()
             for line in diagnosis_lines:
                 progress.log(line)
 
-            progress.step(28, "Removing managed policy plist files...")
+            progress.step(40, "Removing policy files...")
             removed_files = remove_managed_pref_files()
             if removed_files:
                 for p in removed_files:
-                    progress.log(f"Removed managed policy file: {p}")
+                    progress.log(f"Removed: {p}")
             else:
-                progress.log("No managed policy plist files were present.")
+                progress.log("No policy files found.")
 
-            progress.step(42, "Removing legacy SlimBrave keys from the live Brave domain...")
+            progress.step(60, "Removing old live-domain keys...")
             removed_keys = strip_legacy_policy_keys_from_live_domain()
-            progress.log(f"Legacy policy keys removed from com.brave.Browser: {len(removed_keys)}")
-            if removed_keys:
-                for k in removed_keys:
-                    progress.log(f" - {k}")
+            progress.log(f"Removed keys: {len(removed_keys)}")
+            for k in removed_keys:
+                progress.log(f" - {k}")
 
-            progress.step(55, "Flushing macOS preference cache...")
+            progress.step(75, "Refreshing macOS cache...")
             flush_pref_cache()
 
-            progress.step(68, "Clearing Brave runtime caches...")
+            progress.step(88, "Clearing Brave caches...")
             cache_removed = clear_brave_runtime_caches()
-            progress.log(f"Runtime cache paths removed: {len(cache_removed)}")
+            progress.log(f"Cache paths cleared: {len(cache_removed)}")
 
-            progress.step(82, "Quarantining the Brave user-data profile...")
+            progress.step(96, "Refreshing app...")
+            reload_ui_from_registry()
+            set_dirty_state(False)
+
+            report = [
+                "Light Reset finished.",
+                "",
+                "Checks:",
+                *diagnosis_lines,
+                "",
+                f"Policy files removed: {len(removed_files)}",
+                f"Old live-domain keys removed: {len(removed_keys)}",
+                f"Cache paths cleared: {len(cache_removed)}",
+                "",
+                "Your Brave profile was kept.",
+            ]
+
+            progress.finish("Done.")
+            show_text_report("Light Reset Summary", report)
+            messagebox.showinfo("Light Reset", "Light Reset finished.")
+            set_status("Light Reset finished.")
+        except Exception as e:
+            write_log(f"Light reset failed: {e}")
+            progress.finish("Failed.")
+            messagebox.showerror("Light Reset", f"Light Reset failed.\n\n{e}")
+
+    def do_hard_reset():
+        progress = ProgressDialog(root, "Hard Reset")
+        try:
+            progress.step(5, "Closing Brave...")
+            stopped = kill_brave_family(progress)
+            if not stopped:
+                raise Exception("Brave could not be closed.")
+
+            progress.step(15, "Checking current settings...")
+            diagnosis_lines = diagnose_policy_sources()
+            for line in diagnosis_lines:
+                progress.log(line)
+
+            progress.step(30, "Removing policy files...")
+            removed_files = remove_managed_pref_files()
+            if removed_files:
+                for p in removed_files:
+                    progress.log(f"Removed: {p}")
+            else:
+                progress.log("No policy files found.")
+
+            progress.step(45, "Removing old live-domain keys...")
+            removed_keys = strip_legacy_policy_keys_from_live_domain()
+            progress.log(f"Removed keys: {len(removed_keys)}")
+            for k in removed_keys:
+                progress.log(f" - {k}")
+
+            progress.step(58, "Refreshing macOS cache...")
+            flush_pref_cache()
+
+            progress.step(70, "Clearing Brave caches...")
+            cache_removed = clear_brave_runtime_caches()
+            progress.log(f"Cache paths cleared: {len(cache_removed)}")
+
+            progress.step(84, "Moving Brave profile to backup...")
             backup_path = quarantine_brave_user_data()
             if backup_path:
-                progress.log(f"Quarantined profile backup: {backup_path}")
+                progress.log(f"Backup: {backup_path}")
             else:
-                progress.log("No existing Brave user-data directory was present; created a clean one.")
+                progress.log("Created a new Brave data folder.")
 
-            progress.step(92, "Recreating a clean profile shell and refreshing UI...")
+            progress.step(95, "Refreshing app...")
             os.makedirs(BRAVE_USER_DATA_DIR, exist_ok=True)
             reload_ui_from_registry()
             set_dirty_state(False)
 
             report = [
-                "Deep repair completed.",
+                "Hard Reset finished.",
                 "",
-                "Diagnosis:",
+                "Checks:",
                 *diagnosis_lines,
                 "",
-                f"Managed policy files removed: {len(removed_files)}",
-                f"Legacy live-domain keys removed: {len(removed_keys)}",
-                f"Runtime cache paths removed: {len(cache_removed)}",
-                f"Quarantined Brave profile backup: {backup_path if backup_path else '(fresh folder created only)'}",
+                f"Policy files removed: {len(removed_files)}",
+                f"Old live-domain keys removed: {len(removed_keys)}",
+                f"Cache paths cleared: {len(cache_removed)}",
+                f"Profile backup: {backup_path if backup_path else '(new folder created)'}",
                 "",
-                "Result:",
-                "Brave should now start with a fresh profile and without legacy SlimBrave policy writes in the live com.brave.Browser domain.",
-                "If Brave still crashes after this repair, the remaining suspects are the Brave app install itself or a non-SlimBrave external factor.",
+                "A fresh Brave profile will be created on next launch.",
             ]
 
-            progress.finish("Deep repair completed.")
-            show_text_report("Deep Repair Diagnostics", report)
-            messagebox.showinfo(
-                "Repair Finished",
-                "Deep repair completed.\n\n"
-                "Brave's old profile was quarantined and a fresh profile area was created.\n"
-                "Open Brave and test search plus Site Settings again."
-            )
-            set_status("Deep repair completed.")
+            progress.finish("Done.")
+            show_text_report("Hard Reset Summary", report)
+            messagebox.showinfo("Hard Reset", "Hard Reset finished.")
+            set_status("Hard Reset finished.")
         except Exception as e:
-            write_log(f"Deep repair failed: {e}")
-            progress.finish("Deep repair failed.")
-            messagebox.showerror("Repair Failed", f"The deep repair failed:\n{e}")
+            write_log(f"Hard reset failed: {e}")
+            progress.finish("Failed.")
+            messagebox.showerror("Hard Reset", f"Hard Reset failed.\n\n{e}")
+
+    def reset_settings():
+        mode = choose_reset_mode()
+        if mode == "light":
+            do_light_reset()
+        elif mode == "hard":
+            do_hard_reset()
+        else:
+            set_status("Reset cancelled.")
 
     def apply_preset(preset_type):
         nonlocal suspend_dirty_tracking
@@ -1388,7 +1447,7 @@ def main():
                     all_feature_vars[key].set(1)
             sb_var.set("Off")
             dns_var.set("Off")
-            set_status("Loaded: High Privacy + Moderate Security preset.")
+            set_status("Privacy preset loaded.")
 
         elif preset_type == "security":
             security_keys = [
@@ -1409,7 +1468,7 @@ def main():
                     all_feature_vars[key].set(1)
             sb_var.set("On")
             dns_var.set("On")
-            set_status("Loaded: High Security + Moderate Privacy preset.")
+            set_status("Security preset loaded.")
 
         suspend_dirty_tracking = False
         check_dirty_state()
@@ -1428,13 +1487,13 @@ def main():
     inner_top = tk.Frame(top_frame, bg="#191919")
     inner_top.pack(fill="x")
 
-    tk.Label(inner_top, text="Quick Toggles:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
+    tk.Label(inner_top, text="Quick Presets:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
 
-    btn_priv = ttk.Button(inner_top, text="High Privacy + Moderate Security", style="Orange.TButton", command=lambda: apply_preset("privacy"))
+    btn_priv = ttk.Button(inner_top, text="Privacy", style="Preset.TButton", command=lambda: apply_preset("privacy"))
     btn_priv.pack(side="left", padx=10)
     create_tooltip(btn_priv, "Applies the recommended preset for High Privacy and Moderate Security.")
 
-    btn_sec = ttk.Button(inner_top, text="High Security + Moderate Privacy", style="Orange.TButton", command=lambda: apply_preset("security"))
+    btn_sec = ttk.Button(inner_top, text="Security", style="Preset.TButton", command=lambda: apply_preset("security"))
     btn_sec.pack(side="left", padx=10)
     create_tooltip(btn_sec, "Applies the recommended preset for High Security and Moderate Privacy.")
 
@@ -1580,12 +1639,12 @@ def main():
     btn_frame = tk.Frame(bottom_bar, bg="#2d2d2d")
     btn_frame.pack(side="top", fill="x", pady=5)
 
-    ttk.Button(btn_frame, text="Export Settings", style="Export.TButton", command=export_settings).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Export JSON", style="Export.TButton", command=export_settings).pack(side="left", expand=True, padx=5)
     ttk.Button(btn_frame, text="Import JSON", style="Import.TButton", command=import_settings).pack(side="left", expand=True, padx=5)
-    ttk.Button(btn_frame, text="Restore Plist/XML", style="Plist.TButton", command=import_plist).pack(side="left", expand=True, padx=5)
-    ttk.Button(btn_frame, text="Pull Settings", style="Pull.TButton", command=reload_ui_from_registry).pack(side="left", expand=True, padx=5)
-    ttk.Button(btn_frame, text="Apply Settings", style="Apply.TButton", command=apply_settings).pack(side="left", expand=True, padx=5)
-    ttk.Button(btn_frame, text="Reset All", style="Reset.TButton", command=reset_settings).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Restore Plist", style="Plist.TButton", command=import_plist).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Reload", style="Reload.TButton", command=reload_ui_from_registry).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Apply", style="Apply.TButton", command=apply_settings).pack(side="left", expand=True, padx=5)
+    ttk.Button(btn_frame, text="Reset", style="Reset.TButton", command=reset_settings).pack(side="left", expand=True, padx=5)
 
     status_label = tk.Label(bottom_bar, textvariable=status_var, bg="#2d2d2d", fg="#aaaaaa", font=("courier", 10), anchor="w", padx=10)
     status_label.pack(side="bottom", fill="x")
