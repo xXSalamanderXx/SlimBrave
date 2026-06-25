@@ -23,14 +23,23 @@ A lightweight, GUI-driven PowerShell utility designed to give you ultimate contr
 <details>
 <summary> Requirements </summary>
 
+Windows Requirements:
 - Windows 10/11
 - PowerShell
 - Administrator privileges
+
+MacOS Requiremens:
+- Homebrew
+- Python (python via Homebrew)
+
+(Homebrew and Python will be automatically installed if you agree to the auto-installation upon running Slimbrave)
 
 </details>
 
 <details>
 <summary> Error "Running Scripts is Disabled on this System"</summary>
+
+Windows:
 
 ### Run this command in PowerShell:
 
@@ -42,6 +51,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 
 ## 🚀 How to Use
 
+## (Windows)
+
 ## Run the command below in PowerShell:
 *Tip: Better if you run Powershell as Administrator*
 > [!CAUTION]
@@ -49,6 +60,16 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 ```ps1
 iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
 ```
+
+## (MacOS)
+
+## Run the command below in Terminal:
+> [!CAUTION]
+> This branch is purely for development and experimental use. Do not attempt to run any scripts from this branch.
+```
+curl -sO https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave.py && python3 SlimBrave.py
+```
+
 
 ## or
 
