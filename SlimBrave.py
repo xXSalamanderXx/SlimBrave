@@ -420,7 +420,7 @@ def main():
     all_perm_vars = {}
 
     status_var = tk.StringVar(value="Ready.")
-    save_status_var = tk.StringVar(value="Saved")
+    save_status_var = tk.StringVar(value="Saved ✅")
 
     def set_status(msg):
         status_var.set(msg)
@@ -433,10 +433,10 @@ def main():
             return
         global_is_dirty = is_dirty
         if is_dirty:
-            save_status_var.set("Unsaved")
+            save_status_var.set("UnSaved ⚠️")
             save_status_label.config(fg="#FFD700")
         else:
-            save_status_var.set("Saved")
+            save_status_var.set("Saved ✅")
             save_status_label.config(fg="#90EE90")
 
     def get_ui_snapshot():
@@ -461,7 +461,7 @@ def main():
         try:
             with open(STATE_FILE, "w", encoding="utf-8") as f:
                 json.dump(get_ui_snapshot(), f, indent=4)
-            write_log(f"State saved to {STATE_FILE}")
+            write_log(f"State Saved ✅ to {STATE_FILE}")
         except Exception as e:
             write_log(f"State save failed: {e}")
 
