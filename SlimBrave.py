@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SlimBrave - Revived - v1.0.9 (macOS) (Pre-Release Use At Own Risk)
+# SlimBrave - Revived - v1.0.9 (macOS)
 
 import subprocess
 import sys
@@ -288,7 +288,7 @@ def main():
     }
 
     root = tk.Tk()
-    root.title("SlimBrave - Revived v1.0.9 (macOS) (Pre-Release Use At Own Risk)")
+    root.title("SlimBrave - Revived v1.0.9 (macOS)")
     root.geometry("1040x550")
     root.minsize(900, 400)
     root.configure(bg="#191919")
@@ -588,11 +588,11 @@ def main():
 
         msg = (
             "Light Reset\n"
-            "Removes SlimBrave settings and clears needed caches.\n"
-            "Keeps your Brave profile.\n\n"
+            "Removes SlimBrave settings and clears Brave runtime caches.\n"
+            "Keeps your current Brave profile.\n\n"
             "Hard Reset\n"
-            "Does everything above and starts Brave with a fresh profile.\n"
-            "Your old profile is moved to a backup folder."
+            "DESTRUCTIVE: Moves your current Brave profile to a backup folder\n"
+            "and forces Brave to create a fresh profile on next launch."
         )
         tk.Label(outer, text=msg, bg="#1f1f1f", fg="white", justify="left", anchor="w", font=("sans-serif", 10)).pack(fill="x", pady=(0, 18))
 
@@ -1098,6 +1098,15 @@ def main():
         progress.finish("Brave is closed.")
         return True
 
+    def confirm_hard_reset():
+        return messagebox.askyesno(
+            "Confirm Hard Reset",
+            "Hard Reset is destructive.\n\n"
+            "It will move your current Brave profile to a backup folder and Brave will start with a fresh profile on next launch.\n\n"
+            "You may lose signed-in sessions, extension state, local settings, and site data in the active profile.\n\n"
+            "Continue?"
+        )
+
     def reload_ui_from_registry():
         payload = merged_policy_source_for_ui()
         apply_payload_to_ui(payload)
@@ -1184,7 +1193,7 @@ def main():
                 for w in warnings:
                     progress.log(f" - {w}")
 
-            progress.finish("Done.")
+            progress.finish("SlimBrave Applied Successfully!")
             show_text_report(
                 "Apply Summary",
                 [
@@ -1197,11 +1206,13 @@ def main():
                     *([f" - {w}" for w in warnings] if warnings else []),
                 ],
             )
-            set_status("Settings applied.")
+            messagebox.showinfo("Apply", "SlimBrave Applied Successfully!")
+            set_status("SlimBrave Applied Successfully!")
         except Exception as e:
             write_log(f"Apply failed: {e}")
-            progress.finish("Failed.")
-            messagebox.showerror("Apply", f"Apply failed.\n\n{e}")
+            progress.finish("Something Went Wrong, Please Read Logs for More Details")
+            set_status("Something Went Wrong, Please Read Logs for More Details")
+            messagebox.showerror("Apply", "Something Went Wrong, Please Read Logs for More Details.\n\n" + str(e))
 
     def import_plist():
         f = filedialog.askopenfilename(filetypes=[("Property List / XML", "*.plist *.xml"), ("All files", "*.*")])
@@ -1241,6 +1252,8 @@ def main():
             progress.step(92, "Refreshing app...")
             flush_pref_cache()
             clear_brave_runtime_caches()
+            flush_pref_cache()
+            progress.log("macOS preference cache refreshed again.")
             reload_ui_from_registry()
             set_dirty_state(False)
 
@@ -1300,8 +1313,11 @@ def main():
             progress.step(88, "Clearing Brave caches...")
             cache_removed = clear_brave_runtime_caches()
             progress.log(f"Cache paths cleared: {len(cache_removed)}")
+            flush_pref_cache()
+            progress.log("macOS preference cache refreshed again.")
 
             progress.step(96, "Refreshing app...")
+            save_current_state()
             reload_ui_from_registry()
             set_dirty_state(False)
 
@@ -1328,6 +1344,10 @@ def main():
             messagebox.showerror("Light Reset", f"Light Reset failed.\n\n{e}")
 
     def do_hard_reset():
+        if not confirm_hard_reset():
+            set_status("Hard Reset cancelled.")
+            return
+
         progress = ProgressDialog(root, "Hard Reset")
         try:
             progress.step(5, "Closing Brave...")
@@ -1360,6 +1380,8 @@ def main():
             progress.step(70, "Clearing Brave caches...")
             cache_removed = clear_brave_runtime_caches()
             progress.log(f"Cache paths cleared: {len(cache_removed)}")
+            flush_pref_cache()
+            progress.log("macOS preference cache refreshed again.")
 
             progress.step(84, "Moving Brave profile to backup...")
             backup_path = quarantine_brave_user_data()
@@ -1370,6 +1392,7 @@ def main():
 
             progress.step(95, "Refreshing app...")
             os.makedirs(BRAVE_USER_DATA_DIR, exist_ok=True)
+            save_current_state()
             reload_ui_from_registry()
             set_dirty_state(False)
 
