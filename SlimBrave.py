@@ -139,13 +139,11 @@ def main():
     import uuid
 
     CONFIG_DIR = os.path.expanduser("~/.config/slimbrave")
-    RESTORE_STAGING_DIR = os.path.join(CONFIG_DIR, "restore-staging")
     STATE_FILE = os.path.join(CONFIG_DIR, "SlimBraveState.json")
     LOG_FILE = os.path.join(CONFIG_DIR, "SlimBrave.log")
     USER_MANAGED_PREFS_DIR = os.path.expanduser("~/Library/Managed Preferences")
 
     os.makedirs(CONFIG_DIR, exist_ok=True)
-    os.makedirs(RESTORE_STAGING_DIR, exist_ok=True)
     os.makedirs(USER_MANAGED_PREFS_DIR, exist_ok=True)
 
     # Dynamic Channel Variables
@@ -401,8 +399,7 @@ def main():
         "Import.TButton": "#1976D2",
         "Reload.TButton": "#F57F17",
         "Apply.TButton": "#2E7D32",
-        "Reset.TButton": "#C62828",
-        "Plist.TButton": "#6A1B9A",
+        "Reset.TButton": "#C62828"
     }
     active_styles = {
         "Preset.TButton": "#BF360C",
@@ -410,8 +407,7 @@ def main():
         "Import.TButton": "#1565C0",
         "Reload.TButton": "#E65100",
         "Apply.TButton": "#1B5E20",
-        "Reset.TButton": "#B71C1C",
-        "Plist.TButton": "#4A148C",
+        "Reset.TButton": "#B71C1C"
     }
 
     for sty, color in button_styles.items():
@@ -433,7 +429,7 @@ def main():
     all_perm_vars = {}
 
     status_var = tk.StringVar(value="Ready.")
-    save_status_var = tk.StringVar(value="Saved \u2705")
+    save_status_var = tk.StringVar(value="Unmanaged ❌")
 
     # Determine installed channels
     channels_dict = {
@@ -453,6 +449,13 @@ def main():
     current_channel_info = list(installed_channels.values())[0]
     update_paths_for_channel(current_channel_info)
 
+    def is_profile_installed():
+        try:
+            res = run_cmd(["profiles", "list"])
+            return f"com.slimbrave.profile.{DOMAIN}" in res.stdout
+        except Exception:
+            return False
+
     def set_status(msg):
         status_var.set(msg)
         write_log(msg)
@@ -464,11 +467,15 @@ def main():
             return
         global_is_dirty = is_dirty
         if is_dirty:
-            save_status_var.set("UnSaved \u26A0\uFE0F")
+            save_status_var.set("UnSaved ⚠️")
             save_status_label.config(fg="#FFD700")
         else:
-            save_status_var.set("Saved \u2705")
-            save_status_label.config(fg="#90EE90")
+            if is_profile_installed():
+                save_status_var.set("Profile Active ✅")
+                save_status_label.config(fg="#90EE90")
+            else:
+                save_status_var.set("Unmanaged ❌")
+                save_status_label.config(fg="#aaaaaa")
 
     def get_ui_snapshot():
         return {
@@ -647,10 +654,6 @@ def main():
         with open(path, "rb") as f:
             return plistlib.load(f)
 
-    def plist_dump_binary(path, data):
-        with open(path, "wb") as f:
-            plistlib.dump(data, f, fmt=plistlib.FMT_BINARY, sort_keys=True)
-
     def defaults_export_domain_dict():
         fd, temp_path = tempfile.mkstemp(prefix="slimbrave-domain-", suffix=".plist")
         os.close(fd)
@@ -665,33 +668,6 @@ def main():
                 os.remove(temp_path)
             except OSError:
                 pass
-
-    def defaults_import_domain_dict(data):
-        fd, temp_path = tempfile.mkstemp(prefix="slimbrave-import-", suffix=".plist")
-        os.close(fd)
-        try:
-            plist_dump_binary(temp_path, data)
-            res = run_cmd(["defaults", "import", DOMAIN, temp_path])
-            if res.returncode != 0:
-                err = res.stderr.strip() or res.stdout.strip() or "defaults import failed"
-                raise Exception(err)
-        finally:
-            try:
-                os.remove(temp_path)
-            except OSError:
-                pass
-
-    def normalize_restore_root(data):
-        if not isinstance(data, dict):
-            raise Exception("Selected file is not a valid plist.")
-
-        if "__SlimBrave__" in data and isinstance(data.get("Payload"), dict):
-            return data["Payload"], f"wrapped:{data['__SlimBrave__'].get('kind', 'unknown')}"
-
-        if DOMAIN in data and isinstance(data.get(DOMAIN), dict):
-            return data[DOMAIN], "nested-domain"
-
-        return data, "plain-dict"
 
     def sanitize_managed_payload(raw_payload):
         cleaned = {}
@@ -806,8 +782,6 @@ def main():
         return {}
 
     def write_mobileconfig(payload):
-        # Use a stable namespace so macOS recognizes updates to the same profile
-        # instead of creating duplicates every time you click Apply.
         PROFILE_IDENTIFIER = f"com.slimbrave.profile.{DOMAIN}"
         profile_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, PROFILE_IDENTIFIER)).upper()
         payload_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{PROFILE_IDENTIFIER}.payload")).upper()
@@ -822,7 +796,6 @@ def main():
                     "PayloadEnabled": True,
                     "PayloadContent": {
                         DOMAIN: {
-                            # CRITICAL FIX: Apple requires the 'Forced' array wrapper
                             "Forced": [
                                 {
                                     "mcx_preference_settings": payload
@@ -842,7 +815,6 @@ def main():
         
         config_path = os.path.expanduser(f"~/Desktop/SlimBrave-{DOMAIN}.mobileconfig")
         with open(config_path, "wb") as f:
-            # Configuration Profiles must strictly be formatted as XML
             plistlib.dump(mobileconfig, f, fmt=plistlib.FMT_XML)
             
         write_log(f"Wrote Configuration Profile: {config_path}")
@@ -851,7 +823,6 @@ def main():
     def remove_mobileconfig_profile():
         try:
             profile_identifier = f"com.slimbrave.profile.{DOMAIN}"
-            # Attempt native CLI removal of the profile
             res = run_cmd(["profiles", "remove", "-identifier", profile_identifier, "-forced"])
             return res.returncode == 0
         except Exception:
@@ -1076,8 +1047,6 @@ def main():
         return not still_running
 
     def flush_pref_cache():
-        # Let macOS handle preference syncing natively. 
-        # Force-killing cfprefsd causes file corruption and crashes.
         time.sleep(0.5)
 
     def clear_brave_runtime_caches():
@@ -1214,8 +1183,11 @@ def main():
     def reload_ui_from_registry():
         payload = merged_policy_source_for_ui()
         apply_payload_to_ui(payload)
-        if payload:
-            set_status("Settings loaded.")
+        
+        if is_profile_installed():
+            set_status("Settings loaded. (Profile Installed ✅)")
+        elif payload:
+            set_status("Settings loaded. (Legacy Plist Mode ⚠️)")
         else:
             set_status("No SlimBrave settings found.")
 
@@ -1281,8 +1253,6 @@ def main():
                 progress.log(f"Wrote: {config_path}")
                 run_cmd(["open", config_path])
             else:
-                if os.path.exists(USER_MANAGED_PREFS_FILE):
-                    os.remove(USER_MANAGED_PREFS_FILE)
                 progress.log("No policies selected. No profile generated.")
 
             progress.step(75, "Refreshing macOS cache...")
@@ -1322,70 +1292,6 @@ def main():
             set_status("Something Went Wrong, Please Read Logs for More Details")
             messagebox.showerror("Apply", "Something Went Wrong, Please Read Logs for More Details.\n\n" + str(e))
 
-    def import_plist():
-        f = filedialog.askopenfilename(filetypes=[("Property List / XML", "*.plist *.xml"), ("All files", "*.*")])
-        if not f:
-            return
-
-        if not check_and_close_brave():
-            return
-
-        progress = ProgressDialog(root, "Restore Plist")
-        try:
-            progress.step(10, "Reading file...")
-            staged = os.path.join(RESTORE_STAGING_DIR, f"{timestamp_slug()}-{os.path.basename(f)}")
-            shutil.copy2(f, staged)
-            raw = plist_load_any(staged)
-
-            progress.step(25, "Checking data...")
-            payload, container_kind = normalize_restore_root(raw)
-            progress.log(f"Type: {container_kind}")
-
-            progress.step(45, "Filtering SlimBrave keys...")
-            cleaned_payload, warnings = sanitize_managed_payload(payload)
-            skipped_count = len(payload.keys()) - len(cleaned_payload.keys()) if isinstance(payload, dict) else 0
-            progress.log(f"Keys restored: {len(cleaned_payload)}")
-            progress.log(f"Keys skipped: {skipped_count}")
-
-            if not cleaned_payload:
-                raise Exception("No valid SlimBrave keys were found in this file.")
-
-            progress.step(65, "Removing old live-domain keys...")
-            removed = strip_legacy_policy_keys_from_live_domain()
-            progress.log(f"Removed: {len(removed)}")
-
-            progress.step(80, "Generating Configuration Profile...")
-            config_path = write_mobileconfig(cleaned_payload)
-            progress.log(f"Wrote: {config_path}")
-            run_cmd(["open", config_path])
-
-            progress.step(92, "Refreshing app...")
-            flush_pref_cache()
-            clear_brave_runtime_caches()
-            flush_pref_cache()
-            progress.log("macOS preference cache refreshed again.")
-            reload_ui_from_registry()
-            set_dirty_state(False)
-
-            progress.finish("Done.")
-            
-            messagebox.showinfo(
-                "Action Required", 
-                "A restored .mobileconfig file has been saved to your Desktop and opened.\n\n"
-                "To finish applying the policies:\n"
-                "1. A 'Profile Downloaded' notification will appear.\n"
-                "2. Open System Settings.\n"
-                "3. Navigate to 'Privacy & Security' -> 'Profiles'.\n"
-                "4. Double-click 'SlimBrave Policy' and click 'Install'.\n\n"
-                "5. Once installed, you can safely delete the .mobileconfig file from your Desktop."
-            )
-            
-            set_status("Plist profile generated.")
-        except Exception as e:
-            write_log(f"Plist restore failed: {e}")
-            progress.finish("Failed.")
-            messagebox.showerror("Restore", f"Restore failed.\n\n{e}")
-
     def do_light_reset():
         progress = ProgressDialog(root, "Light Reset")
         try:
@@ -1399,7 +1305,7 @@ def main():
             for line in diagnosis_lines:
                 progress.log(line)
 
-            progress.step(40, "Removing old policy files...")
+            progress.step(40, "Removing old legacy policy files...")
             removed_files = remove_managed_pref_files()
             if removed_files:
                 for p in removed_files:
@@ -1407,12 +1313,17 @@ def main():
             else:
                 progress.log("No legacy policy files found.")
                 
-            progress.step(42, "Removing Configuration Profile (if possible)...")
-            profile_removed = remove_mobileconfig_profile()
-            if profile_removed:
-                progress.log("Configuration Profile natively removed via CLI.")
+            progress.step(42, "Removing Configuration Profile (if installed)...")
+            profile_installed_initially = is_profile_installed()
+            if profile_installed_initially:
+                profile_removed = remove_mobileconfig_profile()
+                if profile_removed:
+                    progress.log("Configuration Profile natively removed via CLI.")
+                else:
+                    progress.log("Configuration Profile requires manual removal via System Settings.")
             else:
-                progress.log("Configuration Profile requires manual removal via System Settings.")
+                progress.log("No Configuration Profile detected.")
+                profile_removed = True
 
             progress.step(60, "Removing old live-domain keys...")
             removed_keys = strip_legacy_policy_keys_from_live_domain()
@@ -1440,19 +1351,22 @@ def main():
                 "Checks:",
                 *diagnosis_lines,
                 "",
-                f"Policy files removed: {len(removed_files)}",
-                f"Profile CLI removal: {'Success' if profile_removed else 'Manual removal required'}",
+                f"Legacy files removed: {len(removed_files)}",
+                f"Profile CLI removal: {'Success / Not Required' if profile_removed else 'Manual removal required'}",
                 f"Old live-domain keys removed: {len(removed_keys)}",
                 f"Cache paths cleared: {len(cache_removed)}",
                 "",
-                "Your Brave profile was kept.",
-                "",
-                "NOTE: If you previously generated a Configuration Profile, you must manually delete it from macOS System Settings -> Privacy & Security -> Profiles."
+                "Your Brave profile was kept."
             ]
 
             progress.finish("Done.")
             show_text_report("Light Reset Summary", report)
-            messagebox.showinfo("Light Reset", "Light Reset finished.\n\nBe sure to delete any remaining SlimBrave policies from your macOS System Settings -> Profiles.")
+            
+            if not profile_removed:
+                messagebox.showwarning("Manual Removal Required", "Light Reset finished, but Apple blocked the automatic removal of your SlimBrave Configuration Profile.\n\nYou must manually delete it by going to macOS System Settings -> Privacy & Security -> Profiles.")
+            else:
+                messagebox.showinfo("Light Reset", "Light Reset finished successfully.")
+                
             set_status("Light Reset finished.")
         except Exception as e:
             write_log(f"Light reset failed: {e}")
@@ -1476,7 +1390,7 @@ def main():
             for line in diagnosis_lines:
                 progress.log(line)
 
-            progress.step(30, "Removing old policy files...")
+            progress.step(30, "Removing old legacy policy files...")
             removed_files = remove_managed_pref_files()
             if removed_files:
                 for p in removed_files:
@@ -1484,12 +1398,17 @@ def main():
             else:
                 progress.log("No legacy policy files found.")
                 
-            progress.step(42, "Removing Configuration Profile (if possible)...")
-            profile_removed = remove_mobileconfig_profile()
-            if profile_removed:
-                progress.log("Configuration Profile natively removed via CLI.")
+            progress.step(42, "Removing Configuration Profile (if installed)...")
+            profile_installed_initially = is_profile_installed()
+            if profile_installed_initially:
+                profile_removed = remove_mobileconfig_profile()
+                if profile_removed:
+                    progress.log("Configuration Profile natively removed via CLI.")
+                else:
+                    progress.log("Configuration Profile requires manual removal via System Settings.")
             else:
-                progress.log("Configuration Profile requires manual removal via System Settings.")
+                progress.log("No Configuration Profile detected.")
+                profile_removed = True
 
             progress.step(45, "Removing old live-domain keys...")
             removed_keys = strip_legacy_policy_keys_from_live_domain()
@@ -1525,20 +1444,23 @@ def main():
                 "Checks:",
                 *diagnosis_lines,
                 "",
-                f"Policy files removed: {len(removed_files)}",
-                f"Profile CLI removal: {'Success' if profile_removed else 'Manual removal required'}",
+                f"Legacy files removed: {len(removed_files)}",
+                f"Profile CLI removal: {'Success / Not Required' if profile_removed else 'Manual removal required'}",
                 f"Old live-domain keys removed: {len(removed_keys)}",
                 f"Cache paths cleared: {len(cache_removed)}",
                 f"Profile backup: {backup_path if backup_path else '(new folder created)'}",
                 "",
-                "A fresh Brave profile will be created on next launch.",
-                "",
-                "NOTE: If you previously generated a Configuration Profile, you must manually delete it from macOS System Settings -> Privacy & Security -> Profiles."
+                "A fresh Brave profile will be created on next launch."
             ]
 
             progress.finish("Done.")
             show_text_report("Hard Reset Summary", report)
-            messagebox.showinfo("Hard Reset", "Hard Reset finished.\n\nBe sure to delete any remaining SlimBrave policies from your macOS System Settings -> Profiles.")
+            
+            if not profile_removed:
+                messagebox.showwarning("Manual Removal Required", "Hard Reset finished, but Apple blocked the automatic removal of your SlimBrave Configuration Profile.\n\nYou must manually delete it by going to macOS System Settings -> Privacy & Security -> Profiles.")
+            else:
+                messagebox.showinfo("Hard Reset", "Hard Reset finished successfully.")
+                
             set_status("Hard Reset finished.")
         except Exception as e:
             write_log(f"Hard reset failed: {e}")
@@ -1804,7 +1726,8 @@ def main():
     dns_tpl_var.trace_add("write", check_dirty_state)
     dns_tpl_entry = tk.Entry(dns_tpl_f, textvariable=dns_tpl_var, bg="#161616", fg="white", insertbackground="white", relief="flat")
     dns_tpl_entry.pack(side="left", fill="x", expand=True, padx=8)
-    create_tooltip(dns_tpl_entry, "Enter Custom DoH URL template if 'Custom' or 'Secure' is selected.")
+    dns_tpl_tt = "Specifies the DoH resolver URL template when 'Custom' or 'Secure' is selected.\n\nSuggested Settings for Privacy: (Blank) | Security: (Blank)"
+    create_tooltip(dns_tpl_entry, dns_tpl_tt)
 
     left_scroll.bind_children()
     mid_scroll.bind_children()
@@ -1819,7 +1742,6 @@ def main():
 
     ttk.Button(btn_frame, text="Export JSON", style="Export.TButton", command=export_settings).pack(side="left", expand=True, padx=5)
     ttk.Button(btn_frame, text="Import JSON", style="Import.TButton", command=import_settings).pack(side="left", expand=True, padx=5)
-    ttk.Button(btn_frame, text="Restore Plist", style="Plist.TButton", command=import_plist).pack(side="left", expand=True, padx=5)
     ttk.Button(btn_frame, text="Reload", style="Reload.TButton", command=reload_ui_from_registry).pack(side="left", expand=True, padx=5)
     ttk.Button(btn_frame, text="Apply", style="Apply.TButton", command=apply_settings).pack(side="left", expand=True, padx=5)
     ttk.Button(btn_frame, text="Reset", style="Reset.TButton", command=reset_settings).pack(side="left", expand=True, padx=5)
