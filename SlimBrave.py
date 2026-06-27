@@ -138,39 +138,25 @@ def main():
     import tempfile
     import uuid
 
+    DOMAIN = "com.brave.Browser"
     CONFIG_DIR = os.path.expanduser("~/.config/slimbrave")
+    RESTORE_STAGING_DIR = os.path.join(CONFIG_DIR, "restore-staging")
     STATE_FILE = os.path.join(CONFIG_DIR, "SlimBraveState.json")
     LOG_FILE = os.path.join(CONFIG_DIR, "SlimBrave.log")
+
     USER_MANAGED_PREFS_DIR = os.path.expanduser("~/Library/Managed Preferences")
+    USER_MANAGED_PREFS_FILE = os.path.join(USER_MANAGED_PREFS_DIR, f"{DOMAIN}.plist")
+    SYSTEM_MANAGED_PREFS_FILE = os.path.join("/Library/Managed Preferences", f"{DOMAIN}.plist")
+
+    BRAVE_SUPPORT_DIR = os.path.expanduser("~/Library/Application Support/BraveSoftware/Brave-Browser")
+    BRAVE_USER_DATA_DIR = BRAVE_SUPPORT_DIR
+    BRAVE_DEFAULT_PROFILE_DIR = os.path.join(BRAVE_USER_DATA_DIR, "Default")
+    BRAVE_LOCAL_STATE_FILE = os.path.join(BRAVE_USER_DATA_DIR, "Local State")
+    BRAVE_CACHE_DIR = os.path.expanduser("~/Library/Caches/BraveSoftware/Brave-Browser")
 
     os.makedirs(CONFIG_DIR, exist_ok=True)
+    os.makedirs(RESTORE_STAGING_DIR, exist_ok=True)
     os.makedirs(USER_MANAGED_PREFS_DIR, exist_ok=True)
-
-    # Dynamic Channel Variables
-    DOMAIN = ""
-    USER_MANAGED_PREFS_FILE = ""
-    SYSTEM_MANAGED_PREFS_FILE = ""
-    BRAVE_SUPPORT_DIR = ""
-    BRAVE_USER_DATA_DIR = ""
-    BRAVE_DEFAULT_PROFILE_DIR = ""
-    BRAVE_LOCAL_STATE_FILE = ""
-    BRAVE_CACHE_DIR = ""
-    current_channel_info = {}
-
-    def update_paths_for_channel(channel_info):
-        nonlocal DOMAIN, USER_MANAGED_PREFS_FILE, SYSTEM_MANAGED_PREFS_FILE
-        nonlocal BRAVE_SUPPORT_DIR, BRAVE_USER_DATA_DIR, BRAVE_DEFAULT_PROFILE_DIR
-        nonlocal BRAVE_LOCAL_STATE_FILE, BRAVE_CACHE_DIR
-
-        DOMAIN = channel_info["Domain"]
-        USER_MANAGED_PREFS_FILE = os.path.join(USER_MANAGED_PREFS_DIR, f"{DOMAIN}.plist")
-        SYSTEM_MANAGED_PREFS_FILE = os.path.join("/Library/Managed Preferences", f"{DOMAIN}.plist")
-
-        BRAVE_SUPPORT_DIR = os.path.expanduser(f"~/Library/Application Support/BraveSoftware/{channel_info['Dir']}")
-        BRAVE_USER_DATA_DIR = BRAVE_SUPPORT_DIR
-        BRAVE_DEFAULT_PROFILE_DIR = os.path.join(BRAVE_USER_DATA_DIR, "Default")
-        BRAVE_LOCAL_STATE_FILE = os.path.join(BRAVE_USER_DATA_DIR, "Local State")
-        BRAVE_CACHE_DIR = os.path.expanduser(f"~/Library/Caches/BraveSoftware/{channel_info['Dir']}")
 
     def write_log(message):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -272,11 +258,10 @@ def main():
     ALL_FEATURES = telemetry_features + privacy_features + brave_features + perf_features
     managed_keys = {feat["Key"] for feat in ALL_FEATURES}
     managed_keys.update({perm["Key"] for perm in permission_settings})
-    managed_keys.update({"DefaultFileSystemWriteGuardSetting", "SafeBrowsingProtectionLevel", "DnsOverHttpsMode", "DnsOverHttpsTemplates"})
+    managed_keys.update({"DefaultFileSystemWriteGuardSetting", "SafeBrowsingProtectionLevel", "DnsOverHttpsMode"})
 
     BOOL_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "bool"}
     STRING_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "string"}
-    STRING_POLICY_KEYS.update({"WebRtcIPHandling", "HttpsOnlyMode", "DnsOverHttpsMode", "DnsOverHttpsTemplates"})
     ARRAY_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "array"}
     INT_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "int"}
 
@@ -345,9 +330,9 @@ def main():
                 relief="solid",
                 borderwidth=1,
                 font=("sans-serif", 10, "normal"),
-                padx=8,
-                pady=6,
-                wraplength=430,
+                padx=12,
+                pady=8,
+                wraplength=400,
             )
             label.pack(ipadx=1)
 
@@ -427,6 +412,9 @@ def main():
     baseline_state = ""
     all_feature_vars = {}
     all_perm_vars = {}
+    
+    global HAS_PROMPTED_CLEANUP
+    HAS_PROMPTED_CLEANUP = False
 
     status_var = tk.StringVar(value="Ready.")
     save_status_var = tk.StringVar(value="Unmanaged ❌")
@@ -451,7 +439,7 @@ def main():
 
     def is_profile_installed():
         try:
-            res = run_cmd(["profiles", "list"])
+            res = run_cmd(["profiles", "list", "-type", "configuration"])
             return f"com.slimbrave.profile.{DOMAIN}" in res.stdout
         except Exception:
             return False
@@ -846,11 +834,16 @@ def main():
             return []
 
         removed = []
-        for key in managed_keys:
-            if key in domain_data:
-                res = run_cmd(["defaults", "delete", DOMAIN, key])
-                if res.returncode == 0:
-                    removed.append(key)
+        for key in list(domain_data.keys()):
+            if key in managed_keys:
+                removed.append(key)
+                domain_data.pop(key, None)
+
+        if removed:
+            # We use `defaults delete` natively to prune the specific legacy keys instead of importing 
+            # to avoid clobber-bombing Brave's dynamic preference schema with old dumps.
+            for r_key in removed:
+                run_cmd(["defaults", "delete", DOMAIN, r_key])
 
         return sorted(removed)
 
@@ -1000,18 +993,54 @@ def main():
         update_baseline()
         check_dirty_state()
 
-    def merged_policy_source_for_ui():
-        payload = {}
-        payload.update(read_managed_prefs_dict())
+    def prompt_legacy_cleanup():
+        ans = messagebox.askyesno(
+            "Legacy Configurations Detected",
+            "SlimBrave detected old legacy plist configurations on your system.\n\n"
+            "Because you are now utilizing the modern Configuration Profile standard, these old files can cause conflicts and prevent Brave from applying your policies properly.\n\n"
+            "Would you like SlimBrave to safely clean up these deprecated files now?"
+        )
+        if ans:
+            removed_files = remove_managed_pref_files()
+            removed_keys = strip_legacy_policy_keys_from_live_domain()
+            flush_pref_cache()
+            
+            msg = "Cleanup successful!\n\n"
+            if removed_files:
+                msg += f"Policy files removed: {len(removed_files)}\n"
+            if removed_keys:
+                msg += f"Live keys removed: {len(removed_keys)}\n"
+            if not removed_files and not removed_keys:
+                msg += "No conflicting files were actually found during the sweep."
+                
+            messagebox.showinfo("Cleanup Complete", msg.strip())
+            reload_ui_from_registry()
 
-        legacy = defaults_export_domain_dict()
-        if isinstance(legacy, dict):
-            for key in managed_keys:
-                if key in legacy and key not in payload:
-                    payload[key] = legacy[key]
-
-        payload, _ = sanitize_managed_payload(payload)
-        return payload
+    def reload_ui_from_registry():
+        global HAS_PROMPTED_CLEANUP
+        
+        payload = merged_policy_source_for_ui()
+        apply_payload_to_ui(payload)
+        
+        profile_active = is_profile_installed()
+        
+        legacy_files = [p for p in (USER_MANAGED_PREFS_FILE, SYSTEM_MANAGED_PREFS_FILE) if os.path.exists(p)]
+        legacy_live = [k for k in managed_keys if k in defaults_export_domain_dict()]
+        has_legacy = bool(legacy_files or legacy_live)
+        
+        if profile_active:
+            if has_legacy:
+                set_status("Settings loaded. (Profile Active, Legacy Plists Found ⚠️)")
+                if not HAS_PROMPTED_CLEANUP:
+                    HAS_PROMPTED_CLEANUP = True
+                    # Let the UI finish drawing before showing the prompt
+                    root.after(500, prompt_legacy_cleanup)
+            else:
+                set_status("Settings loaded. (Profile Installed ✅)")
+        elif has_legacy:
+            set_status("Settings loaded. (Legacy Plist Mode ⚠️)")
+        else:
+            set_status("No SlimBrave settings found.")
 
     def pgrep_any(pattern):
         res = run_cmd(["pgrep", "-if", pattern])
@@ -1047,6 +1076,8 @@ def main():
         return not still_running
 
     def flush_pref_cache():
+        # Force-killing cfprefsd causes file corruption and crashes.
+        # Allow macOS to sleep naturally to flush preferences.
         time.sleep(0.5)
 
     def clear_brave_runtime_caches():
@@ -1180,17 +1211,6 @@ def main():
             "Continue?"
         )
 
-    def reload_ui_from_registry():
-        payload = merged_policy_source_for_ui()
-        apply_payload_to_ui(payload)
-        
-        if is_profile_installed():
-            set_status("Settings loaded. (Profile Installed ✅)")
-        elif payload:
-            set_status("Settings loaded. (Legacy Plist Mode ⚠️)")
-        else:
-            set_status("No SlimBrave settings found.")
-
     def export_settings():
         f = filedialog.asksaveasfilename(defaultextension=".json", initialfile="SlimBraveSettings.json")
         if not f:
@@ -1243,9 +1263,11 @@ def main():
             progress.step(10, "Preparing settings...")
             progress.log(f"Keys selected: {len(cleaned_payload)}")
 
-            progress.step(30, "Removing old live-domain keys...")
+            progress.step(30, "Removing legacy configurations...")
             removed = strip_legacy_policy_keys_from_live_domain()
-            progress.log(f"Removed: {len(removed)}")
+            removed_files = remove_managed_pref_files()
+            progress.log(f"Legacy live keys removed: {len(removed)}")
+            progress.log(f"Legacy policy files removed: {len(removed_files)}")
 
             progress.step(55, "Generating Configuration Profile...")
             if cleaned_payload:
@@ -1280,7 +1302,8 @@ def main():
                     "2. Open System Settings.\n"
                     "3. Navigate to 'Privacy & Security' -> 'Profiles' (or 'General' -> 'Device Management').\n"
                     "4. Double-click 'SlimBrave Policy' and click 'Install'.\n\n"
-                    "5. Once installed, you can safely delete the .mobileconfig file from your Desktop."
+                    "5. Once installed, you can safely delete the .mobileconfig file from your Desktop.\n\n"
+                    "To uninstall in the future, return to System Settings -> Profiles and delete it, or use the SlimBrave Reset button."
                 )
             else:
                 messagebox.showinfo("Apply", "SlimBrave settings cleared successfully!")
