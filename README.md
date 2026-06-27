@@ -68,7 +68,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 > [!TIP]
 > Better if you run Powershell as Administrator
 ```ps1
-iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
+iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave-Windows.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
 ```
 ## or
 
@@ -91,7 +91,7 @@ iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimB
 > 2. Install Python: `brew install python`
 > 3. Install Tkinter support: `brew install python-tk`
 ```
-curl -sO https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave.py && python3 SlimBrave.py
+curl -sO https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave-MacOS.py && python3 SlimBrave.py
 ```
 
 ##
