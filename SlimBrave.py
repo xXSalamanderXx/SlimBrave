@@ -869,7 +869,16 @@ def main():
                     removed.append(path)
                     write_log(f"Removed managed prefs file: {path}")
                 except Exception as e:
-                    write_log(f"Failed removing managed prefs file {path}: {e}")
+                    # Fallback to elevated removal if permission denied or locked
+                    try:
+                        res = run_cmd(["osascript", "-e", f'do shell script "rm -f \\"{path}\\"" with administrator privileges'])
+                        if not os.path.exists(path):
+                            removed.append(path)
+                            write_log(f"Removed managed prefs file (via sudo): {path}")
+                        else:
+                            write_log(f"Failed removing managed prefs file {path}: {e}")
+                    except Exception as ex:
+                        write_log(f"Failed removing managed prefs file {path}: {ex}")
         return removed
 
     def strip_legacy_policy_keys_from_live_domain():
@@ -883,11 +892,15 @@ def main():
                 removed.append(key)
                 domain_data.pop(key, None)
 
+        actual_removed = []
         if removed:
             for r_key in removed:
-                run_cmd(["defaults", "delete", DOMAIN, r_key])
+                res = run_cmd(["defaults", "delete", DOMAIN, r_key])
+                # Only track the keys that were actually physically deleted from the user domain
+                if res.returncode == 0:
+                    actual_removed.append(r_key)
 
-        return sorted(removed)
+        return sorted(actual_removed)
 
     def build_managed_payload_from_ui():
         payload = {}
@@ -1051,7 +1064,7 @@ def main():
             if removed_files:
                 msg += f"Policy files removed: {len(removed_files)}\n"
             if removed_keys:
-                msg += f"Live keys removed: {len(removed_keys)}\n"
+                msg += f"Live user keys removed: {len(removed_keys)}\n"
             if not removed_files and not removed_keys:
                 msg += "No conflicting files were actually found during the sweep."
                 
@@ -1066,9 +1079,9 @@ def main():
         
         profile_active = is_profile_installed()
         
+        # Only check physical files for the warning, ignore live profile keys
         legacy_files = [p for p in (USER_MANAGED_PREFS_FILE, SYSTEM_MANAGED_PREFS_FILE) if os.path.exists(p)]
-        legacy_live = [k for k in managed_keys if k in defaults_export_domain_dict()]
-        has_legacy = bool(legacy_files or legacy_live)
+        has_legacy = bool(legacy_files)
         
         if profile_active:
             if has_legacy:
