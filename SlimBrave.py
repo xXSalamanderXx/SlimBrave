@@ -140,13 +140,11 @@ def main():
     import uuid
 
     CONFIG_DIR = os.path.expanduser("~/.config/slimbrave")
-    RESTORE_STAGING_DIR = os.path.join(CONFIG_DIR, "restore-staging")
     STATE_FILE = os.path.join(CONFIG_DIR, "SlimBraveState.json")
     LOG_FILE = os.path.join(CONFIG_DIR, "SlimBrave.log")
     USER_MANAGED_PREFS_DIR = os.path.expanduser("~/Library/Managed Preferences")
 
     os.makedirs(CONFIG_DIR, exist_ok=True)
-    os.makedirs(RESTORE_STAGING_DIR, exist_ok=True)
     os.makedirs(USER_MANAGED_PREFS_DIR, exist_ok=True)
 
     # Dynamic Channel Variables
@@ -275,10 +273,11 @@ def main():
     ALL_FEATURES = telemetry_features + privacy_features + brave_features + perf_features
     managed_keys = {feat["Key"] for feat in ALL_FEATURES}
     managed_keys.update({perm["Key"] for perm in permission_settings})
-    managed_keys.update({"DefaultFileSystemWriteGuardSetting", "SafeBrowsingProtectionLevel", "DnsOverHttpsMode"})
+    managed_keys.update({"DefaultFileSystemWriteGuardSetting", "SafeBrowsingProtectionLevel", "DnsOverHttpsMode", "DnsOverHttpsTemplates"})
 
     BOOL_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "bool"}
     STRING_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "string"}
+    STRING_POLICY_KEYS.update({"WebRtcIPHandling", "HttpsOnlyMode", "DnsOverHttpsMode", "DnsOverHttpsTemplates"})
     ARRAY_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "array"}
     INT_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "int"}
 
