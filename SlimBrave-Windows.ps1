@@ -1,4 +1,4 @@
-# Slimbrave - Revived - v1.0.9
+# Slimbrave - Revived - v1.1.0
 
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Start-Process powershell -ArgumentList "-File `"$($MyInvocation.MyCommand.Path)`"" -Verb RunAs
@@ -43,7 +43,7 @@ if (-not (Test-Path -Path $registryPath)) {
 Clear-Host
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "SlimBrave - Revived v1.0.9"
+$form.Text = "SlimBrave - Revived v1.1.0"
 $form.ForeColor = [System.Drawing.Color]::White
 $form.Size = New-Object System.Drawing.Size(1300, 850) 
 $form.MinimumSize = New-Object System.Drawing.Size(1300, 850)
@@ -212,6 +212,11 @@ $privacyFeatures = @(
     @{ Name = "Disable QUIC Protocol"; Key = "QuicAllowed"; Value = 0; Type = "DWord"; ToolTip = "Forces standard TCP, stopping UDP firewall bypasses and tracking.`n`nSuggested Settings for Privacy: Unticked | Security: Ticked" },
     @{ Name = "Block Third Party Cookies"; Key = "BlockThirdPartyCookies"; Value = 1; Type = "DWord"; ToolTip = "Blocks all third-party tracking cookies.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Enable Do Not Track"; Key = "EnableDoNotTrack"; Value = 1; Type = "DWord"; ToolTip = "Sends a Do Not Track request with your browsing traffic.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Enable Global Privacy Control"; Key = "GlobalPrivacyControlEnabled"; Value = 1; Type = "DWord"; ToolTip = "Enables GPC to tell sites not to sell or share your data.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Enable De-AMP"; Key = "BraveDeAMPEnabled"; Value = 1; Type = "DWord"; ToolTip = "Bypasses Google AMP pages and redirects you to the original website.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Enable Debouncing"; Key = "BraveDebouncingEnabled"; Value = 1; Type = "DWord"; ToolTip = "Skips known tracking redirect hops before you reach your destination.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Strip URL Trackers"; Key = "BraveTrackersStrippingEnabled"; Value = 1; Type = "DWord"; ToolTip = "Automatically removes tracking parameters from URLs.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Reduce Language Fingerprinting"; Key = "ReduceAcceptLanguage"; Value = 1; Type = "DWord"; ToolTip = "Reduces the language data sent to sites to prevent fingerprinting.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Force Google SafeSearch"; Key = "ForceGoogleSafeSearch"; Value = 1; Type = "DWord"; ToolTip = "Filters explicit search results.`n`nSuggested Settings for Privacy: Unticked | Security: Ticked" },
     @{ Name = "Disable IPFS"; Key = "IPFSEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops peer-to-peer background connections to unknown nodes.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord"; ToolTip = "Forces the browser to always open in Incognito Mode.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
@@ -430,7 +435,7 @@ $permPad.Size = New-Object System.Drawing.Size(10, 40)
 
 $sbLabel = New-Object System.Windows.Forms.Label
 $sbLabel.Text = "Safe Browsing:"
-$sbLabel.Size = New-Object System.Drawing.Size(140, 20)
+$sbLabel.Size = New-Object System.Drawing.Size(110, 20)
 $form.Controls.Add($sbLabel)
 
 $sbDropdown = New-Object System.Windows.Forms.ComboBox
@@ -448,21 +453,38 @@ $toolTip.SetToolTip($sbLabel, $sbTooltip)
 
 $dnsLabel = New-Object System.Windows.Forms.Label
 $dnsLabel.Text = "DNS Over HTTPS:"
-$dnsLabel.Size = New-Object System.Drawing.Size(140, 20)
+$dnsLabel.Size = New-Object System.Drawing.Size(110, 20)
 $form.Controls.Add($dnsLabel)
 
 $dnsDropdown = New-Object System.Windows.Forms.ComboBox
 $dnsDropdown.Size = New-Object System.Drawing.Size(150, 20)
-[void]$dnsDropdown.Items.AddRange(@("On", "Off"))
+[void]$dnsDropdown.Items.AddRange(@("Automatic", "Off", "Secure", "Custom"))
 $dnsDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $dnsDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $dnsDropdown.ForeColor = [System.Drawing.Color]::White
 $dnsDropdown.Add_SelectedIndexChanged({ Check-DirtyState })
 $form.Controls.Add($dnsDropdown)
 
-$dnsTooltip = "Forces encrypted DNS lookups.`n`nSuggested Settings for Privacy: On | Security: On  (If you use a VPN keep this off, otherwise it will likely lead to DNS leaks)"
+$dnsTooltip = "Forces encrypted DNS lookups.`n`nSuggested Settings for Privacy: Off | Security: On"
 $toolTip.SetToolTip($dnsDropdown, $dnsTooltip)
 $toolTip.SetToolTip($dnsLabel, $dnsTooltip)
+
+$dnsTplLabel = New-Object System.Windows.Forms.Label
+$dnsTplLabel.Text = "DoH Template:"
+$dnsTplLabel.Size = New-Object System.Drawing.Size(95, 20)
+$form.Controls.Add($dnsTplLabel)
+
+$dnsTplInput = New-Object System.Windows.Forms.TextBox
+$dnsTplInput.Size = New-Object System.Drawing.Size(300, 20)
+$dnsTplInput.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
+$dnsTplInput.ForeColor = [System.Drawing.Color]::White
+$dnsTplInput.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+$dnsTplInput.Add_TextChanged({ Check-DirtyState })
+$form.Controls.Add($dnsTplInput)
+
+$dnsTplTooltip = "Specifies the DoH resolver URL template when 'Custom' or 'Secure' is selected.`n`nSuggested Settings for Privacy: (Blank) | Security: (Blank)"
+$toolTip.SetToolTip($dnsTplInput, $dnsTplTooltip)
+$toolTip.SetToolTip($dnsTplLabel, $dnsTplTooltip)
 
 $exportButton = New-Object System.Windows.Forms.Button
 $exportButton.Text = "Export Settings"
@@ -522,6 +544,7 @@ function Get-UIStateSnapshot {
         Permissions = [ordered]@{}
         SafeBrowsing = $sbDropdown.SelectedItem
         DnsMode = $dnsDropdown.SelectedItem
+        DnsTemplate = $dnsTplInput.Text
     }
     $fList = @()
     foreach ($checkbox in $allFeatures) {
@@ -595,6 +618,7 @@ function Restore-StateToUI ($stateObj) {
 
     if ($stateObj.SafeBrowsing) { $sbDropdown.SelectedItem = $stateObj.SafeBrowsing } else { $sbDropdown.SelectedIndex = -1 }
     if ($stateObj.DnsMode) { $dnsDropdown.SelectedItem = $stateObj.DnsMode } else { $dnsDropdown.SelectedIndex = -1 }
+    if ($null -ne $stateObj.DnsTemplate) { $dnsTplInput.Text = $stateObj.DnsTemplate } else { $dnsTplInput.Text = "" }
     
     $global:suspendDirtyTracking = $false
     Check-DirtyState
@@ -641,6 +665,9 @@ function Check-StateChanges {
     }
     if ($savedState.DnsMode -ne $currentSnap.DnsMode) {
         $diffs += "DNS Mode:`n  Expected: $($savedState.DnsMode) | Found: $($currentSnap.DnsMode)"
+    }
+    if ($savedState.DnsTemplate -ne $currentSnap.DnsTemplate) {
+        $diffs += "DNS Template:`n  Expected: $($savedState.DnsTemplate) | Found: $($currentSnap.DnsTemplate)"
     }
 
     if ($diffs.Count -gt 0) {
@@ -742,6 +769,9 @@ function Update-Layout {
     $dnsLabel.Location = New-Object System.Drawing.Point($leftPanel.Left, ($bottomY + 35))
     $dnsDropdown.Location = New-Object System.Drawing.Point(($dnsLabel.Right + 5), ($bottomY + 32))
 
+    $dnsTplLabel.Location = New-Object System.Drawing.Point(($dnsDropdown.Right + 20), ($bottomY + 35))
+    $dnsTplInput.Location = New-Object System.Drawing.Point(($dnsTplLabel.Right + 5), ($bottomY + 32))
+
     $buttonY = $form.ClientSize.Height - $statusBar.Height - 55
     $btnWidth = 200 
     $exportButton.Size = New-Object System.Drawing.Size($btnWidth, 38)
@@ -782,7 +812,7 @@ $btnPrivacy.Add_Click({
         $cb.Checked = $false 
         $cb.ForeColor = [System.Drawing.Color]::White
     }
-    $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "AutofillAddressEnabled", "AutofillCreditCardEnabled", "PasswordManagerEnabled", "BrowserSignin", "WebRtcIPHandling", "BlockThirdPartyCookies", "EnableDoNotTrack", "IPFSEnabled", "PromptForDownloadLocation", "ClearBrowsingDataOnExitList", "HttpsOnlyMode", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled", "AlwaysOpenPdfExternally", "PromotionsEnabled", "SearchSuggestEnabled", "DefaultBrowserSettingEnabled", "BravePlaylistEnabled")
+    $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "AutofillAddressEnabled", "AutofillCreditCardEnabled", "PasswordManagerEnabled", "BrowserSignin", "WebRtcIPHandling", "BlockThirdPartyCookies", "EnableDoNotTrack", "IPFSEnabled", "PromptForDownloadLocation", "ClearBrowsingDataOnExitList", "HttpsOnlyMode", "GlobalPrivacyControlEnabled", "BraveDeAMPEnabled", "BraveDebouncingEnabled", "BraveTrackersStrippingEnabled", "ReduceAcceptLanguage", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled", "AlwaysOpenPdfExternally", "PromotionsEnabled", "SearchSuggestEnabled", "DefaultBrowserSettingEnabled", "BravePlaylistEnabled")
     foreach ($key in $keys) {
         foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } }
     }
@@ -804,6 +834,7 @@ $btnPrivacy.Add_Click({
 
     $sbDropdown.SelectedItem = "Off"
     $dnsDropdown.SelectedItem = "Off"
+    $dnsTplInput.Text = ""
     $global:suspendDirtyTracking = $false
     Check-DirtyState
     Update-Status "Loaded: High Privacy + Moderate Security preset."
@@ -836,7 +867,8 @@ $btnSecurity.Add_Click({
     }
 
     $sbDropdown.SelectedItem = "On"
-    $dnsDropdown.SelectedItem = "On"
+    $dnsDropdown.SelectedItem = "Automatic"
+    $dnsTplInput.Text = ""
     $global:suspendDirtyTracking = $false
     Check-DirtyState
     Update-Status "Loaded: High Security + Moderate Privacy preset."
@@ -853,6 +885,7 @@ function Reload-UIFromRegistry {
     }
     $sbDropdown.SelectedIndex = -1
     $dnsDropdown.SelectedIndex = -1
+    $dnsTplInput.Text = ""
 
     $regProps = Get-ItemProperty -Path $registryPath -ErrorAction SilentlyContinue
 
@@ -890,8 +923,19 @@ function Reload-UIFromRegistry {
         }
 
         if ($null -ne $regProps.DnsOverHttpsMode) {
-            if ($regProps.DnsOverHttpsMode -eq "automatic") { $dnsDropdown.SelectedItem = "On" }
+            if ($regProps.DnsOverHttpsMode -eq "automatic") { $dnsDropdown.SelectedItem = "Automatic" }
             elseif ($regProps.DnsOverHttpsMode -eq "off") { $dnsDropdown.SelectedItem = "Off" }
+            elseif ($regProps.DnsOverHttpsMode -eq "secure") {
+                if ([string]::IsNullOrWhiteSpace($regProps.DnsOverHttpsTemplates)) {
+                    $dnsDropdown.SelectedItem = "Secure"
+                } else {
+                    $dnsDropdown.SelectedItem = "Custom"
+                }
+            }
+        }
+        
+        if ($null -ne $regProps.DnsOverHttpsTemplates) {
+            $dnsTplInput.Text = $regProps.DnsOverHttpsTemplates
         }
     }
     $global:suspendDirtyTracking = $false
@@ -996,9 +1040,27 @@ $saveButton.Add_Click({
     }
 
     if ($dnsDropdown.SelectedItem) {
-        if ($dnsDropdown.SelectedItem -eq "On") { Set-DnsMode "automatic" }
-        elseif ($dnsDropdown.SelectedItem -eq "Off") { Set-DnsMode "off" }
-        else { Remove-ItemProperty -Path $registryPath -Name "DnsOverHttpsMode" -ErrorAction SilentlyContinue }
+        $mode = $dnsDropdown.SelectedItem
+        if ($mode -eq "Automatic") { 
+            Set-DnsMode "automatic"
+            Remove-ItemProperty -Path $registryPath -Name "DnsOverHttpsTemplates" -ErrorAction SilentlyContinue
+        }
+        elseif ($mode -eq "Off") { 
+            Set-DnsMode "off"
+            Remove-ItemProperty -Path $registryPath -Name "DnsOverHttpsTemplates" -ErrorAction SilentlyContinue
+        }
+        elseif ($mode -eq "Secure") { 
+            Set-DnsMode "secure"
+            Remove-ItemProperty -Path $registryPath -Name "DnsOverHttpsTemplates" -ErrorAction SilentlyContinue
+        }
+        elseif ($mode -eq "Custom") {
+            Set-DnsMode "secure"
+            [void](Set-ItemProperty -Path $registryPath -Name "DnsOverHttpsTemplates" -Value $dnsTplInput.Text -Type String -Force)
+            Write-Log "Set DnsOverHttpsTemplates to $($dnsTplInput.Text)"
+        }
+    } else {
+        Remove-ItemProperty -Path $registryPath -Name "DnsOverHttpsMode" -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $registryPath -Name "DnsOverHttpsTemplates" -ErrorAction SilentlyContinue
     }
 
     Save-CurrentState
@@ -1049,6 +1111,7 @@ function Reset-AllSettings {
             foreach ($perm in $allPerms) { $perm.SelectedItem = "Not Set" }
             $sbDropdown.SelectedIndex = -1
             $dnsDropdown.SelectedIndex = -1
+            $dnsTplInput.Text = ""
             $global:suspendDirtyTracking = $false
 
             Write-Log "All settings successfully wiped from registry."
