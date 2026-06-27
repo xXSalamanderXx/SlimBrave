@@ -456,17 +456,14 @@ def main():
         try:
             profile_id = f"com.slimbrave.profile.{DOMAIN}"
             
-            # Method 1: Standard profiles list
             res1 = subprocess.run(["profiles", "list"], capture_output=True, text=True)
             if profile_id in res1.stdout or "SlimBrave Policy" in res1.stdout:
                 return True
                 
-            # Method 2: XML profiles list (bypasses console formatting limits)
             res2 = subprocess.run(["profiles", "list", "-output", "stdout-xml", "-type", "configuration"], capture_output=True, text=True)
             if profile_id in res2.stdout or "SlimBrave Policy" in res2.stdout:
                 return True
                 
-            # Method 3: System Profiler (Ultimate fallback for strict macOS sandboxing)
             res3 = subprocess.run(["system_profiler", "SPConfigurationProfileDataType"], capture_output=True, text=True)
             if profile_id in res3.stdout or "SlimBrave Policy" in res3.stdout:
                 return True
@@ -869,7 +866,6 @@ def main():
                     removed.append(path)
                     write_log(f"Removed managed prefs file: {path}")
                 except Exception as e:
-                    # Fallback to elevated removal if permission denied or locked
                     try:
                         res = run_cmd(["osascript", "-e", f'do shell script "rm -f \\"{path}\\"" with administrator privileges'])
                         if not os.path.exists(path):
@@ -896,7 +892,6 @@ def main():
         if removed:
             for r_key in removed:
                 res = run_cmd(["defaults", "delete", DOMAIN, r_key])
-                # Only track the keys that were actually physically deleted from the user domain
                 if res.returncode == 0:
                     actual_removed.append(r_key)
 
@@ -1047,6 +1042,37 @@ def main():
         suspend_dirty_tracking = False
         update_baseline()
         check_dirty_state()
+        
+    def apply_json_state_to_ui(data):
+        nonlocal suspend_dirty_tracking
+        suspend_dirty_tracking = True
+
+        for var in all_feature_vars.values():
+            var.set(0)
+        for var in all_perm_vars.values():
+            var.set("Not Set")
+        sb_var.set("")
+        dns_var.set("Automatic")
+        dns_tpl_var.set("")
+
+        for key in data.get("Features", []):
+            if key in all_feature_vars:
+                all_feature_vars[key].set(1)
+
+        for key, val in data.get("Permissions", {}).items():
+            if key in all_perm_vars:
+                all_perm_vars[key].set(val)
+
+        if "SafeBrowsing" in data:
+            sb_var.set(data["SafeBrowsing"])
+        if "DnsMode" in data:
+            dns_var.set(data["DnsMode"])
+        if "DnsTemplate" in data:
+            dns_tpl_var.set(data["DnsTemplate"])
+
+        suspend_dirty_tracking = False
+        update_baseline()
+        check_dirty_state()
 
     def prompt_legacy_cleanup():
         ans = messagebox.askyesno(
@@ -1064,7 +1090,7 @@ def main():
             if removed_files:
                 msg += f"Policy files removed: {len(removed_files)}\n"
             if removed_keys:
-                msg += f"Live user keys removed: {len(removed_keys)}\n"
+                msg += f"Live keys removed: {len(removed_keys)}\n"
             if not removed_files and not removed_keys:
                 msg += "No conflicting files were actually found during the sweep."
                 
@@ -1074,27 +1100,46 @@ def main():
     def reload_ui_from_registry():
         global HAS_PROMPTED_CLEANUP
         
-        payload = merged_policy_source_for_ui()
-        apply_payload_to_ui(payload)
-        
         profile_active = is_profile_installed()
         
-        # Only check physical files for the warning, ignore live profile keys
         legacy_files = [p for p in (USER_MANAGED_PREFS_FILE, SYSTEM_MANAGED_PREFS_FILE) if os.path.exists(p)]
         has_legacy = bool(legacy_files)
         
         if profile_active:
             if has_legacy:
-                set_status("Settings loaded. (Profile Active, Legacy Plists Found ⚠️)")
-                if not HAS_PROMPTED_CLEANUP:
-                    HAS_PROMPTED_CLEANUP = True
-                    root.after(500, prompt_legacy_cleanup)
+                status = "Settings loaded. (Profile Active, Legacy Plists Found ⚠️)"
             else:
-                set_status("Settings loaded. (Profile Installed ✅)")
+                status = "Settings loaded. (Profile Installed ✅)"
         elif has_legacy:
-            set_status("Settings loaded. (Legacy Plist Mode ⚠️)")
+            status = "Settings loaded. (Legacy Plist Mode ⚠️)"
         else:
-            set_status("No SlimBrave settings found.")
+            status = "No SlimBrave policies active."
+
+        if os.path.exists(STATE_FILE):
+            try:
+                with open(STATE_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                apply_json_state_to_ui(data)
+                
+                if not data.get("Features") and not data.get("Permissions"):
+                    if not profile_active and not has_legacy:
+                        status = "Ready."
+            except Exception as e:
+                write_log(f"Failed to read local state JSON: {e}")
+                apply_payload_to_ui({})
+        elif has_legacy:
+            payload = merged_policy_source_for_ui()
+            apply_payload_to_ui(payload)
+        else:
+            apply_payload_to_ui({})
+            if not profile_active:
+                status = "Ready."
+
+        set_status(status)
+
+        if profile_active and has_legacy and not HAS_PROMPTED_CLEANUP:
+            HAS_PROMPTED_CLEANUP = True
+            root.after(500, prompt_legacy_cleanup)
 
     def pgrep_any(pattern):
         res = run_cmd(["pgrep", "-if", pattern])
@@ -1279,28 +1324,7 @@ def main():
         with open(f, "r", encoding="utf-8") as file:
             data = json.load(file)
 
-        nonlocal suspend_dirty_tracking
-        suspend_dirty_tracking = True
-
-        for var in all_feature_vars.values():
-            var.set(0)
-        for var in all_perm_vars.values():
-            var.set("Not Set")
-
-        for key in data.get("Features", []):
-            if key in all_feature_vars:
-                all_feature_vars[key].set(1)
-
-        for key, val in data.get("Permissions", {}).items():
-            if key in all_perm_vars:
-                all_perm_vars[key].set(val)
-
-        sb_var.set(data.get("SafeBrowsing", ""))
-        dns_var.set(data.get("DnsMode", ""))
-        dns_tpl_var.set(data.get("DnsTemplate", ""))
-
-        suspend_dirty_tracking = False
-        check_dirty_state()
+        apply_json_state_to_ui(data)
         set_status("JSON loaded.")
 
     def apply_settings():
@@ -1315,19 +1339,18 @@ def main():
             progress.step(10, "Preparing settings...")
             progress.log(f"Keys selected: {len(cleaned_payload)}")
 
-            progress.step(30, "Removing legacy configurations...")
-            removed = strip_legacy_policy_keys_from_live_domain()
-            removed_files = remove_managed_pref_files()
-            progress.log(f"Legacy live keys removed: {len(removed)}")
-            progress.log(f"Legacy policy files removed: {len(removed_files)}")
-
             progress.step(55, "Generating Configuration Profile...")
             if cleaned_payload:
                 config_path = write_mobileconfig(cleaned_payload)
                 progress.log(f"Wrote: {config_path}")
                 run_cmd(["open", config_path])
             else:
-                progress.log("No policies selected. No profile generated.")
+                if is_profile_installed():
+                    if remove_mobileconfig_profile():
+                        progress.log("Configuration Profile natively removed via CLI.")
+                    else:
+                        progress.log("Configuration Profile requires manual removal via System Settings.")
+                progress.log("No policies selected. Profile cleared.")
 
             progress.step(75, "Refreshing macOS cache...")
             flush_pref_cache()
@@ -1416,6 +1439,7 @@ def main():
             progress.log("macOS preference cache refreshed again.")
 
             progress.step(96, "Refreshing app...")
+            apply_payload_to_ui({})
             save_current_state()
             reload_ui_from_registry()
             set_dirty_state(False)
@@ -1509,6 +1533,7 @@ def main():
 
             progress.step(95, "Refreshing app...")
             os.makedirs(BRAVE_USER_DATA_DIR, exist_ok=True)
+            apply_payload_to_ui({})
             save_current_state()
             reload_ui_from_registry()
             set_dirty_state(False)
