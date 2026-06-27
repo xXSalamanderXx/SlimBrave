@@ -136,6 +136,7 @@ def main():
     import datetime
     import plistlib
     import tempfile
+    import uuid
 
     CONFIG_DIR = os.path.expanduser("~/.config/slimbrave")
     RESTORE_STAGING_DIR = os.path.join(CONFIG_DIR, "restore-staging")
@@ -804,10 +805,41 @@ def main():
 
         return {}
 
-    def write_user_managed_prefs_dict(payload):
-        os.makedirs(USER_MANAGED_PREFS_DIR, exist_ok=True)
-        plist_dump_binary(USER_MANAGED_PREFS_FILE, payload)
-        write_log(f"Wrote managed prefs: {USER_MANAGED_PREFS_FILE}")
+    def write_mobileconfig(payload):
+        profile_uuid = str(uuid.uuid4())
+        payload_uuid = str(uuid.uuid4())
+        
+        mobileconfig = {
+            "PayloadContent": [
+                {
+                    "PayloadType": "com.apple.ManagedClient.preferences",
+                    "PayloadVersion": 1,
+                    "PayloadIdentifier": f"{DOMAIN}.policy",
+                    "PayloadUUID": payload_uuid,
+                    "PayloadEnabled": True,
+                    "PayloadContent": {
+                        DOMAIN: {
+                            "ForcedTraits": [],
+                            "Set-Once": [],
+                            "mcx_preference_settings": payload
+                        }
+                    }
+                }
+            ],
+            "PayloadDisplayName": f"SlimBrave Policy ({DOMAIN})",
+            "PayloadIdentifier": f"com.slimbrave.profile.{DOMAIN}",
+            "PayloadType": "Configuration",
+            "PayloadUUID": profile_uuid,
+            "PayloadVersion": 1
+        }
+        
+        config_path = os.path.expanduser(f"~/Desktop/SlimBrave-{DOMAIN}.mobileconfig")
+        with open(config_path, "wb") as f:
+            # Configuration Profiles must strictly be formatted as XML
+            plistlib.dump(mobileconfig, f, fmt=plistlib.FMT_XML)
+            
+        write_log(f"Wrote Configuration Profile: {config_path}")
+        return config_path
 
     def remove_managed_pref_files():
         removed = []
@@ -1227,14 +1259,15 @@ def main():
             removed = strip_legacy_policy_keys_from_live_domain()
             progress.log(f"Removed: {len(removed)}")
 
-            progress.step(55, "Writing policy file...")
+            progress.step(55, "Generating Configuration Profile...")
             if cleaned_payload:
-                write_user_managed_prefs_dict(cleaned_payload)
-                progress.log(f"Wrote: {USER_MANAGED_PREFS_FILE}")
+                config_path = write_mobileconfig(cleaned_payload)
+                progress.log(f"Wrote: {config_path}")
+                run_cmd(["open", config_path])
             else:
                 if os.path.exists(USER_MANAGED_PREFS_FILE):
                     os.remove(USER_MANAGED_PREFS_FILE)
-                progress.log("No policy file needed.")
+                progress.log("No policies selected. No profile generated.")
 
             progress.step(75, "Refreshing macOS cache...")
             flush_pref_cache()
@@ -1250,21 +1283,22 @@ def main():
                 for w in warnings:
                     progress.log(f" - {w}")
 
-            progress.finish("SlimBrave Applied Successfully!")
-            show_text_report(
-                "Apply Summary",
-                [
-                    "Apply finished.",
-                    f"Policy file: {USER_MANAGED_PREFS_FILE}",
-                    f"Keys written: {len(cleaned_payload)}",
-                    f"Old live-domain keys removed: {len(removed)}",
-                    "",
-                    "Warnings:" if warnings else "Warnings: none",
-                    *([f" - {w}" for w in warnings] if warnings else []),
-                ],
-            )
-            messagebox.showinfo("Apply", "SlimBrave Applied Successfully!")
-            set_status("SlimBrave Applied Successfully!")
+            progress.finish("SlimBrave Profile Generated!")
+            
+            if cleaned_payload:
+                messagebox.showinfo(
+                    "Action Required", 
+                    "A .mobileconfig file has been saved to your Desktop and opened.\n\n"
+                    "To finish applying the policies:\n"
+                    "1. A 'Profile Downloaded' notification will appear on your Mac.\n"
+                    "2. Open System Settings.\n"
+                    "3. Navigate to 'Privacy & Security' -> 'Profiles' (or 'General' -> 'Device Management').\n"
+                    "4. Double-click 'SlimBrave Policy' and click 'Install'."
+                )
+            else:
+                messagebox.showinfo("Apply", "SlimBrave settings cleared successfully!")
+
+            set_status("SlimBrave Application Complete!")
         except Exception as e:
             write_log(f"Apply failed: {e}")
             progress.finish("Something Went Wrong, Please Read Logs for More Details")
@@ -1303,8 +1337,10 @@ def main():
             removed = strip_legacy_policy_keys_from_live_domain()
             progress.log(f"Removed: {len(removed)}")
 
-            progress.step(80, "Writing policy file...")
-            write_user_managed_prefs_dict(cleaned_payload)
+            progress.step(80, "Generating Configuration Profile...")
+            config_path = write_mobileconfig(cleaned_payload)
+            progress.log(f"Wrote: {config_path}")
+            run_cmd(["open", config_path])
 
             progress.step(92, "Refreshing app...")
             flush_pref_cache()
@@ -1315,23 +1351,18 @@ def main():
             set_dirty_state(False)
 
             progress.finish("Done.")
-            report = [
-                "Restore finished.",
-                f"Selected file: {f}",
-                f"Copy used: {staged}",
-                f"Type: {container_kind}",
-                f"Keys restored: {len(cleaned_payload)}",
-                f"Old live-domain keys removed: {len(removed)}",
-                f"Policy file: {USER_MANAGED_PREFS_FILE}",
-                "",
-                "Restored keys:",
-                *[f" - {k}" for k in sorted(cleaned_payload.keys())],
-                "",
-                "Warnings:" if warnings else "Warnings: none",
-                *([f" - {w}" for w in warnings] if warnings else []),
-            ]
-            show_text_report("Restore Summary", report)
-            set_status("Plist restored.")
+            
+            messagebox.showinfo(
+                "Action Required", 
+                "A restored .mobileconfig file has been saved to your Desktop and opened.\n\n"
+                "To finish applying the policies:\n"
+                "1. A 'Profile Downloaded' notification will appear.\n"
+                "2. Open System Settings.\n"
+                "3. Navigate to 'Privacy & Security' -> 'Profiles'.\n"
+                "4. Double-click 'SlimBrave Policy' and click 'Install'."
+            )
+            
+            set_status("Plist profile generated.")
         except Exception as e:
             write_log(f"Plist restore failed: {e}")
             progress.finish("Failed.")
@@ -1389,11 +1420,13 @@ def main():
                 f"Cache paths cleared: {len(cache_removed)}",
                 "",
                 "Your Brave profile was kept.",
+                "",
+                "NOTE: If you installed a Configuration Profile, you must manually delete it from macOS System Settings -> Privacy & Security -> Profiles."
             ]
 
             progress.finish("Done.")
             show_text_report("Light Reset Summary", report)
-            messagebox.showinfo("Light Reset", "Light Reset finished.")
+            messagebox.showinfo("Light Reset", "Light Reset finished.\n\nBe sure to delete any remaining SlimBrave policies from your macOS System Settings -> Profiles.")
             set_status("Light Reset finished.")
         except Exception as e:
             write_log(f"Light reset failed: {e}")
@@ -1465,11 +1498,13 @@ def main():
                 f"Profile backup: {backup_path if backup_path else '(new folder created)'}",
                 "",
                 "A fresh Brave profile will be created on next launch.",
+                "",
+                "NOTE: If you installed a Configuration Profile, you must manually delete it from macOS System Settings -> Privacy & Security -> Profiles."
             ]
 
             progress.finish("Done.")
             show_text_report("Hard Reset Summary", report)
-            messagebox.showinfo("Hard Reset", "Hard Reset finished.")
+            messagebox.showinfo("Hard Reset", "Hard Reset finished.\n\nBe sure to delete any remaining SlimBrave policies from your macOS System Settings -> Profiles.")
             set_status("Hard Reset finished.")
         except Exception as e:
             write_log(f"Hard reset failed: {e}")
