@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # SlimBrave - Revived - v1.0.9 (macOS)
-# Author: xXSalamanderXx
 
 import subprocess
 import sys
@@ -1335,6 +1334,9 @@ def main():
         cleaned_payload, warnings = sanitize_managed_payload(payload)
 
         progress = ProgressDialog(root, "Apply")
+        profile_was_installed = False
+        profile_removed = False
+
         try:
             progress.step(10, "Preparing settings...")
             progress.log(f"Keys selected: {len(cleaned_payload)}")
@@ -1345,9 +1347,11 @@ def main():
                 progress.log(f"Wrote: {config_path}")
                 run_cmd(["open", config_path])
             else:
-                if is_profile_installed():
+                profile_was_installed = is_profile_installed()
+                if profile_was_installed:
                     if remove_mobileconfig_profile():
                         progress.log("Configuration Profile natively removed via CLI.")
+                        profile_removed = True
                     else:
                         progress.log("Configuration Profile requires manual removal via System Settings.")
                 progress.log("No policies selected. Profile cleared.")
@@ -1372,16 +1376,25 @@ def main():
                 messagebox.showinfo(
                     "Action Required", 
                     "A .mobileconfig file has been saved to your Desktop and opened.\n\n"
-                    "To finish applying the policies:\n"
+                    "To finish applying or updating the policies:\n"
                     "1. A 'Profile Downloaded' notification will appear on your Mac.\n"
                     "2. Open System Settings.\n"
                     "3. Navigate to 'Privacy & Security' -> 'Profiles' (or 'General' -> 'Device Management').\n"
-                    "4. Double-click 'SlimBrave Policy' and click 'Install'.\n\n"
-                    "5. Once installed, you can safely delete the .mobileconfig file from your Desktop.\n\n"
+                    "4. Double-click 'SlimBrave Policy'.\n"
+                    "   • If installing for the first time, click 'Install'.\n"
+                    "   • If updating settings, macOS will ask to replace the old profile. Click 'Replace' or 'Update'.\n\n"
+                    "5. Once complete, you can safely delete the .mobileconfig file from your Desktop.\n\n"
                     "6. Finally, click the 'Reload' button in SlimBrave to verify the profile is active!"
                 )
             else:
-                messagebox.showinfo("Apply", "SlimBrave settings cleared successfully!")
+                if profile_was_installed and not profile_removed:
+                    messagebox.showwarning(
+                        "Manual Removal Required",
+                        "SlimBrave settings cleared locally, but macOS blocked automatic removal of the active Configuration Profile.\n\n"
+                        "You must manually delete it by going to macOS System Settings -> Privacy & Security -> Profiles, selecting 'SlimBrave Policy', and clicking the '-' button."
+                    )
+                else:
+                    messagebox.showinfo("Apply", "SlimBrave settings cleared successfully!")
 
             set_status("SlimBrave Application Complete!")
         except Exception as e:
@@ -1675,7 +1688,7 @@ def main():
     chan_var.trace_add("write", on_channel_change)
     chan_cb = ttk.Combobox(inner_top, textvariable=chan_var, values=list(installed_channels.keys()), state="readonly", width=10, style="Dark.TCombobox")
     chan_cb.pack(side="left", padx=(5, 20))
-    create_tooltip(chan_cb, "Select which Brave Channel to manage.")
+    create_tooltip(chan_cb, "Select which installed Brave release channel you would like to manage policies for.\n\nChanging this will load the corresponding settings.")
 
     tk.Label(inner_top, text="Quick Presets:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
 
