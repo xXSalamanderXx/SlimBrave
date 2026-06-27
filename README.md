@@ -1,33 +1,42 @@
+> [!CAUTION]
+> This branch is purely for development and experimental use. Do not attempt to run any scripts from this branch.
+
 <div align="center">
 
 # SlimBrave - Revived
 
   <img src="https://i.postimg.cc/QCyWVFGN/SlimBrave.png" alt="SlimBrave Lion Logo" width="200"/>
-  
-A lightweight, GUI-driven PowerShell utility designed to give you ultimate control over your Brave Browser. Lock down telemetry, enforce strict privacy standards, and strip away built-in browser bloatware—all from a single, clean interface.
+
+A lightweight utility designed to give you ultimate control over your Brave Browser. Lock down telemetry, enforce strict privacy standards, and strip away built-in browser bloatware—all from a single, clean interface.
+
+Supported on Windows and MacOS!
 </div>
 
 <br>
 
-[![Release](https://img.shields.io/github/v/release/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave/releases) [![Top language](https://img.shields.io/github/languages/top/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave) [![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge)](./LICENSE)
+[![Release](https://img.shields.io/github/v/release/xXSalamanderXx/SlimBrave?style=for-the-badge)](https://github.com/xXSalamanderXx/SlimBrave/releases)
+![](https://img.shields.io/badge/PowerShell-5391FE?style=for-the-badge&labelColor=ffffff&logoColor=5391FE&logo=powershell)
+![](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&labelColor=FFD43B&logoColor=3776AB&logo=python)
+[![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge)](./LICENSE)
 
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://buymeacoffee.com/SinZZzz)
 
-> [!WARNING]
-> This tool is currently not built for MacOS or Linux.
+> [!IMPORTANT]
+> This tool is currently not built for Linux.
 > On Linux, it is recommended to use Brave Origin. Brave Origin is free to use on Linux and debloats Brave out of the box.
 
 <details>
 <summary> Requirements </summary>
 
+
+## Windows Requirements:
+
 - Windows 10/11
 - PowerShell
 - Administrator privileges
 
-</details>
-
 <details>
-<summary> Error "Running Scripts is Disabled on this System"</summary>
+<summary> Powershell Error "Running Scripts is Disabled on this System"</summary>
 
 ### Run this command in PowerShell:
 
@@ -37,14 +46,30 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 
 </details>
 
+## MacOS Requiremens:
+
+- Homebrew
+- Python (python via Homebrew)
+- Python Tkinter
+
+(Homebrew and Python will be automatically installed if you agree to the auto-installation upon running Slimbrave)
+
+</details>
+
+
 ## 🚀 How to Use
 
-## Run the command below in PowerShell:
-*Tip: Better if you run Powershell as Administrator*
-```ps1
-iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
-```
+## (Windows)
 
+## Run the command below in PowerShell:
+> [!CAUTION]
+> This branch is purely for development and experimental use. Do not attempt to run any scripts from this branch.
+
+> [!TIP]
+> Better if you run Powershell as Administrator
+```ps1
+iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave-Windows.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
+```
 ## or
 
 1. Download the `SlimBrave.ps1` script from the [Releases](https://github.com/xXSalamanderXx/SlimBrave/releases) page.
@@ -53,18 +78,21 @@ iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave.p
 4. Check the boxes for the features you wish to disable/enable.
 5. Click **Apply Settings** and restart your Brave Browser.
 
-##
+
+## (MacOS)
+
+## Run the command below in Terminal:
+> [!CAUTION]
+> This branch is purely for development and experimental use. Do not attempt to run any scripts from this branch.
 
 > [!IMPORTANT]
-> Presets are now built in, so using the presets below is no longer recommended.
-> They still work, but they are deprecated and not updated for the new options available in 2026+.
-## 📂 How to Use Presets
-Instead of manually checking boxes, you can instantly load a pre-configured setup:
-1. Download your desired preset `.json` file from the `Presets` folder in this repository.
-2. Run `SlimBrave.ps1`.
-3. Click the **Import Settings** button at the bottom of the window.
-4. Select the downloaded `.json` file. The script will automatically check the correct boxes for that specific setup.
-5. Click **Apply Settings**.
+> It's preferred if you install the macOS dependencies prior to running; however, Slimbrave will attempt to auto-install these dependencies:
+> 1. Install Homebrew: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
+> 2. Install Python: `brew install python`
+> 3. Install Tkinter support: `brew install python-tk`
+```
+curl -sO https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/SlimBrave-MacOS.py && python3 SlimBrave.py
+```
 
 ##
   
