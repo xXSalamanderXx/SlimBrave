@@ -10,10 +10,8 @@ import base64
 
 BREW_INSTALLED_SOMETHING = False
 
-
 def print_step(msg):
     print(f"\n[SlimBrave] {msg}")
-
 
 def prompt_yes_no(question):
     while True:
@@ -24,14 +22,12 @@ def prompt_yes_no(question):
             return False
         print("Please answer 'y' or 'n'.")
 
-
 def get_brew_prefix():
     if os.path.exists("/opt/homebrew/bin/brew"):
         return "/opt/homebrew"
     if os.path.exists("/usr/local/bin/brew"):
         return "/usr/local"
     return None
-
 
 def check_homebrew():
     global BREW_INSTALLED_SOMETHING
@@ -65,13 +61,11 @@ def check_homebrew():
     print_step("Homebrew still not available. Exiting.")
     sys.exit(1)
 
-
 def is_homebrew_python():
     brew_prefix = get_brew_prefix()
     if not brew_prefix:
         return False
     return os.path.abspath(sys.executable).startswith(brew_prefix)
-
 
 def get_tk_version():
     try:
@@ -79,7 +73,6 @@ def get_tk_version():
         return tkinter.TkVersion
     except Exception:
         return 0
-
 
 def check_python_and_tk():
     global BREW_INSTALLED_SOMETHING
@@ -119,12 +112,10 @@ def check_python_and_tk():
             print_step("Cannot run without a working Tk. Exiting.")
             sys.exit(1)
 
-
 def run_cleanup():
     if shutil.which("brew") and BREW_INSTALLED_SOMETHING:
         print_step("Running brew cleanup…")
         subprocess.run(["brew", "cleanup"], check=False)
-
 
 def dependency_setup():
     print("=" * 60)
@@ -138,7 +129,6 @@ def dependency_setup():
     print_step("All required dependencies OK. Launching SlimBrave interface…")
     time.sleep(1)
 
-
 def main():
     import tkinter as tk
     from tkinter import ttk, messagebox, filedialog
@@ -147,25 +137,41 @@ def main():
     import plistlib
     import tempfile
 
-    DOMAIN = "com.brave.Browser"
     CONFIG_DIR = os.path.expanduser("~/.config/slimbrave")
     RESTORE_STAGING_DIR = os.path.join(CONFIG_DIR, "restore-staging")
     STATE_FILE = os.path.join(CONFIG_DIR, "SlimBraveState.json")
     LOG_FILE = os.path.join(CONFIG_DIR, "SlimBrave.log")
-
     USER_MANAGED_PREFS_DIR = os.path.expanduser("~/Library/Managed Preferences")
-    USER_MANAGED_PREFS_FILE = os.path.join(USER_MANAGED_PREFS_DIR, f"{DOMAIN}.plist")
-    SYSTEM_MANAGED_PREFS_FILE = os.path.join("/Library/Managed Preferences", f"{DOMAIN}.plist")
-
-    BRAVE_SUPPORT_DIR = os.path.expanduser("~/Library/Application Support/BraveSoftware/Brave-Browser")
-    BRAVE_USER_DATA_DIR = BRAVE_SUPPORT_DIR
-    BRAVE_DEFAULT_PROFILE_DIR = os.path.join(BRAVE_USER_DATA_DIR, "Default")
-    BRAVE_LOCAL_STATE_FILE = os.path.join(BRAVE_USER_DATA_DIR, "Local State")
-    BRAVE_CACHE_DIR = os.path.expanduser("~/Library/Caches/BraveSoftware/Brave-Browser")
 
     os.makedirs(CONFIG_DIR, exist_ok=True)
     os.makedirs(RESTORE_STAGING_DIR, exist_ok=True)
     os.makedirs(USER_MANAGED_PREFS_DIR, exist_ok=True)
+
+    # Dynamic Channel Variables
+    DOMAIN = ""
+    USER_MANAGED_PREFS_FILE = ""
+    SYSTEM_MANAGED_PREFS_FILE = ""
+    BRAVE_SUPPORT_DIR = ""
+    BRAVE_USER_DATA_DIR = ""
+    BRAVE_DEFAULT_PROFILE_DIR = ""
+    BRAVE_LOCAL_STATE_FILE = ""
+    BRAVE_CACHE_DIR = ""
+    current_channel_info = {}
+
+    def update_paths_for_channel(channel_info):
+        nonlocal DOMAIN, USER_MANAGED_PREFS_FILE, SYSTEM_MANAGED_PREFS_FILE
+        nonlocal BRAVE_SUPPORT_DIR, BRAVE_USER_DATA_DIR, BRAVE_DEFAULT_PROFILE_DIR
+        nonlocal BRAVE_LOCAL_STATE_FILE, BRAVE_CACHE_DIR
+
+        DOMAIN = channel_info["Domain"]
+        USER_MANAGED_PREFS_FILE = os.path.join(USER_MANAGED_PREFS_DIR, f"{DOMAIN}.plist")
+        SYSTEM_MANAGED_PREFS_FILE = os.path.join("/Library/Managed Preferences", f"{DOMAIN}.plist")
+
+        BRAVE_SUPPORT_DIR = os.path.expanduser(f"~/Library/Application Support/BraveSoftware/{channel_info['Dir']}")
+        BRAVE_USER_DATA_DIR = BRAVE_SUPPORT_DIR
+        BRAVE_DEFAULT_PROFILE_DIR = os.path.join(BRAVE_USER_DATA_DIR, "Default")
+        BRAVE_LOCAL_STATE_FILE = os.path.join(BRAVE_USER_DATA_DIR, "Local State")
+        BRAVE_CACHE_DIR = os.path.expanduser(f"~/Library/Caches/BraveSoftware/{channel_info['Dir']}")
 
     def write_log(message):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -196,6 +202,11 @@ def main():
         {"Name": "Disable QUIC Protocol", "Key": "QuicAllowed", "Value": False, "Type": "bool", "ToolTip": "Forces standard TCP, stopping UDP firewall bypasses and tracking.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked"},
         {"Name": "Block Third Party Cookies", "Key": "BlockThirdPartyCookies", "Value": True, "Type": "bool", "ToolTip": "Blocks all third-party tracking cookies.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Enable Do Not Track", "Key": "EnableDoNotTrack", "Value": True, "Type": "bool", "ToolTip": "Sends a Do Not Track request with your browsing traffic.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
+        {"Name": "Enable Global Privacy Control", "Key": "GlobalPrivacyControlEnabled", "Value": True, "Type": "bool", "ToolTip": "Enables GPC to tell sites not to sell or share your data.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
+        {"Name": "Enable De-AMP", "Key": "BraveDeAMPEnabled", "Value": True, "Type": "bool", "ToolTip": "Bypasses Google AMP pages and redirects you to the original website.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
+        {"Name": "Enable Debouncing", "Key": "BraveDebouncingEnabled", "Value": True, "Type": "bool", "ToolTip": "Skips known tracking redirect hops before you reach your destination.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
+        {"Name": "Strip URL Trackers", "Key": "BraveTrackersStrippingEnabled", "Value": True, "Type": "bool", "ToolTip": "Automatically removes tracking parameters from URLs.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
+        {"Name": "Reduce Language Fingerprinting", "Key": "ReduceAcceptLanguage", "Value": True, "Type": "bool", "ToolTip": "Reduces the language data sent to sites to prevent fingerprinting.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Force Google SafeSearch", "Key": "ForceGoogleSafeSearch", "Value": True, "Type": "bool", "ToolTip": "Filters explicit search results.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked"},
         {"Name": "Disable IPFS", "Key": "IPFSEnabled", "Value": False, "Type": "bool", "ToolTip": "Stops peer-to-peer background connections to unknown nodes.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Force Incognito Mode", "Key": "IncognitoModeAvailability", "Value": 2, "Type": "int", "ToolTip": "Forces the browser to always open in Incognito Mode.\n\nSuggested Settings for Privacy: Unticked | Security: Unticked"},
@@ -262,10 +273,11 @@ def main():
     ALL_FEATURES = telemetry_features + privacy_features + brave_features + perf_features
     managed_keys = {feat["Key"] for feat in ALL_FEATURES}
     managed_keys.update({perm["Key"] for perm in permission_settings})
-    managed_keys.update({"DefaultFileSystemWriteGuardSetting", "SafeBrowsingProtectionLevel", "DnsOverHttpsMode"})
+    managed_keys.update({"DefaultFileSystemWriteGuardSetting", "SafeBrowsingProtectionLevel", "DnsOverHttpsMode", "DnsOverHttpsTemplates"})
 
     BOOL_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "bool"}
     STRING_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "string"}
+    STRING_POLICY_KEYS.update({"WebRtcIPHandling", "HttpsOnlyMode", "DnsOverHttpsMode", "DnsOverHttpsTemplates"})
     ARRAY_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "array"}
     INT_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "int"}
 
@@ -422,6 +434,24 @@ def main():
     status_var = tk.StringVar(value="Ready.")
     save_status_var = tk.StringVar(value="Saved \u2705")
 
+    # Determine installed channels
+    channels_dict = {
+        "Release": {"Domain": "com.brave.Browser", "App": "Brave Browser", "Dir": "Brave-Browser"},
+        "Beta": {"Domain": "com.brave.Browser.beta", "App": "Brave Browser Beta", "Dir": "Brave-Browser-Beta"},
+        "Dev": {"Domain": "com.brave.Browser.dev", "App": "Brave Browser Dev", "Dir": "Brave-Browser-Dev"},
+        "Nightly": {"Domain": "com.brave.Browser.nightly", "App": "Brave Browser Nightly", "Dir": "Brave-Browser-Nightly"}
+    }
+    installed_channels = {}
+    for name, info in channels_dict.items():
+        if os.path.exists(f"/Applications/{info['App']}.app") or os.path.exists(os.path.expanduser(f"~/Applications/{info['App']}.app")):
+            installed_channels[name] = info
+    
+    if not installed_channels:
+        installed_channels["Release"] = channels_dict["Release"]
+
+    current_channel_info = list(installed_channels.values())[0]
+    update_paths_for_channel(current_channel_info)
+
     def set_status(msg):
         status_var.set(msg)
         write_log(msg)
@@ -445,6 +475,7 @@ def main():
             "Permissions": {key: var.get() for key, var in all_perm_vars.items() if var.get() != "Not Set"},
             "SafeBrowsing": sb_var.get(),
             "DnsMode": dns_var.get(),
+            "DnsTemplate": dns_tpl_var.get()
         }
 
     def update_baseline():
@@ -615,9 +646,9 @@ def main():
         with open(path, "rb") as f:
             return plistlib.load(f)
 
-    def plist_dump_xml(path, data):
+    def plist_dump_binary(path, data):
         with open(path, "wb") as f:
-            plistlib.dump(data, f, fmt=plistlib.FMT_XML, sort_keys=True)
+            plistlib.dump(data, f, fmt=plistlib.FMT_BINARY, sort_keys=True)
 
     def defaults_export_domain_dict():
         fd, temp_path = tempfile.mkstemp(prefix="slimbrave-domain-", suffix=".plist")
@@ -638,7 +669,7 @@ def main():
         fd, temp_path = tempfile.mkstemp(prefix="slimbrave-import-", suffix=".plist")
         os.close(fd)
         try:
-            plist_dump_xml(temp_path, data)
+            plist_dump_binary(temp_path, data)
             res = run_cmd(["defaults", "import", DOMAIN, temp_path])
             if res.returncode != 0:
                 err = res.stderr.strip() or res.stdout.strip() or "defaults import failed"
@@ -735,10 +766,14 @@ def main():
 
             if key == "DnsOverHttpsMode":
                 s = str(value).strip().lower()
-                if s in {"automatic", "off"}:
+                if s in {"automatic", "off", "secure"}:
                     cleaned[key] = s
                 else:
                     warnings.append(f"Skipped {key}: invalid value")
+                continue
+            
+            if key == "DnsOverHttpsTemplates":
+                cleaned[key] = str(value)
                 continue
 
             cleaned[key] = value
@@ -771,7 +806,7 @@ def main():
 
     def write_user_managed_prefs_dict(payload):
         os.makedirs(USER_MANAGED_PREFS_DIR, exist_ok=True)
-        plist_dump_xml(USER_MANAGED_PREFS_FILE, payload)
+        plist_dump_binary(USER_MANAGED_PREFS_FILE, payload)
         write_log(f"Wrote managed prefs: {USER_MANAGED_PREFS_FILE}")
 
     def remove_managed_pref_files():
@@ -792,13 +827,11 @@ def main():
             return []
 
         removed = []
-        for key in list(domain_data.keys()):
-            if key in managed_keys:
-                removed.append(key)
-                domain_data.pop(key, None)
-
-        if removed:
-            defaults_import_domain_dict(domain_data)
+        for key in managed_keys:
+            if key in domain_data:
+                res = run_cmd(["defaults", "delete", DOMAIN, key])
+                if res.returncode == 0:
+                    removed.append(key)
 
         return sorted(removed)
 
@@ -844,10 +877,19 @@ def main():
         elif sb_var.get() == "Off":
             payload["SafeBrowsingProtectionLevel"] = 0
 
-        if dns_var.get() == "On":
+        dns_mode = dns_var.get()
+        if dns_mode == "Automatic":
             payload["DnsOverHttpsMode"] = "automatic"
-        elif dns_var.get() == "Off":
+        elif dns_mode == "Off":
             payload["DnsOverHttpsMode"] = "off"
+        elif dns_mode == "Secure":
+            payload["DnsOverHttpsMode"] = "secure"
+        elif dns_mode == "Custom":
+            payload["DnsOverHttpsMode"] = "secure"
+
+        tpl = dns_tpl_var.get().strip()
+        if tpl and dns_mode in ["Secure", "Custom"]:
+            payload["DnsOverHttpsTemplates"] = tpl
 
         return payload
 
@@ -860,7 +902,8 @@ def main():
         for var in all_perm_vars.values():
             var.set("Not Set")
         sb_var.set("")
-        dns_var.set("")
+        dns_var.set("Automatic")
+        dns_tpl_var.set("")
 
         for feat in ALL_FEATURES:
             key = feat["Key"]
@@ -922,9 +965,17 @@ def main():
         if "DnsOverHttpsMode" in payload:
             d = str(payload["DnsOverHttpsMode"]).strip().lower()
             if d == "automatic":
-                dns_var.set("On")
+                dns_var.set("Automatic")
             elif d == "off":
                 dns_var.set("Off")
+            elif d == "secure":
+                if payload.get("DnsOverHttpsTemplates"):
+                    dns_var.set("Custom")
+                else:
+                    dns_var.set("Secure")
+
+        if "DnsOverHttpsTemplates" in payload:
+            dns_tpl_var.set(str(payload["DnsOverHttpsTemplates"]))
 
         suspend_dirty_tracking = False
         update_baseline()
@@ -948,14 +999,16 @@ def main():
         return bool(res.stdout.strip())
 
     def kill_brave_family(progress=None):
+        nonlocal current_channel_info
+        app_name = current_channel_info["App"]
         patterns = [
-            "Brave Browser",
-            "Brave Browser Helper",
+            app_name,
+            f"{app_name} Helper",
             "Brave Crashpad",
         ]
 
         try:
-            run_cmd(["osascript", "-e", 'tell application "Brave Browser" to quit'])
+            run_cmd(["osascript", "-e", f'tell application "{app_name}" to quit'])
         except Exception:
             pass
         time.sleep(2.0)
@@ -964,19 +1017,20 @@ def main():
             run_cmd(["pkill", "-TERM", "-if", pat])
         time.sleep(2.0)
 
-        if pgrep_any("Brave"):
+        if pgrep_any(app_name):
             for pat in patterns:
                 run_cmd(["pkill", "-KILL", "-if", pat])
             time.sleep(1.5)
 
-        still_running = pgrep_any("Brave")
+        still_running = pgrep_any(app_name)
         if progress:
-            progress.log("Brave is still running." if still_running else "Brave is closed.")
+            progress.log(f"{app_name} is still running." if still_running else f"{app_name} is closed.")
         return not still_running
 
     def flush_pref_cache():
-        run_cmd(["killall", "cfprefsd"])
-        time.sleep(0.8)
+        # Let macOS handle preference syncing natively. 
+        # Force-killing cfprefsd causes file corruption and crashes.
+        time.sleep(0.5)
 
     def clear_brave_runtime_caches():
         paths = [
@@ -1076,26 +1130,28 @@ def main():
         return lines
 
     def check_and_close_brave():
-        if not pgrep_any("Brave"):
+        nonlocal current_channel_info
+        app_name = current_channel_info["App"]
+        if not pgrep_any(app_name):
             return True
 
         ok = messagebox.askokcancel(
-            "Close Brave",
-            "Brave is open.\n\nClose it now to continue?"
+            f"Close {app_name}",
+            f"{app_name} is open.\n\nClose it now to continue?"
         )
         if not ok:
             set_status("Cancelled.")
             return False
 
-        progress = ProgressDialog(root, "Closing Brave")
-        progress.step(20, "Closing Brave...")
+        progress = ProgressDialog(root, f"Closing {app_name}")
+        progress.step(20, f"Closing {app_name}...")
         stopped = kill_brave_family(progress)
         if not stopped:
-            progress.finish("Brave is still open.")
-            messagebox.showerror("Brave", "Could not close Brave.\n\nPlease close it and try again.")
+            progress.finish(f"{app_name} is still open.")
+            messagebox.showerror("Brave", f"Could not close {app_name}.\n\nPlease close it and try again.")
             return False
 
-        progress.finish("Brave is closed.")
+        progress.finish(f"{app_name} is closed.")
         return True
 
     def confirm_hard_reset():
@@ -1149,6 +1205,7 @@ def main():
 
         sb_var.set(data.get("SafeBrowsing", ""))
         dns_var.set(data.get("DnsMode", ""))
+        dns_tpl_var.set(data.get("DnsTemplate", ""))
 
         suspend_dirty_tracking = False
         check_dirty_state()
@@ -1457,8 +1514,9 @@ def main():
                 "AutofillAddressEnabled", "AutofillCreditCardEnabled", "PasswordManagerEnabled",
                 "BrowserSignin", "WebRtcIPHandling", "BlockThirdPartyCookies",
                 "EnableDoNotTrack", "IPFSEnabled", "PromptForDownloadLocation",
-                "ClearBrowsingDataOnExitList", "HttpsOnlyMode",
-                "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled",
+                "ClearBrowsingDataOnExitList", "HttpsOnlyMode", "GlobalPrivacyControlEnabled",
+                "BraveDeAMPEnabled", "BraveDebouncingEnabled", "BraveTrackersStrippingEnabled",
+                "ReduceAcceptLanguage", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled",
                 "BraveAIChatEnabled", "TorDisabled", "BraveNewsDisabled",
                 "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled",
                 "BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled",
@@ -1470,6 +1528,7 @@ def main():
                     all_feature_vars[key].set(1)
             sb_var.set("Off")
             dns_var.set("Off")
+            dns_tpl_var.set("")
             set_status("Privacy preset loaded.")
 
         elif preset_type == "security":
@@ -1490,7 +1549,8 @@ def main():
                 if key in all_feature_vars:
                     all_feature_vars[key].set(1)
             sb_var.set("On")
-            dns_var.set("On")
+            dns_var.set("Automatic")
+            dns_tpl_var.set("")
             set_status("Security preset loaded.")
 
         suspend_dirty_tracking = False
@@ -1509,6 +1569,22 @@ def main():
     top_frame.grid(row=0, column=0, sticky="ew", padx=15, pady=(15, 15))
     inner_top = tk.Frame(top_frame, bg="#191919")
     inner_top.pack(fill="x")
+
+    tk.Label(inner_top, text="Channel:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left")
+
+    chan_var = tk.StringVar(value=list(installed_channels.keys())[0])
+    def on_channel_change(*args):
+        nonlocal current_channel_info
+        sel = chan_var.get()
+        if sel in installed_channels:
+            current_channel_info = installed_channels[sel]
+            update_paths_for_channel(current_channel_info)
+            reload_ui_from_registry()
+            
+    chan_var.trace_add("write", on_channel_change)
+    chan_cb = ttk.Combobox(inner_top, textvariable=chan_var, values=list(installed_channels.keys()), state="readonly", width=10, style="Dark.TCombobox")
+    chan_cb.pack(side="left", padx=(5, 20))
+    create_tooltip(chan_cb, "Select which Brave Channel to manage.")
 
     tk.Label(inner_top, text="Quick Presets:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(0, 10))
 
@@ -1645,11 +1721,21 @@ def main():
     dns_lbl.pack(side="left")
     dns_var = tk.StringVar()
     dns_var.trace_add("write", check_dirty_state)
-    dns_cb = ttk.Combobox(dns_f, textvariable=dns_var, values=["On", "Off"], state="readonly", width=10, style="Dark.TCombobox")
+    dns_cb = ttk.Combobox(dns_f, textvariable=dns_var, values=["Automatic", "Off", "Secure", "Custom"], state="readonly", width=10, style="Dark.TCombobox")
     dns_cb.pack(side="left", padx=8)
     dns_tt = "Forces encrypted DNS lookups.\n\nSuggested Settings for Privacy: Off | Security: On"
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
+
+    dns_tpl_f = tk.Frame(right_panel, bg="#232323")
+    dns_tpl_f.pack(fill="x", padx=16, pady=2)
+    dns_tpl_lbl = tk.Label(dns_tpl_f, text="DoH Template:", fg="white", bg="#232323", width=12, anchor="w", font=("sans-serif", 9))
+    dns_tpl_lbl.pack(side="left")
+    dns_tpl_var = tk.StringVar()
+    dns_tpl_var.trace_add("write", check_dirty_state)
+    dns_tpl_entry = tk.Entry(dns_tpl_f, textvariable=dns_tpl_var, bg="#161616", fg="white", insertbackground="white", relief="flat")
+    dns_tpl_entry.pack(side="left", fill="x", expand=True, padx=8)
+    create_tooltip(dns_tpl_entry, "Enter Custom DoH URL template if 'Custom' or 'Secure' is selected.")
 
     left_scroll.bind_children()
     mid_scroll.bind_children()
@@ -1674,7 +1760,6 @@ def main():
 
     root.after(100, reload_ui_from_registry)
     root.mainloop()
-
 
 if __name__ == "__main__":
     dependency_setup()
