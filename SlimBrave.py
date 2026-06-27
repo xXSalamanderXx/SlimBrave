@@ -277,7 +277,6 @@ def main():
 
     BOOL_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "bool"}
     STRING_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "string"}
-    STRING_POLICY_KEYS.update({"WebRtcIPHandling", "HttpsOnlyMode", "DnsOverHttpsMode", "DnsOverHttpsTemplates"})
     ARRAY_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "array"}
     INT_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "int"}
 
@@ -455,8 +454,24 @@ def main():
 
     def is_profile_installed():
         try:
-            res = run_cmd(["profiles", "list", "-type", "configuration"])
-            return f"com.slimbrave.profile.{DOMAIN}" in res.stdout
+            profile_id = f"com.slimbrave.profile.{DOMAIN}"
+            
+            # Method 1: Standard profiles list
+            res1 = subprocess.run(["profiles", "list"], capture_output=True, text=True)
+            if profile_id in res1.stdout or "SlimBrave Policy" in res1.stdout:
+                return True
+                
+            # Method 2: XML profiles list (bypasses console formatting limits)
+            res2 = subprocess.run(["profiles", "list", "-output", "stdout-xml", "-type", "configuration"], capture_output=True, text=True)
+            if profile_id in res2.stdout or "SlimBrave Policy" in res2.stdout:
+                return True
+                
+            # Method 3: System Profiler (Ultimate fallback for strict macOS sandboxing)
+            res3 = subprocess.run(["system_profiler", "SPConfigurationProfileDataType"], capture_output=True, text=True)
+            if profile_id in res3.stdout or "SlimBrave Policy" in res3.stdout:
+                return True
+                
+            return False
         except Exception:
             return False
 
@@ -1047,7 +1062,6 @@ def main():
                 set_status("Settings loaded. (Profile Active, Legacy Plists Found ⚠️)")
                 if not HAS_PROMPTED_CLEANUP:
                     HAS_PROMPTED_CLEANUP = True
-                    # Let the UI finish drawing before showing the prompt
                     root.after(500, prompt_legacy_cleanup)
             else:
                 set_status("Settings loaded. (Profile Installed ✅)")
@@ -1090,8 +1104,6 @@ def main():
         return not still_running
 
     def flush_pref_cache():
-        # Force-killing cfprefsd causes file corruption and crashes.
-        # Allow macOS to sleep naturally to flush preferences.
         time.sleep(0.5)
 
     def clear_brave_runtime_caches():
@@ -1317,7 +1329,7 @@ def main():
                     "3. Navigate to 'Privacy & Security' -> 'Profiles' (or 'General' -> 'Device Management').\n"
                     "4. Double-click 'SlimBrave Policy' and click 'Install'.\n\n"
                     "5. Once installed, you can safely delete the .mobileconfig file from your Desktop.\n\n"
-                    "To uninstall in the future, return to System Settings -> Profiles and delete it, or use the SlimBrave Reset button."
+                    "6. Finally, click the 'Reload' button in SlimBrave to verify the profile is active!"
                 )
             else:
                 messagebox.showinfo("Apply", "SlimBrave settings cleared successfully!")
