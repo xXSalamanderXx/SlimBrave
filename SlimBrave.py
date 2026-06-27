@@ -800,6 +800,19 @@ def main():
 
         return {}
 
+    def merged_policy_source_for_ui():
+        payload = {}
+        payload.update(read_managed_prefs_dict())
+
+        legacy = defaults_export_domain_dict()
+        if isinstance(legacy, dict):
+            for key in managed_keys:
+                if key in legacy and key not in payload:
+                    payload[key] = legacy[key]
+
+        payload, _ = sanitize_managed_payload(payload)
+        return payload
+
     def write_mobileconfig(payload):
         PROFILE_IDENTIFIER = f"com.slimbrave.profile.{DOMAIN}"
         profile_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, PROFILE_IDENTIFIER)).upper()
