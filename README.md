@@ -95,19 +95,6 @@ curl -sO https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/prerelease/S
 ```
 
 ##
-
-> [!IMPORTANT]
-> Presets are now built in, so using the presets below is no longer recommended.
-> They still work, but they are deprecated and not updated for the new options available.
-## 📂 How to Use Presets
-Instead of manually checking boxes, you can instantly load a pre-configured setup:
-1. Download your desired preset `.json` file from the `Presets` folder in this repository.
-2. Run `SlimBrave.ps1`.
-3. Click the **Import Settings** button at the bottom of the window.
-4. Select the downloaded `.json` file. The script will automatically check the correct boxes for that specific setup.
-5. Click **Apply Settings**.
-
-##
   
 ### Why SlimBrave Matters
 
