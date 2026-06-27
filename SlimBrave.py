@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SlimBrave - Revived - v1.0.9 (macOS)
+# Author: xXSalamanderXx
 
 import subprocess
 import sys
@@ -138,25 +139,41 @@ def main():
     import tempfile
     import uuid
 
-    DOMAIN = "com.brave.Browser"
     CONFIG_DIR = os.path.expanduser("~/.config/slimbrave")
     RESTORE_STAGING_DIR = os.path.join(CONFIG_DIR, "restore-staging")
     STATE_FILE = os.path.join(CONFIG_DIR, "SlimBraveState.json")
     LOG_FILE = os.path.join(CONFIG_DIR, "SlimBrave.log")
-
     USER_MANAGED_PREFS_DIR = os.path.expanduser("~/Library/Managed Preferences")
-    USER_MANAGED_PREFS_FILE = os.path.join(USER_MANAGED_PREFS_DIR, f"{DOMAIN}.plist")
-    SYSTEM_MANAGED_PREFS_FILE = os.path.join("/Library/Managed Preferences", f"{DOMAIN}.plist")
-
-    BRAVE_SUPPORT_DIR = os.path.expanduser("~/Library/Application Support/BraveSoftware/Brave-Browser")
-    BRAVE_USER_DATA_DIR = BRAVE_SUPPORT_DIR
-    BRAVE_DEFAULT_PROFILE_DIR = os.path.join(BRAVE_USER_DATA_DIR, "Default")
-    BRAVE_LOCAL_STATE_FILE = os.path.join(BRAVE_USER_DATA_DIR, "Local State")
-    BRAVE_CACHE_DIR = os.path.expanduser("~/Library/Caches/BraveSoftware/Brave-Browser")
 
     os.makedirs(CONFIG_DIR, exist_ok=True)
     os.makedirs(RESTORE_STAGING_DIR, exist_ok=True)
     os.makedirs(USER_MANAGED_PREFS_DIR, exist_ok=True)
+
+    # Dynamic Channel Variables
+    DOMAIN = ""
+    USER_MANAGED_PREFS_FILE = ""
+    SYSTEM_MANAGED_PREFS_FILE = ""
+    BRAVE_SUPPORT_DIR = ""
+    BRAVE_USER_DATA_DIR = ""
+    BRAVE_DEFAULT_PROFILE_DIR = ""
+    BRAVE_LOCAL_STATE_FILE = ""
+    BRAVE_CACHE_DIR = ""
+    current_channel_info = {}
+
+    def update_paths_for_channel(channel_info):
+        nonlocal DOMAIN, USER_MANAGED_PREFS_FILE, SYSTEM_MANAGED_PREFS_FILE
+        nonlocal BRAVE_SUPPORT_DIR, BRAVE_USER_DATA_DIR, BRAVE_DEFAULT_PROFILE_DIR
+        nonlocal BRAVE_LOCAL_STATE_FILE, BRAVE_CACHE_DIR
+
+        DOMAIN = channel_info["Domain"]
+        USER_MANAGED_PREFS_FILE = os.path.join(USER_MANAGED_PREFS_DIR, f"{DOMAIN}.plist")
+        SYSTEM_MANAGED_PREFS_FILE = os.path.join("/Library/Managed Preferences", f"{DOMAIN}.plist")
+
+        BRAVE_SUPPORT_DIR = os.path.expanduser(f"~/Library/Application Support/BraveSoftware/{channel_info['Dir']}")
+        BRAVE_USER_DATA_DIR = BRAVE_SUPPORT_DIR
+        BRAVE_DEFAULT_PROFILE_DIR = os.path.join(BRAVE_USER_DATA_DIR, "Default")
+        BRAVE_LOCAL_STATE_FILE = os.path.join(BRAVE_USER_DATA_DIR, "Local State")
+        BRAVE_CACHE_DIR = os.path.expanduser(f"~/Library/Caches/BraveSoftware/{channel_info['Dir']}")
 
     def write_log(message):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -840,8 +857,6 @@ def main():
                 domain_data.pop(key, None)
 
         if removed:
-            # We use `defaults delete` natively to prune the specific legacy keys instead of importing 
-            # to avoid clobber-bombing Brave's dynamic preference schema with old dumps.
             for r_key in removed:
                 run_cmd(["defaults", "delete", DOMAIN, r_key])
 
