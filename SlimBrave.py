@@ -806,31 +806,38 @@ def main():
         return {}
 
     def write_mobileconfig(payload):
-        profile_uuid = str(uuid.uuid4())
-        payload_uuid = str(uuid.uuid4())
+        # Use a stable namespace so macOS recognizes updates to the same profile
+        # instead of creating duplicates every time you click Apply.
+        PROFILE_IDENTIFIER = f"com.slimbrave.profile.{DOMAIN}"
+        profile_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, PROFILE_IDENTIFIER)).upper()
+        payload_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{PROFILE_IDENTIFIER}.payload")).upper()
         
         mobileconfig = {
             "PayloadContent": [
                 {
                     "PayloadType": "com.apple.ManagedClient.preferences",
                     "PayloadVersion": 1,
-                    "PayloadIdentifier": f"{DOMAIN}.policy",
+                    "PayloadIdentifier": f"{PROFILE_IDENTIFIER}.payload",
                     "PayloadUUID": payload_uuid,
                     "PayloadEnabled": True,
                     "PayloadContent": {
                         DOMAIN: {
-                            "ForcedTraits": [],
-                            "Set-Once": [],
-                            "mcx_preference_settings": payload
+                            # CRITICAL FIX: Apple requires the 'Forced' array wrapper
+                            "Forced": [
+                                {
+                                    "mcx_preference_settings": payload
+                                }
+                            ]
                         }
                     }
                 }
             ],
             "PayloadDisplayName": f"SlimBrave Policy ({DOMAIN})",
-            "PayloadIdentifier": f"com.slimbrave.profile.{DOMAIN}",
+            "PayloadIdentifier": PROFILE_IDENTIFIER,
             "PayloadType": "Configuration",
             "PayloadUUID": profile_uuid,
-            "PayloadVersion": 1
+            "PayloadVersion": 1,
+            "PayloadScope": "System"
         }
         
         config_path = os.path.expanduser(f"~/Desktop/SlimBrave-{DOMAIN}.mobileconfig")
@@ -840,6 +847,15 @@ def main():
             
         write_log(f"Wrote Configuration Profile: {config_path}")
         return config_path
+
+    def remove_mobileconfig_profile():
+        try:
+            profile_identifier = f"com.slimbrave.profile.{DOMAIN}"
+            # Attempt native CLI removal of the profile
+            res = run_cmd(["profiles", "remove", "-identifier", profile_identifier, "-forced"])
+            return res.returncode == 0
+        except Exception:
+            return False
 
     def remove_managed_pref_files():
         removed = []
@@ -1293,7 +1309,8 @@ def main():
                     "1. A 'Profile Downloaded' notification will appear on your Mac.\n"
                     "2. Open System Settings.\n"
                     "3. Navigate to 'Privacy & Security' -> 'Profiles' (or 'General' -> 'Device Management').\n"
-                    "4. Double-click 'SlimBrave Policy' and click 'Install'."
+                    "4. Double-click 'SlimBrave Policy' and click 'Install'.\n\n"
+                    "5. Once installed, you can safely delete the .mobileconfig file from your Desktop."
                 )
             else:
                 messagebox.showinfo("Apply", "SlimBrave settings cleared successfully!")
@@ -1359,7 +1376,8 @@ def main():
                 "1. A 'Profile Downloaded' notification will appear.\n"
                 "2. Open System Settings.\n"
                 "3. Navigate to 'Privacy & Security' -> 'Profiles'.\n"
-                "4. Double-click 'SlimBrave Policy' and click 'Install'."
+                "4. Double-click 'SlimBrave Policy' and click 'Install'.\n\n"
+                "5. Once installed, you can safely delete the .mobileconfig file from your Desktop."
             )
             
             set_status("Plist profile generated.")
@@ -1381,13 +1399,20 @@ def main():
             for line in diagnosis_lines:
                 progress.log(line)
 
-            progress.step(40, "Removing policy files...")
+            progress.step(40, "Removing old policy files...")
             removed_files = remove_managed_pref_files()
             if removed_files:
                 for p in removed_files:
                     progress.log(f"Removed: {p}")
             else:
-                progress.log("No policy files found.")
+                progress.log("No legacy policy files found.")
+                
+            progress.step(42, "Removing Configuration Profile (if possible)...")
+            profile_removed = remove_mobileconfig_profile()
+            if profile_removed:
+                progress.log("Configuration Profile natively removed via CLI.")
+            else:
+                progress.log("Configuration Profile requires manual removal via System Settings.")
 
             progress.step(60, "Removing old live-domain keys...")
             removed_keys = strip_legacy_policy_keys_from_live_domain()
@@ -1416,12 +1441,13 @@ def main():
                 *diagnosis_lines,
                 "",
                 f"Policy files removed: {len(removed_files)}",
+                f"Profile CLI removal: {'Success' if profile_removed else 'Manual removal required'}",
                 f"Old live-domain keys removed: {len(removed_keys)}",
                 f"Cache paths cleared: {len(cache_removed)}",
                 "",
                 "Your Brave profile was kept.",
                 "",
-                "NOTE: If you installed a Configuration Profile, you must manually delete it from macOS System Settings -> Privacy & Security -> Profiles."
+                "NOTE: If you previously generated a Configuration Profile, you must manually delete it from macOS System Settings -> Privacy & Security -> Profiles."
             ]
 
             progress.finish("Done.")
@@ -1450,13 +1476,20 @@ def main():
             for line in diagnosis_lines:
                 progress.log(line)
 
-            progress.step(30, "Removing policy files...")
+            progress.step(30, "Removing old policy files...")
             removed_files = remove_managed_pref_files()
             if removed_files:
                 for p in removed_files:
                     progress.log(f"Removed: {p}")
             else:
-                progress.log("No policy files found.")
+                progress.log("No legacy policy files found.")
+                
+            progress.step(42, "Removing Configuration Profile (if possible)...")
+            profile_removed = remove_mobileconfig_profile()
+            if profile_removed:
+                progress.log("Configuration Profile natively removed via CLI.")
+            else:
+                progress.log("Configuration Profile requires manual removal via System Settings.")
 
             progress.step(45, "Removing old live-domain keys...")
             removed_keys = strip_legacy_policy_keys_from_live_domain()
@@ -1493,13 +1526,14 @@ def main():
                 *diagnosis_lines,
                 "",
                 f"Policy files removed: {len(removed_files)}",
+                f"Profile CLI removal: {'Success' if profile_removed else 'Manual removal required'}",
                 f"Old live-domain keys removed: {len(removed_keys)}",
                 f"Cache paths cleared: {len(cache_removed)}",
                 f"Profile backup: {backup_path if backup_path else '(new folder created)'}",
                 "",
                 "A fresh Brave profile will be created on next launch.",
                 "",
-                "NOTE: If you installed a Configuration Profile, you must manually delete it from macOS System Settings -> Privacy & Security -> Profiles."
+                "NOTE: If you previously generated a Configuration Profile, you must manually delete it from macOS System Settings -> Privacy & Security -> Profiles."
             ]
 
             progress.finish("Done.")
