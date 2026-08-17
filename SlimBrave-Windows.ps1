@@ -1,4 +1,4 @@
-# Slimbrave - Revived - v1.1.1
+# Slimbrave - Revived - v1.1.2 (Windows)
 
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Start-Process powershell -ArgumentList "-File `"$($MyInvocation.MyCommand.Path)`"" -Verb RunAs
@@ -29,6 +29,7 @@ $stateFile = Join-Path $PSScriptRoot "SlimBraveState.json"
 
 $global:isDirty = $false
 $global:suspendDirtyTracking = $false
+$global:suspendPresetTriggers = $false
 
 function Write-Log ($message) {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -43,7 +44,7 @@ if (-not (Test-Path -Path $global:registryPath)) {
 Clear-Host
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "SlimBrave - Revived v1.1.1"
+$form.Text = "SlimBrave - Revived v1.1.2"
 $form.ForeColor = [System.Drawing.Color]::White
 $form.Size = New-Object System.Drawing.Size(1300, 850) 
 $form.MinimumSize = New-Object System.Drawing.Size(1300, 850)
@@ -115,6 +116,105 @@ $channelDropdown.Add_SelectedIndexChanged({
     Update-Status "Target channel switched to $($channelDropdown.SelectedItem). UI reloaded."
 })
 
+$presetLabel = New-Object System.Windows.Forms.Label
+$presetLabel.Text = "Presets:"
+$presetLabel.AutoSize = $true
+$presetLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9, [System.Drawing.FontStyle]::Bold)
+$presetLabel.ForeColor = [System.Drawing.Color]::LightSkyBlue
+$form.Controls.Add($presetLabel)
+
+$presetDropdown = New-Object System.Windows.Forms.ComboBox
+$presetDropdown.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+[void]$presetDropdown.Items.AddRange(@("Maximum Privacy", "High Security", "Performance Focused", "Strict Parental Controls", "Balanced Privacy", "Developer"))
+$presetDropdown.SelectedIndex = 0
+$presetDropdown.Size = New-Object System.Drawing.Size(200, 20)
+$presetDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 45, 45, 45)
+$presetDropdown.ForeColor = [System.Drawing.Color]::White
+$presetDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$toolTip.SetToolTip($presetDropdown, "Select a preset to automatically configure recommended settings.")
+$form.Controls.Add($presetDropdown)
+
+$presetDropdown.Add_SelectedIndexChanged({
+    if ($global:suspendPresetTriggers) { return }
+    $preset = $presetDropdown.SelectedItem
+    $global:suspendDirtyTracking = $true
+
+    foreach ($cb in $allFeatures) { 
+        $cb.Checked = $false 
+        $cb.ForeColor = [System.Drawing.Color]::White
+    }
+
+    foreach ($perm in $allPerms) {
+        $n = $perm.Tag.Name
+        if ($n -eq "JavaScript") {
+            $perm.SelectedItem = "Allow"
+        } elseif ($n -in @("Camera", "Microphone")) {
+            $perm.SelectedItem = "Ask"
+        } elseif ($n -eq "Images") {
+            $perm.SelectedItem = "Not Set"
+        } else {
+            if ($perm.Items.Contains("Block")) {
+                $perm.SelectedItem = "Block"
+            } else {
+                $perm.SelectedItem = "Not Set"
+            }
+        }
+    }
+
+    switch ($preset) {
+        "Maximum Privacy" {
+            $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "AutofillAddressEnabled", "AutofillCreditCardEnabled", "PasswordManagerEnabled", "BrowserSignin", "WebRtcIPHandling", "BlockThirdPartyCookies", "EnableDoNotTrack", "IPFSEnabled", "PromptForDownloadLocation", "ClearBrowsingDataOnExitList", "HttpsOnlyMode", "GlobalPrivacyControlEnabled", "BraveDeAMPEnabled", "BraveDebouncingEnabled", "BraveTrackersStrippingEnabled", "ReduceAcceptLanguage", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BackgroundModeEnabled", "AlwaysOpenPdfExternally", "SearchSuggestEnabled", "DefaultBrowserSettingEnabled", "BravePlaylistEnabled", "ChromeVariations", "NetworkPredictionOptions", "PasswordLeakDetectionEnabled", "AlternateErrorPagesEnabled", "DNSInterceptionChecksEnabled", "BraveLocalAiEnabled", "BasicAuthOverHttpEnabled", "RemoteDebuggingAllowed", "BlockExternalExtensions")
+            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
+            $sbDropdown.SelectedItem = "On"
+            $dnsDropdown.SelectedItem = "Off"
+            $dnsTplInput.Text = ""
+        }
+        "High Security" {
+            $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "WebRtcIPHandling", "QuicAllowed", "BlockThirdPartyCookies", "EnableDoNotTrack", "ForceGoogleSafeSearch", "IPFSEnabled", "PromptForDownloadLocation", "HttpsOnlyMode", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "SyncDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BackgroundModeEnabled", "AlwaysOpenPdfExternally", "DeveloperToolsDisabled", "BravePlaylistEnabled", "RemoteDebuggingAllowed", "BlockExternalExtensions", "BasicAuthOverHttpEnabled", "BraveLocalAiEnabled")
+            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
+            $sbDropdown.SelectedItem = "On"
+            $dnsDropdown.SelectedItem = "Automatic"
+            $dnsTplInput.Text = ""
+        }
+        "Performance Focused" {
+            $keys = @("BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled", "PromotionsEnabled", "BraveNewsDisabled", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveTalkDisabled", "BravePlaylistEnabled", "HighEfficiencyModeEnabled", "HardwareAccelerationModeEnabled", "EnableMediaRouter", "SpellcheckEnabled")
+            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
+            $sbDropdown.SelectedItem = "On"
+            $dnsDropdown.SelectedItem = "Automatic"
+            $dnsTplInput.Text = ""
+        }
+        "Strict Parental Controls" {
+            $keys = @("BrowserGuestModeEnabled", "ExtensionInstallBlocklist", "SafeSitesFilterBehavior", "ForceGoogleSafeSearch", "IncognitoModeAvailability", "SpellCheckServiceEnabled", "BraveAIChatEnabled", "TorDisabled", "BraveLocalAiEnabled", "PromptForDownloadLocation", "DefaultBrowserSettingEnabled", "SyncDisabled")
+            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
+            $sbDropdown.SelectedItem = "On"
+            $dnsDropdown.SelectedItem = "Secure"
+        }
+        "Balanced Privacy" {
+            $keys = @("MetricsReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "WebRtcIPHandling", "BlockThirdPartyCookies", "EnableDoNotTrack", "GlobalPrivacyControlEnabled", "BraveDeAMPEnabled", "BraveDebouncingEnabled", "BraveTrackersStrippingEnabled", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveNewsDisabled", "BravePlaylistEnabled")
+            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
+            $sbDropdown.SelectedItem = "On"
+            $dnsDropdown.SelectedItem = "Automatic"
+            $dnsTplInput.Text = ""
+        }
+        "Developer" {
+            $keys = @("BraveRewardsDisabled", "BraveWalletDisabled", "BraveNewsDisabled", "BravePlaylistEnabled", "EnableDoNotTrack", "BraveDeAMPEnabled", "BraveDebouncingEnabled")
+            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
+            foreach ($perm in $allPerms) {
+                if ($perm.Tag.Key -in @("DefaultLocalFontsSetting", "DefaultClipboardSetting")) {
+                    $perm.SelectedItem = "Allow"
+                }
+            }
+            $sbDropdown.SelectedItem = "Off"
+            $dnsDropdown.SelectedItem = "Off"
+            $dnsTplInput.Text = ""
+        }
+    }
+
+    $global:suspendDirtyTracking = $false
+    Check-DirtyState
+    Update-Status "Loaded: $preset preset."
+})
+
 $statusBar = New-Object System.Windows.Forms.Label
 $statusBar.Height = 30
 $statusBar.Dock = [System.Windows.Forms.DockStyle]::Bottom
@@ -173,31 +273,6 @@ function Set-RoundedCorners($ctrl, $r) {
     $ctrl.Region = New-Object System.Drawing.Region($p)
 }
 
-$presetLabel = New-Object System.Windows.Forms.Label
-$presetLabel.Text = "Quick Presets:"
-$presetLabel.AutoSize = $true
-$presetLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9, [System.Drawing.FontStyle]::Bold)
-$presetLabel.ForeColor = [System.Drawing.Color]::LightSkyBlue
-$form.Controls.Add($presetLabel)
-
-$btnPrivacy = New-Object System.Windows.Forms.Button
-$btnPrivacy.Text = "High Privacy"
-$btnPrivacy.Size = New-Object System.Drawing.Size(280, 35)
-$btnPrivacy.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$btnPrivacy.FlatAppearance.BorderSize = 0
-$btnPrivacy.BackColor = [System.Drawing.Color]::FromArgb(255, 60, 60, 60)
-$toolTip.SetToolTip($btnPrivacy, "Applies the recommended preset for High Privacy and Moderate Security.")
-$form.Controls.Add($btnPrivacy)
-
-$btnSecurity = New-Object System.Windows.Forms.Button
-$btnSecurity.Text = "High Security"
-$btnSecurity.Size = New-Object System.Drawing.Size(280, 35)
-$btnSecurity.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$btnSecurity.FlatAppearance.BorderSize = 0
-$btnSecurity.BackColor = [System.Drawing.Color]::FromArgb(255, 60, 60, 60)
-$toolTip.SetToolTip($btnSecurity, "Applies the recommended preset for High Security and Moderate Privacy.")
-$form.Controls.Add($btnSecurity)
-
 $leftPanel = New-Object System.Windows.Forms.Panel
 $leftPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $leftPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::None
@@ -217,9 +292,10 @@ $telemetryFeatures = @(
     @{ Name = "Disable Safe Browsing Reporting"; Key = "SafeBrowsingExtendedReportingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from sending extended Safe Browsing data back to servers.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable URL Data Collection"; Key = "UrlKeyedAnonymizedDataCollectionEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops sending anonymized URLs to help improve the browser.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Feedback Surveys"; Key = "FeedbackSurveysEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables proactive feedback survey prompts.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
-    @{ Name = "Disable P3A Telemetry"; Key = "BraveP3AEnabled"; Value = "Disabled"; Type = "String"; ToolTip = "Disables Privacy-Preserving Product Analytics completely.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable P3A Telemetry"; Key = "BraveP3AEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Privacy-Preserving Product Analytics completely.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Daily Stats Ping"; Key = "BraveStatsPingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops the daily active user ping.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
-    @{ Name = "Disable Web Discovery"; Key = "BraveWebDiscoveryEnabled"; Value = 0; Type = "DWord"; ToolTip = "Prevents anonymous search/browsing data from being sent to Brave Search.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" }
+    @{ Name = "Disable Web Discovery"; Key = "BraveWebDiscoveryEnabled"; Value = 0; Type = "DWord"; ToolTip = "Prevents anonymous search/browsing data from being sent to Brave Search.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Variations / Experiments"; Key = "ChromeVariations"; Value = 1; Type = "DWord"; ToolTip = "Stops Brave from fetching feature-flip seeds from variations.brave.com.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" }
 )
 
 [int]$leftY = 40
@@ -273,12 +349,13 @@ $privacyFeatures = @(
     @{ Name = "Enable Debouncing"; Key = "BraveDebouncingEnabled"; Value = 1; Type = "DWord"; ToolTip = "Skips known tracking redirect hops before you reach your destination.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Strip URL Trackers"; Key = "BraveTrackersStrippingEnabled"; Value = 1; Type = "DWord"; ToolTip = "Automatically removes tracking parameters from URLs.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Reduce Language Fingerprinting"; Key = "ReduceAcceptLanguage"; Value = 1; Type = "DWord"; ToolTip = "Reduces the language data sent to sites to prevent fingerprinting.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
-    @{ Name = "Force Google SafeSearch"; Key = "ForceGoogleSafeSearch"; Value = 1; Type = "DWord"; ToolTip = "Filters explicit search results.`n`nSuggested Settings for Privacy: Unticked | Security: Ticked" },
     @{ Name = "Disable IPFS"; Key = "IPFSEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops peer-to-peer background connections to unknown nodes.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
-    @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord"; ToolTip = "Forces the browser to always open in Incognito Mode.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
     @{ Name = "Force Download Prompts"; Key = "PromptForDownloadLocation"; Value = 1; Type = "DWord"; ToolTip = "Forces Brave to ask where to save a file before downloading, preventing drive-by downloads.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Clear Data on Exit"; Key = "ClearBrowsingDataOnExitList"; Value = @("browsing_history", "download_history", "cookies_and_other_site_data", "cached_images_and_files", "password_signin", "autofill", "site_settings", "hosted_app_data"); Type = "List"; ToolTip = "Wipes all cookies, cache, and browsing history the moment the browser closes.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
-    @{ Name = "Force HTTPS-Only Mode"; Key = "HttpsOnlyMode"; Value = "force_enabled"; Type = "String"; ToolTip = "Strictly upgrades all connections to HTTPS and blocks unencrypted HTTP traffic.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" }
+    @{ Name = "Force HTTPS-Only Mode"; Key = "HttpsOnlyMode"; Value = "force_enabled"; Type = "String"; ToolTip = "Strictly upgrades all connections to HTTPS and blocks unencrypted HTTP traffic.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Network Prediction"; Key = "NetworkPredictionOptions"; Value = 2; Type = "DWord"; ToolTip = "Stops speculative DNS lookups and preconnects to sites you never clicked.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
+    @{ Name = "Disable Password Leak Detection"; Key = "PasswordLeakDetectionEnabled"; Value = 0; Type = "DWord"; ToolTip = "Pins the Google-backed leak check off as managed policy.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
+    @{ Name = "Disable Alternate Error Pages"; Key = "AlternateErrorPagesEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the error-page suggestions service.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" }
 )
 
 foreach ($feature in $privacyFeatures) {
@@ -333,10 +410,11 @@ $braveFeatures = @(
     @{ Name = "Disable Brave Wallet"; Key = "BraveWalletDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables the built-in Brave Crypto Wallet.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Brave VPN"; Key = "BraveVPNDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the Brave VPN integration and prompts.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Brave AI Chat"; Key = "BraveAIChatEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Brave Leo (AI Chat) integration.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Local AI (On-Device)"; Key = "BraveLocalAiEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables on-device AI models. Requires Brave 1.94+.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Tor"; Key = "TorDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables built-in Tor window support.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Sync"; Key = "SyncDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables Brave Sync functionality across devices.`n`nSuggested Settings for Privacy: Unticked | Security: Ticked" },
     @{ Name = "Disable Brave News"; Key = "BraveNewsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the Brave News feed bloat from the New Tab page.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
-    @{ Name = "Disable Brave Talk"; Key = "BraveTalkDisabled"; Value = "Disabled"; Type = "String"; ToolTip = "Removes the built-in video calling integration.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Brave Talk"; Key = "BraveTalkDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the built-in video calling integration.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Speedreader"; Key = "BraveSpeedreaderEnabled"; Value = 0; Type = "DWord"; ToolTip = "Completely disables the Speedreader feature, reader mode, and automatic prompts.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Wayback Machine Prompts"; Key = "BraveWaybackMachineEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from asking to search the Internet Archive when you hit a 404 error.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" }
 )
@@ -383,13 +461,18 @@ $perfFeatures = @(
     @{ Name = "Disable Shopping List"; Key = "ShoppingListEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the shopping list feature.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
     @{ Name = "Always Open PDF Externally"; Key = "AlwaysOpenPdfExternally"; Value = 1; Type = "DWord"; ToolTip = "Forces PDFs to download and open in your system viewer instead of the browser.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Translate"; Key = "TranslateEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables automatic translation prompts.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
-    @{ Name = "Disable Spellcheck"; Key = "SpellcheckEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the built-in spellchecker to save CPU cycles.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Disable Spellcheck"; Key = "SpellcheckEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the built-in spellchecker completely to save CPU cycles.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Disable Enhanced Spell Check"; Key = "SpellCheckServiceEnabled"; Value = 0; Type = "DWord"; ToolTip = "Drops the Google web-service callout while keeping offline spellcheck active.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
     @{ Name = "Disable Promotions"; Key = "PromotionsEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Brave promotional notifications.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
     @{ Name = "Disable Search Suggestions"; Key = "SearchSuggestEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables predictive search suggestions in the URL bar.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
     @{ Name = "Disable Printing"; Key = "PrintingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the browser print function.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
     @{ Name = "Disable Default Browser Prompt"; Key = "DefaultBrowserSettingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from asking to be the default browser.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" },
     @{ Name = "Disable Developer Tools"; Key = "DeveloperToolsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables F12 / Inspect Element.`n`nSuggested Settings for Privacy: Unticked | Security: Ticked" },
-    @{ Name = "Disable Brave Playlist"; Key = "BravePlaylistEnabled"; Value = 0; Type = "DWord"; ToolTip = "Removes the Brave Playlist media feature.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" }
+    @{ Name = "Disable Brave Playlist"; Key = "BravePlaylistEnabled"; Value = 0; Type = "DWord"; ToolTip = "Removes the Brave Playlist media feature.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Enable Memory Saver"; Key = "HighEfficiencyModeEnabled"; Value = 1; Type = "DWord"; ToolTip = "Forces Chromium High Efficiency Mode on to aggressively save RAM.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Force Hardware Acceleration"; Key = "HardwareAccelerationModeEnabled"; Value = 1; Type = "DWord"; ToolTip = "Pins the default hardware acceleration on so it can't drift.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Disable Media Router (Cast)"; Key = "EnableMediaRouter"; Value = 0; Type = "DWord"; ToolTip = "Disables Chromecast casting support.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Disable DNS Interception Probes"; Key = "DNSInterceptionChecksEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Chromium from resolving random hostnames to check for captive portals.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" }
 )
 
 foreach ($feature in $perfFeatures) {
@@ -430,8 +513,51 @@ $form.Controls.Add($rightPanel)
 
 [int]$permY = 10
 
+$accessLabel = New-Object System.Windows.Forms.Label
+$accessLabel.Text = "Permissions & Access"
+$accessLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 11, [System.Drawing.FontStyle]::Bold)
+$accessLabel.Location = New-Object System.Drawing.Point(28, $permY)
+$accessLabel.Size = New-Object System.Drawing.Size(300, 25)
+$accessLabel.ForeColor = [System.Drawing.Color]::LightSalmon
+$rightPanel.Controls.Add($accessLabel)
+$permY += 30
+
+$accessFeatures = @(
+    @{ Name = "Disable Guest Mode"; Key = "BrowserGuestModeEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables the guest profile escape hatch.`n`nSuggested Settings for Privacy: Unticked | Security: Ticked" },
+    @{ Name = "Block All Extensions"; Key = "ExtensionInstallBlocklist"; Value = @("*"); Type = "List"; ToolTip = "Completely blocks all extension installations.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Block Sideloaded Extensions"; Key = "BlockExternalExtensions"; Value = 1; Type = "DWord"; ToolTip = "Blocks silent extension installs while leaving user-chosen extensions working.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Filter Adult Content (SafeSites)"; Key = "SafeSitesFilterBehavior"; Value = 1; Type = "DWord"; ToolTip = "Enables Google SafeSearch-style filtering at the browser level.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Force Google SafeSearch"; Key = "ForceGoogleSafeSearch"; Value = 1; Type = "DWord"; ToolTip = "Filters explicit search results.`n`nSuggested Settings for Privacy: Unticked | Security: Ticked" },
+    @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord"; ToolTip = "Forces the browser to always open in Incognito Mode.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Block Remote Debugging"; Key = "RemoteDebuggingAllowed"; Value = 0; Type = "DWord"; ToolTip = "Stops the --remote-debugging-port cookie theft vector.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Require HTTPS for Basic Auth"; Key = "BasicAuthOverHttpEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops base64 credentials from going out over cleartext HTTP.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" }
+)
+
+foreach ($feature in $accessFeatures) {
+    $checkbox = New-Object System.Windows.Forms.CheckBox
+    $checkbox.Text = $feature.Name
+    $checkbox.Tag = $feature
+    $checkbox.Location = New-Object System.Drawing.Point(30, $permY)
+    $checkbox.Size = New-Object System.Drawing.Size(340, 25)
+    $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left
+    $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $checkbox.FlatAppearance.BorderSize = 1
+    $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
+    $checkbox.FlatAppearance.CheckedBackColor = [System.Drawing.Color]::DodgerBlue
+    $checkbox.Add_CheckedChanged({
+        if ($this.Checked) { $this.ForeColor = [System.Drawing.Color]::DeepSkyBlue } else { $this.ForeColor = [System.Drawing.Color]::White }
+        Check-DirtyState
+    })
+    $toolTip.SetToolTip($checkbox, $feature.ToolTip)
+    $rightPanel.Controls.Add($checkbox)
+    $allFeatures += $checkbox
+    $permY += 28
+}
+
+$permY += 10
+
 $permLabel = New-Object System.Windows.Forms.Label
-$permLabel.Text = "Site Permissions"
+$permLabel.Text = "Site Default Permissions"
 $permLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 11, [System.Drawing.FontStyle]::Bold)
 $permLabel.Location = New-Object System.Drawing.Point(28, $permY)
 $permLabel.Size = New-Object System.Drawing.Size(300, 25)
@@ -454,7 +580,8 @@ $permissionSettings = @(
     @{ Name = "Clipboard"; Key = "DefaultClipboardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read text and images copied to your clipboard.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "Window Management"; Key = "DefaultWindowPlacementSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to open windows on specific monitors or in fullscreen.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "Local Fonts"; Key = "DefaultLocalFontsSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to fingerprint your device based on locally installed fonts.`n`nSuggested Settings for Privacy: Block | Security: Block" },
-    @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to check if you have local payment apps installed.`n`nSuggested Settings for Privacy: Block | Security: Block" }
+    @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to check if you have local payment apps installed.`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "Motion Sensors"; Key = "DefaultSensorsSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to access device orientation and motion sensors.`n`nSuggested Settings for Privacy: Block | Security: Block" }
 )
 
 foreach ($p in $permissionSettings) {
@@ -589,7 +716,7 @@ $resetButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $resetButton.FlatAppearance.BorderSize = 0
 $resetButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $resetButton.ForeColor = [System.Drawing.Color]::LightCoral
-$toolTip.SetToolTip($resetButton, "Erase all Brave policy settings from the registry and restore to default.")
+$toolTip.SetToolTip($resetButton, "Erase SlimBrave policy settings from the registry and restore to default.")
 $form.Controls.Add($resetButton)
 
 $global:baselineStateJson = ""
@@ -643,6 +770,8 @@ function Save-CurrentState {
 
 function Restore-StateToUI ($stateObj) {
     $global:suspendDirtyTracking = $true
+    $global:suspendPresetTriggers = $true
+    
     foreach ($checkbox in $allFeatures) {
         $checkbox.Checked = $false
         $checkbox.ForeColor = [System.Drawing.Color]::White
@@ -676,6 +805,7 @@ function Restore-StateToUI ($stateObj) {
     if ($stateObj.DnsMode) { $dnsDropdown.SelectedItem = $stateObj.DnsMode } else { $dnsDropdown.SelectedIndex = -1 }
     if ($null -ne $stateObj.DnsTemplate) { $dnsTplInput.Text = $stateObj.DnsTemplate } else { $dnsTplInput.Text = "" }
     
+    $global:suspendPresetTriggers = $false
     $global:suspendDirtyTracking = $false
     Check-DirtyState
 }
@@ -797,11 +927,10 @@ function Update-Layout {
     $channelLabel.Location = New-Object System.Drawing.Point(20, 24)
     $channelDropdown.Location = New-Object System.Drawing.Point(($channelLabel.Right + 15), 22)
 
-    $totalTopWidth = $presetLabel.Width + $btnPrivacy.Width + $btnSecurity.Width + 20
+    $totalTopWidth = $presetLabel.Width + $presetDropdown.Width + 10
     $startX = ($form.ClientSize.Width - $totalTopWidth) / 2
     $presetLabel.Location = New-Object System.Drawing.Point($startX, 24)
-    $btnPrivacy.Location = New-Object System.Drawing.Point(($presetLabel.Right + 10), 16)
-    $btnSecurity.Location = New-Object System.Drawing.Point(($btnPrivacy.Right + 10), 16)
+    $presetDropdown.Location = New-Object System.Drawing.Point(($presetLabel.Right + 5), 22)
     
     $statusPanel.Location = New-Object System.Drawing.Point(($form.ClientSize.Width - $statusPanel.Width - 20), 18)
 
@@ -823,11 +952,9 @@ function Update-Layout {
 
     $bottomY = $leftPanel.Bottom + 20
     
-    # Position the labels first so we know their bounds
     $sbLabel.Location = New-Object System.Drawing.Point($leftPanel.Left, ($bottomY + 3))
     $dnsLabel.Location = New-Object System.Drawing.Point($leftPanel.Left, ($bottomY + 35))
 
-    # Align both dropdown boxes slightly to the right of the wider DNS label
     $alignedDropdownX = $dnsLabel.Right + 5
 
     $sbDropdown.Location = New-Object System.Drawing.Point($alignedDropdownX, $bottomY)
@@ -858,8 +985,6 @@ function Update-Layout {
     Set-RoundedCorners $leftPanel 12
     Set-RoundedCorners $midPanel 12
     Set-RoundedCorners $rightPanel 12
-    Set-RoundedCorners $btnPrivacy 10
-    Set-RoundedCorners $btnSecurity 10
     Set-RoundedCorners $exportButton 10
     Set-RoundedCorners $importButton 10
     Set-RoundedCorners $pullButton 10
@@ -870,76 +995,9 @@ function Update-Layout {
 
 $form.Add_Resize({ Update-Layout })
 
-$btnPrivacy.Add_Click({
-    $global:suspendDirtyTracking = $true
-    foreach ($cb in $allFeatures) { 
-        $cb.Checked = $false 
-        $cb.ForeColor = [System.Drawing.Color]::White
-    }
-    $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "AutofillAddressEnabled", "AutofillCreditCardEnabled", "PasswordManagerEnabled", "BrowserSignin", "WebRtcIPHandling", "BlockThirdPartyCookies", "EnableDoNotTrack", "IPFSEnabled", "PromptForDownloadLocation", "ClearBrowsingDataOnExitList", "HttpsOnlyMode", "GlobalPrivacyControlEnabled", "BraveDeAMPEnabled", "BraveDebouncingEnabled", "BraveTrackersStrippingEnabled", "ReduceAcceptLanguage", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled", "AlwaysOpenPdfExternally", "PromotionsEnabled", "SearchSuggestEnabled", "DefaultBrowserSettingEnabled", "BravePlaylistEnabled")
-    foreach ($key in $keys) {
-        foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } }
-    }
-
-    foreach ($perm in $allPerms) {
-        $n = $perm.Tag.Name
-        if ($n -eq "JavaScript") {
-            $perm.SelectedItem = "Allow"
-        } elseif ($n -in @("Camera", "Microphone")) {
-            $perm.SelectedItem = "Ask"
-        } elseif ($n -eq "Images") {
-            $perm.SelectedItem = "Not Set"
-        } else {
-            if ($perm.Items.Contains("Block")) {
-                $perm.SelectedItem = "Block"
-            }
-        }
-    }
-
-    $sbDropdown.SelectedItem = "Off"
-    $dnsDropdown.SelectedItem = "Off"
-    $dnsTplInput.Text = ""
-    $global:suspendDirtyTracking = $false
-    Check-DirtyState
-    Update-Status "Loaded: High Privacy preset."
-})
-
-$btnSecurity.Add_Click({
-    $global:suspendDirtyTracking = $true
-    foreach ($cb in $allFeatures) { 
-        $cb.Checked = $false 
-        $cb.ForeColor = [System.Drawing.Color]::White
-    }
-    $keys = @("MetricsReportingEnabled", "SafeBrowsingExtendedReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "FeedbackSurveysEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "WebRtcIPHandling", "QuicAllowed", "BlockThirdPartyCookies", "EnableDoNotTrack", "ForceGoogleSafeSearch", "IPFSEnabled", "PromptForDownloadLocation", "HttpsOnlyMode", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "SyncDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BackgroundModeEnabled", "AlwaysOpenPdfExternally", "DeveloperToolsDisabled", "BravePlaylistEnabled")
-    foreach ($key in $keys) {
-        foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } }
-    }
-
-    foreach ($perm in $allPerms) {
-        $n = $perm.Tag.Name
-        if ($n -eq "JavaScript") {
-            $perm.SelectedItem = "Allow"
-        } elseif ($n -in @("Camera", "Microphone")) {
-            $perm.SelectedItem = "Ask"
-        } elseif ($n -eq "Images") {
-            $perm.SelectedItem = "Not Set"
-        } else {
-            if ($perm.Items.Contains("Block")) {
-                $perm.SelectedItem = "Block"
-            }
-        }
-    }
-
-    $sbDropdown.SelectedItem = "On"
-    $dnsDropdown.SelectedItem = "Automatic"
-    $dnsTplInput.Text = ""
-    $global:suspendDirtyTracking = $false
-    Check-DirtyState
-    Update-Status "Loaded: High Security preset."
-})
-
 function Reload-UIFromRegistry {
     $global:suspendDirtyTracking = $true
+    $global:suspendPresetTriggers = $true
     foreach ($checkbox in $allFeatures) {
         $checkbox.Checked = $false
         $checkbox.ForeColor = [System.Drawing.Color]::White
@@ -1002,6 +1060,7 @@ function Reload-UIFromRegistry {
             $dnsTplInput.Text = $regProps.DnsOverHttpsTemplates
         }
     }
+    $global:suspendPresetTriggers = $false
     $global:suspendDirtyTracking = $false
     Update-Baseline
     Check-DirtyState
@@ -1013,6 +1072,13 @@ $pullButton.Add_Click({
 })
 
 $saveButton.Add_Click({
+    $mode = $dnsDropdown.SelectedItem
+    if ($mode -in @("Secure", "Custom") -and [string]::IsNullOrWhiteSpace($dnsTplInput.Text)) {
+        [System.Windows.Forms.MessageBox]::Show("DNS mode 'Secure' requires a DoH Template URL.`n`nCannot apply an empty template as it will permanently break name resolution in Brave until reset.", "Validation Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+        Update-Status "Apply cancelled due to missing DNS Template."
+        return
+    }
+
     $restorePrompt = [System.Windows.Forms.MessageBox]::Show("Would you like to create a System Restore point before applying these changes? (Recommended)", "System Restore", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
     
     if ($restorePrompt -eq "Yes") {
@@ -1155,18 +1221,35 @@ $saveButton.Add_Click({
 
 function Reset-AllSettings {
     $confirm = [System.Windows.Forms.MessageBox]::Show(
-        "Warning: This will erase ALL Brave policy settings and restore them to their default state. Do you wish to continue?", 
+        "Warning: This will erase all SlimBrave policy settings from the registry. Do you wish to continue?", 
         "Confirm SlimBrave Reset", 
         [System.Windows.Forms.MessageBoxButtons]::YesNo, 
         [System.Windows.Forms.MessageBoxIcon]::Warning
     )
     
     if ($confirm -eq "Yes") {
-        Update-Status "Resetting all settings to default..."
+        Update-Status "Resetting SlimBrave settings..."
         try {
-            Remove-Item -Path $global:registryPath -Recurse -Force
-            [void](New-Item -Path $global:registryPath -Force)
-            
+            foreach ($cb in $allFeatures) {
+                $feature = $cb.Tag
+                if ($feature.Type -eq "List") {
+                    $listPath = Join-Path $global:registryPath $feature.Key
+                    if (Test-Path $listPath) { Remove-Item -Path $listPath -Recurse -Force -ErrorAction SilentlyContinue }
+                } else {
+                    Remove-ItemProperty -Path $global:registryPath -Name $feature.Key -ErrorAction SilentlyContinue
+                }
+            }
+
+            foreach ($perm in $allPerms) {
+                Remove-ItemProperty -Path $global:registryPath -Name $perm.Tag.Key -ErrorAction SilentlyContinue
+            }
+
+            Remove-ItemProperty -Path $global:registryPath -Name "SafeBrowsingProtectionLevel" -ErrorAction SilentlyContinue
+            Remove-ItemProperty -Path $global:registryPath -Name "DnsOverHttpsMode" -ErrorAction SilentlyContinue
+            Remove-ItemProperty -Path $global:registryPath -Name "DnsOverHttpsTemplates" -ErrorAction SilentlyContinue
+            Remove-ItemProperty -Path $global:registryPath -Name "DefaultFileSystemWriteGuardSetting" -ErrorAction SilentlyContinue
+
+            $global:suspendPresetTriggers = $true
             $global:suspendDirtyTracking = $true
             foreach ($cb in $allFeatures) { 
                 $cb.Checked = $false 
@@ -1177,11 +1260,12 @@ function Reset-AllSettings {
             $dnsDropdown.SelectedIndex = -1
             $dnsTplInput.Text = ""
             $global:suspendDirtyTracking = $false
+            $global:suspendPresetTriggers = $false
 
-            Write-Log "All settings successfully wiped from registry."
+            Write-Log "SlimBrave settings successfully wiped from registry."
             
             [System.Windows.Forms.MessageBox]::Show(
-                "All Brave policy settings have been successfully reset to their default values.", 
+                "All SlimBrave policy settings have been successfully reset.", 
                 "Reset Successful", 
                 [System.Windows.Forms.MessageBoxButtons]::OK, 
                 [System.Windows.Forms.MessageBoxIcon]::Information
@@ -1243,6 +1327,19 @@ $importButton.Add_Click({
     if ($openFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         try {
             $importedSettings = Get-Content -Path $openFileDialog.FileName -Raw | ConvertFrom-Json
+            
+            if ($importedSettings.DnsMode -in @("Secure", "Custom") -and [string]::IsNullOrWhiteSpace($importedSettings.DnsTemplate)) {
+                [System.Windows.Forms.MessageBox]::Show("Import failed.`n`nThe imported configuration uses 'Secure' DNS mode but no template is provided. This is an invalid combination that will break name resolution.", "Import Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                Update-Status "Import aborted."
+                return
+            }
+
+            if ($null -ne $importedSettings.Features) {
+                if ("BraveShieldsDisabledForUrls" -in $importedSettings.Features -and "BraveShieldsEnabledForUrls" -in $importedSettings.Features) {
+                    Write-Log "Import sanitized: Stripped contradictory URLs found in both Shields Disabled and Enabled policies."
+                }
+            }
+
             Restore-StateToUI $importedSettings
             
             Update-Status "Settings imported successfully. Pending save."
