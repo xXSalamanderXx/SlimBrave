@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SlimBrave - Revived - v1.2.0 (macOS)
+# SlimBrave - Revived - v1.1.2 (macOS)
 
 import subprocess
 import sys
@@ -67,6 +67,37 @@ def is_homebrew_python():
         return False
     return os.path.abspath(sys.executable).startswith(brew_prefix)
 
+def get_brew_python_binary():
+    brew_prefix = get_brew_prefix()
+    if not brew_prefix:
+        return None
+
+    # 1. Dynamic Keg Resolution
+    try:
+        res = subprocess.run(["brew", "--prefix", "python3"], capture_output=True, text=True, check=True)
+        keg_path = res.stdout.strip()
+        bin_path = os.path.join(keg_path, "bin", "python3")
+        if os.path.exists(bin_path):
+            return bin_path
+    except Exception:
+        pass
+
+    # 2. Check for versioned binaries in brew_prefix/bin (Fallback)
+    bin_dir = os.path.join(brew_prefix, "bin")
+    if os.path.exists(bin_dir):
+        # Scan down from latest likely version
+        for minor_ver in range(15, 7, -1):
+            versioned_path = os.path.join(bin_dir, f"python3.{minor_ver}")
+            if os.path.exists(versioned_path):
+                return versioned_path
+
+    # 3. Check generic symlink as absolute last resort
+    generic_path = os.path.join(brew_prefix, "bin", "python3")
+    if os.path.exists(generic_path):
+        return generic_path
+
+    return None
+
 def get_tk_version():
     try:
         import tkinter
@@ -83,13 +114,20 @@ def check_python_and_tk():
     print_step(f"Current Python: {sys.executable}")
 
     if not is_homebrew_python():
+        # Silent Hand-off
+        existing_brew_python = get_brew_python_binary()
+        if existing_brew_python:
+            print_step("System Python detected. Silently handing off to Homebrew Python...")
+            os.execv(existing_brew_python, [existing_brew_python] + sys.argv)
+            
         print_step("You are using the system Python, which often ships with an old/deprecated Tcl/Tk.")
         if prompt_yes_no("Install Homebrew Python with Tkinter now?"):
             print_step("Installing Homebrew Python + Tk…")
             subprocess.run(["brew", "install", "python-tk"], check=True)
             BREW_INSTALLED_SOMETHING = True
-            new_python = f"{brew_prefix}/bin/python3"
-            if not os.path.exists(new_python):
+            
+            new_python = get_brew_python_binary()
+            if not new_python:
                 print_step("Installation succeeded but could not find the new Python binary. Exiting.")
                 sys.exit(1)
             print_step(f"Relaunching with {new_python} …")
@@ -303,7 +341,7 @@ def main():
     }
 
     root = tk.Tk()
-    root.title("SlimBrave - Revived v1.9.0 (macOS)")
+    root.title("SlimBrave - Revived v1.1.2 (macOS)")
     root.geometry("1100x600")
     root.minsize(980, 450)
     root.configure(bg="#191919")
@@ -732,7 +770,6 @@ def main():
         if "DefaultFileSystemReadGuardSetting" in cleaned and "DefaultFileSystemWriteGuardSetting" not in cleaned:
             cleaned["DefaultFileSystemWriteGuardSetting"] = cleaned["DefaultFileSystemReadGuardSetting"]
 
-        # Enforce mutual exclusivity on conflicting Shields URL imports
         if "BraveShieldsDisabledForUrls" in cleaned and "BraveShieldsEnabledForUrls" in cleaned:
             disabled_set = set(cleaned["BraveShieldsDisabledForUrls"])
             enabled_set = set(cleaned["BraveShieldsEnabledForUrls"])
@@ -1247,7 +1284,6 @@ def main():
         app_name = current_channel_info["App"]
         lock_path = os.path.join(BRAVE_USER_DATA_DIR, "SingletonLock")
         
-        # Read Chromium's SingletonLock to prevent truncation misses on beta/dev channels
         is_running = False
         if os.path.exists(lock_path) or os.path.islink(lock_path):
             is_running = True
