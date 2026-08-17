@@ -1606,6 +1606,15 @@ def main():
             progress.finish("Failed.")
             messagebox.showerror("Hard Reset", f"Hard Reset failed.\n\n{e}")
 
+    def reset_settings():
+        mode = choose_reset_mode()
+        if mode == "light":
+            do_light_reset()
+        elif mode == "hard":
+            do_hard_reset()
+        else:
+            set_status("Reset cancelled.")
+
     def apply_preset(preset_type):
         nonlocal suspend_dirty_tracking
         suspend_dirty_tracking = True
