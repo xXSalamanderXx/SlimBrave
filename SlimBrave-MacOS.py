@@ -1781,11 +1781,15 @@ def main():
     tk.Label(inner_top, text="Presets:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(10, 5))
 
     preset_var = tk.StringVar(value="Maximum Privacy")
+    
+    def on_preset_change(*args):
+        apply_preset(preset_var.get())
+        
+    preset_var.trace_add("write", on_preset_change)
+    
     preset_cb = ttk.Combobox(inner_top, textvariable=preset_var, values=["Maximum Privacy", "High Security", "Performance Focused", "Strict Parental Controls", "Balanced Privacy", "Developer"], state="readonly", width=22, style="Dark.TCombobox")
     preset_cb.pack(side="left", padx=5)
-
-    btn_preset = ttk.Button(inner_top, text="Apply Preset", style="Preset.TButton", command=lambda: apply_preset(preset_var.get()))
-    btn_preset.pack(side="left", padx=(5, 10))
+    create_tooltip(preset_cb, "Select a preset to automatically configure recommended settings.")
 
     save_status_label = tk.Label(inner_top, textvariable=save_status_var, bg="#191919", fg="#90EE90", font=("sans-serif", 10, "bold"))
     save_status_label.pack(side="right", padx=(50, 0))
