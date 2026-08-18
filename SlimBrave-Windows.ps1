@@ -231,7 +231,7 @@ function Set-DirtyState([bool]$dirty) {
         $saveStatusLabel.Text = "Changes Need To Be Saved..."
         $saveStatusLabel.ForeColor = [System.Drawing.Color]::Gold
     } else {
-        $saveStatusLabel.Text = "Changes Applied ✔"
+        $saveStatusLabel.Text = "Changes Applied [OK]"
         $saveStatusLabel.ForeColor = [System.Drawing.Color]::LightGreen
     }
     $statusPanel.Refresh()
