@@ -247,8 +247,13 @@ def main():
 
     style = ttk.Style()
     style.theme_use("clam")
+    
+    # Checkbox configuration to restore the blue highlights
     style.configure("TCheckbutton", background="#232323", foreground="white", font=("sans-serif", 9))
-    style.map("TCheckbutton", background=[("active", "#232323")])
+    style.map("TCheckbutton", 
+              background=[("active", "#232323")],
+              foreground=[("selected", "#87CEFA"), ("!selected", "white")],
+              indicatorcolor=[("selected", "#87CEFA"), ("!selected", "#161616")])
 
     style.configure(
         "Dark.TCombobox", fieldbackground="#161616", background="#161616",
@@ -821,27 +826,38 @@ def main():
 
         set_status(status)
 
-    def pgrep_any(pattern):
+    def pgrep_exact(pattern):
+        # Using -x strictly matches the executable name, ignoring SlimBrave-Linux.py
+        # and preventing false flags on things like ungoogled-chromium
         try:
-            res = run_cmd(["pgrep", "-if", pattern])
+            res = run_cmd(["pgrep", "-x", pattern])
             return bool(res.stdout.strip())
         except Exception:
             return False
+
+    def singleton_lock_pid():
+        lock_path = os.path.join(BRAVE_USER_DATA_DIR, "SingletonLock")
+        try:
+            target = os.readlink(lock_path)
+            pid_part = target.rsplit("-", 1)[-1]
+            return int(pid_part) if pid_part.isdigit() else None
+        except OSError:
+            return None
 
     def kill_brave_family(progress=None):
         exec_names = current_channel_info["Execs"]
 
         for pat in exec_names:
             run_cmd(["killall", pat])
-            run_cmd(["pkill", "-TERM", "-if", pat])
+            run_cmd(["pkill", "-TERM", "-x", pat])
         time.sleep(2.0)
 
         for pat in exec_names:
-            if pgrep_any(pat):
-                run_cmd(["pkill", "-KILL", "-if", pat])
+            if pgrep_exact(pat):
+                run_cmd(["pkill", "-KILL", "-x", pat])
         time.sleep(1.5)
 
-        still_running = any(pgrep_any(pat) for pat in exec_names)
+        still_running = any(pgrep_exact(pat) for pat in exec_names)
         if progress:
             app_name = current_channel_info["App"]
             progress.log(f"{app_name} is still running." if still_running else f"{app_name} is closed.")
@@ -917,12 +933,12 @@ def main():
     def check_and_close_brave():
         app_name = current_channel_info["App"]
         exec_names = current_channel_info["Execs"]
-        lock_path = os.path.join(BRAVE_USER_DATA_DIR, "SingletonLock")
         
         is_running = False
-        if os.path.exists(lock_path) or os.path.islink(lock_path):
+        pid = singleton_lock_pid()
+        if pid is not None and os.path.isdir(f"/proc/{pid}"):
             is_running = True
-        elif any(pgrep_any(pat) for pat in exec_names):
+        elif any(pgrep_exact(pat) for pat in exec_names):
             is_running = True
 
         if not is_running:
