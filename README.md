@@ -6,7 +6,7 @@
 
 A lightweight utility designed to give you ultimate control over your Brave Browser. Lock down telemetry, enforce strict privacy standards, and strip away built-in browser bloatware—all from a single, clean interface.
 
-Supported on Windows and MacOS!
+Supported on Windows, Linux & MacOS!
 </div>
 
 <br>
@@ -21,12 +21,8 @@ Supported on Windows and MacOS!
 ## SlimBrave Revived - Windows
 [![Slimbrave-Windows.png](https://i.postimg.cc/5yNPg6pc/Slimbrave-Windows.png)](https://postimg.cc/Pp9zrfBK)
 
-## SlimBrave Revived - macOS
+## SlimBrave Revived - macOS & Linux
 [![Slimbrave-mac-OS.png](https://i.postimg.cc/cChH34Lq/Slimbrave-mac-OS.png)](https://postimg.cc/xNknDQmg)
-
-> [!IMPORTANT]
-> This tool is currently not built for Linux.
-> On Linux, it is recommended to use Brave Origin. Brave Origin is free to use on Linux and debloats Brave out of the box.
 
 <details>
 <summary> Requirements </summary>
@@ -55,7 +51,14 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 - Python (python via Homebrew)
 - Python Tkinter
 
-(Homebrew and Python will be automatically installed if you agree to the auto-installation upon running Slimbrave)
+(Homebrew and Python/Tk will be automatically installed if you agree to the auto-installation upon running Slimbrave and if they're not already installed)
+
+## Linux Requiremens:
+
+- Python (usually installed by default)
+- Python Tkinter (sometimes installed by default)
+
+(Python/Tk will be automatically installed if you agree to the auto-installation upon running Slimbrave and if they're not already installed)
 
 </details>
 
@@ -83,15 +86,35 @@ iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave-W
 ## (MacOS)
 
 ## Run the command below in Terminal:
-
-> [!IMPORTANT]
-> It's preferred if you install the macOS dependencies prior to running; however, Slimbrave will attempt to auto-install these dependencies:
-> 1. Install Homebrew: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
-> 2. Install Python: `brew install python`
-> 3. Install Tkinter support: `brew install python-tk`
 ```
 curl -sO https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave-MacOS.py && python3 SlimBrave-MacOS.py
 ```
+
+> [!IMPORTANT]
+> If dependencies fail to auto-install via the script, please refer to this.
+> 1. Install Homebrew: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
+> 2. Install Python: `brew install python`
+> 3. Install Tkinter support: `brew install python-tk`
+
+
+## (Linux)
+
+## Run the command below in Terminal:
+```
+curl -sO https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave-Linux.py && python3 SlimBrave-Linux.py
+```
+
+> [!IMPORTANT]
+> If dependencies fail to auto-install via the script, please refer to this.
+> 
+> **Debian / Ubuntu / Linux Mint:**
+> `sudo apt update && sudo apt install python3 python3-tk`
+> 
+> **Arch Linux / Manjaro:**
+> `sudo pacman -S python tk`
+> 
+> **Fedora / RedHat / CentOS:**
+> `sudo dnf install python3 python3-tkinter`
 
 ##
   
