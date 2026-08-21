@@ -58,7 +58,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 - Python (usually installed by default)
 - Python Tkinter (sometimes installed by default)
 
-(Python/Tk will be automatically installed if you agree to the auto-installation upon running Slimbrave and if they're not already installed)
+(Python/Tk install instuctions are provided inside Slimbrave, if they are not detected on your system)
 
 </details>
 
@@ -105,7 +105,7 @@ curl -sO https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBra
 ```
 
 > [!IMPORTANT]
-> If dependencies fail to auto-install via the script, please refer to this.
+> If Python/Tk dependencies are missing from your system, please refer to this.
 > 
 > **Debian / Ubuntu / Linux Mint:**
 > `sudo apt update && sudo apt install python3 python3-tk`
