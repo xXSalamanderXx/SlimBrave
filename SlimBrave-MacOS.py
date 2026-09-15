@@ -861,7 +861,14 @@ def main():
 
     def remove_managed_pref_files():
         removed = []
-        for path in (USER_MANAGED_PREFS_FILE, SYSTEM_MANAGED_PREFS_FILE):
+        targets = [USER_MANAGED_PREFS_FILE]
+        
+        # macOS native MDM generates the SYSTEM_MANAGED_PREFS_FILE when a profile is installed.
+        # We must protect it from deletion while a profile is active, or policies will silently break.
+        if not is_profile_installed():
+            targets.append(SYSTEM_MANAGED_PREFS_FILE)
+            
+        for path in targets:
             if os.path.exists(path):
                 try:
                     os.remove(path)
@@ -1107,7 +1114,15 @@ def main():
         
         profile_active = is_profile_installed()
         
-        legacy_files = [p for p in (USER_MANAGED_PREFS_FILE, SYSTEM_MANAGED_PREFS_FILE) if os.path.exists(p)]
+        legacy_files = []
+        if os.path.exists(USER_MANAGED_PREFS_FILE):
+            legacy_files.append(USER_MANAGED_PREFS_FILE)
+            
+        # The SYSTEM file is only a "legacy" file if there is NO active Configuration Profile managing it.
+        # If a profile is active, macOS owns this file and it must not be treated as a legacy cleanup target.
+        if not profile_active and os.path.exists(SYSTEM_MANAGED_PREFS_FILE):
+            legacy_files.append(SYSTEM_MANAGED_PREFS_FILE)
+            
         has_legacy = bool(legacy_files)
         
         if profile_active:
@@ -1442,15 +1457,7 @@ def main():
             for line in diagnosis_lines:
                 progress.log(line)
 
-            progress.step(40, "Removing old legacy policy files...")
-            removed_files = remove_managed_pref_files()
-            if removed_files:
-                for p in removed_files:
-                    progress.log(f"Removed: {p}")
-            else:
-                progress.log("No legacy policy files found.")
-                
-            progress.step(42, "Removing Configuration Profile (if installed)...")
+            progress.step(35, "Removing Configuration Profile (if installed)...")
             profile_installed_initially = is_profile_installed()
             if profile_installed_initially:
                 profile_removed = remove_mobileconfig_profile()
@@ -1461,6 +1468,14 @@ def main():
             else:
                 progress.log("No Configuration Profile detected.")
                 profile_removed = True
+
+            progress.step(45, "Removing old legacy policy files...")
+            removed_files = remove_managed_pref_files()
+            if removed_files:
+                for p in removed_files:
+                    progress.log(f"Removed: {p}")
+            else:
+                progress.log("No legacy policy files found.")
 
             progress.step(60, "Removing old live-domain keys...")
             removed_keys = strip_legacy_policy_keys_from_live_domain()
@@ -1528,15 +1543,7 @@ def main():
             for line in diagnosis_lines:
                 progress.log(line)
 
-            progress.step(30, "Removing old legacy policy files...")
-            removed_files = remove_managed_pref_files()
-            if removed_files:
-                for p in removed_files:
-                    progress.log(f"Removed: {p}")
-            else:
-                progress.log("No legacy policy files found.")
-                
-            progress.step(42, "Removing Configuration Profile (if installed)...")
+            progress.step(30, "Removing Configuration Profile (if installed)...")
             profile_installed_initially = is_profile_installed()
             if profile_installed_initially:
                 profile_removed = remove_mobileconfig_profile()
@@ -1547,6 +1554,14 @@ def main():
             else:
                 progress.log("No Configuration Profile detected.")
                 profile_removed = True
+
+            progress.step(40, "Removing old legacy policy files...")
+            removed_files = remove_managed_pref_files()
+            if removed_files:
+                for p in removed_files:
+                    progress.log(f"Removed: {p}")
+            else:
+                progress.log("No legacy policy files found.")
 
             progress.step(45, "Removing old live-domain keys...")
             removed_keys = strip_legacy_policy_keys_from_live_domain()
@@ -1993,3 +2008,4 @@ def main():
 if __name__ == "__main__":
     dependency_setup()
     main()
+    
