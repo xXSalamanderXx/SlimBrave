@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SlimBrave - Revived - v1.1.2 (Linux)
+# SlimBrave - Revived - v1.1.3 (Linux)
 
 import subprocess
 import sys
@@ -76,7 +76,7 @@ def main():
         {"Name": "Disable P3A Telemetry", "Key": "BraveP3AEnabled", "Value": False, "Type": "bool", "ToolTip": "Disables Privacy-Preserving Product Analytics completely.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Daily Stats Ping", "Key": "BraveStatsPingEnabled", "Value": False, "Type": "bool", "ToolTip": "Stops the daily active user ping.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Web Discovery", "Key": "BraveWebDiscoveryEnabled", "Value": False, "Type": "bool", "ToolTip": "Prevents anonymous search/browsing data from being sent to Brave Search.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
-        {"Name": "Disable Variations / Experiments", "Key": "ChromeVariations", "Value": 1, "Type": "int", "ToolTip": "Stops Brave from fetching feature-flip seeds from variations.brave.com.\n\nSuggested Settings for Privacy: Ticked | Security: Unticked"},
+        {"Name": "Limit Variations (Critical Fixes)", "Key": "ChromeVariations", "Value": 2, "Type": "int", "ToolTip": "Stops Brave from fetching general feature-flip seeds from variations.brave.com, limiting to critical security updates.\n\nSuggested Settings for Privacy: Ticked | Security: Unticked"},
     ]
 
     privacy_features = [
@@ -117,6 +117,7 @@ def main():
         {"Name": "Disable Brave Talk", "Key": "BraveTalkDisabled", "Value": True, "Type": "bool", "ToolTip": "Removes the built-in video calling integration.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Speedreader", "Key": "BraveSpeedreaderEnabled", "Value": False, "Type": "bool", "ToolTip": "Completely disables the Speedreader feature, reader mode, and automatic prompts.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Wayback Machine Prompts", "Key": "BraveWaybackMachineEnabled", "Value": False, "Type": "bool", "ToolTip": "Stops Brave from asking to search the Internet Archive when you hit a 404 error.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
+        {"Name": "Disable Email Aliases", "Key": "BraveEmailAliasesEnabled", "Value": False, "Type": "bool", "ToolTip": "Disables Brave's Email Aliases forwarding feature.\n\nSuggested Settings for Privacy: Ticked | Security: Unticked"},
     ]
 
     perf_features = [
@@ -134,7 +135,8 @@ def main():
         {"Name": "Disable Developer Tools", "Key": "DeveloperToolsDisabled", "Value": True, "Type": "bool", "ToolTip": "Disables F12 / Inspect Element.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked"},
         {"Name": "Disable Brave Playlist", "Key": "BravePlaylistEnabled", "Value": False, "Type": "bool", "ToolTip": "Removes the Brave Playlist media feature.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Enable Memory Saver", "Key": "HighEfficiencyModeEnabled", "Value": True, "Type": "bool", "ToolTip": "Forces Chromium High Efficiency Mode on to aggressively save RAM.\n\nSuggested Settings for Privacy: Unticked | Security: Unticked"},
-        {"Name": "Force Hardware Acceleration", "Key": "HardwareAccelerationModeEnabled", "Value": True, "Type": "bool", "ToolTip": "Pins the default hardware acceleration on so it can't drift.\n\nSuggested Settings for Privacy: Unticked | Security: Unticked"},
+        {"Name": "Force Hardware Acceleration", "Key": "HardwareAccelerationModeEnabled_Force", "RealKey": "HardwareAccelerationModeEnabled", "Value": True, "Type": "bool", "ToolTip": "Pins the default hardware acceleration on so it can't drift.\n\nSuggested Settings for Privacy: Unticked | Security: Unticked"},
+        {"Name": "Disable Hardware Acceleration", "Key": "HardwareAccelerationModeEnabled_Disable", "RealKey": "HardwareAccelerationModeEnabled", "Value": False, "Type": "bool", "ToolTip": "Troubleshooting setting to turn off GPU acceleration. Fixes driver faults, screen-sharing bugs, and YouTube playback crashes.\n\nSuggested Settings for Privacy: Unticked | Security: Unticked"},
         {"Name": "Disable Media Router (Cast)", "Key": "EnableMediaRouter", "Value": False, "Type": "bool", "ToolTip": "Disables Chromecast casting support.\n\nSuggested Settings for Privacy: Unticked | Security: Unticked"},
         {"Name": "Disable DNS Interception Probes", "Key": "DNSInterceptionChecksEnabled", "Value": False, "Type": "bool", "ToolTip": "Stops Chromium from resolving random hostnames to check for captive portals.\n\nSuggested Settings for Privacy: Ticked | Security: Unticked"},
     ]
@@ -163,24 +165,24 @@ def main():
         {"Name": "HID Devices", "Key": "DefaultWebHidGuardSetting", "Options": ["Not Set", "Ask", "Block"], "ToolTip": "Allows sites to request access to Human Interface Devices (e.g. controllers).\n\nSuggested Settings for Privacy: Block | Security: Block"},
         {"Name": "File Editing", "Key": "DefaultFileSystemReadGuardSetting", "Options": ["Not Set", "Ask", "Block"], "ToolTip": "Allows sites to read and save files directly to your local file system.\n\nSuggested Settings for Privacy: Block | Security: Block"},
         {"Name": "Clipboard", "Key": "DefaultClipboardSetting", "Options": ["Not Set", "Ask", "Block"], "ToolTip": "Allows sites to read text and images copied to your clipboard.\n\nSuggested Settings for Privacy: Block | Security: Block"},
-        {"Name": "Window Management", "Key": "DefaultWindowPlacementSetting", "Options": ["Not Set", "Ask", "Block", "Allow"], "ToolTip": "Allows sites to open windows on specific monitors or in fullscreen.\n\nSuggested Settings for Privacy: Block | Security: Block"},
+        {"Name": "Window Management", "Key": "DefaultWindowPlacementSetting", "Options": ["Not Set", "Ask", "Block"], "ToolTip": "Allows sites to open windows on specific monitors or in fullscreen.\n\nSuggested Settings for Privacy: Block | Security: Block"},
         {"Name": "Local Fonts", "Key": "DefaultLocalFontsSetting", "Options": ["Not Set", "Ask", "Block"], "ToolTip": "Allows sites to fingerprint your device based on locally installed fonts.\n\nSuggested Settings for Privacy: Block | Security: Block"},
         {"Name": "Payment Handlers", "Key": "PaymentMethodQueryEnabled", "Options": ["Not Set", "Block", "Allow"], "ToolTip": "Allows sites to check if you have local payment apps installed.\n\nSuggested Settings for Privacy: Block | Security: Block"},
         {"Name": "Motion Sensors", "Key": "DefaultSensorsSetting", "Options": ["Not Set", "Ask", "Block", "Allow"], "ToolTip": "Allows sites to access device orientation and motion sensors.\n\nSuggested Settings for Privacy: Block | Security: Block"},
     ]
 
     ALL_FEATURES = telemetry_features + privacy_features + brave_features + perf_features + access_features
-    managed_keys = {feat["Key"] for feat in ALL_FEATURES}
+    managed_keys = {feat.get("RealKey", feat["Key"]) for feat in ALL_FEATURES}
     managed_keys.update({perm["Key"] for perm in permission_settings})
     managed_keys.update({
         "DefaultFileSystemWriteGuardSetting", "SafeBrowsingProtectionLevel", 
         "DnsOverHttpsMode", "DnsOverHttpsTemplates", "BraveShieldsDisabledForUrls", "BraveShieldsEnabledForUrls"
     })
 
-    BOOL_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "bool"}
-    STRING_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "string"}
-    ARRAY_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "array"}
-    INT_POLICY_KEYS = {feat["Key"] for feat in ALL_FEATURES if feat["Type"] == "int"}
+    BOOL_POLICY_KEYS = {feat.get("RealKey", feat["Key"]) for feat in ALL_FEATURES if feat["Type"] == "bool"}
+    STRING_POLICY_KEYS = {feat.get("RealKey", feat["Key"]) for feat in ALL_FEATURES if feat["Type"] == "string"}
+    ARRAY_POLICY_KEYS = {feat.get("RealKey", feat["Key"]) for feat in ALL_FEATURES if feat["Type"] == "array"}
+    INT_POLICY_KEYS = {feat.get("RealKey", feat["Key"]) for feat in ALL_FEATURES if feat["Type"] == "int"}
     ARRAY_POLICY_KEYS.update({"BraveShieldsDisabledForUrls", "BraveShieldsEnabledForUrls"})
 
     CONTENT_SETTING_KEYS = {
@@ -190,6 +192,15 @@ def main():
         "DefaultWebHidGuardSetting", "DefaultFileSystemReadGuardSetting", "DefaultFileSystemWriteGuardSetting",
         "DefaultClipboardSetting", "DefaultWindowPlacementSetting", "DefaultLocalFontsSetting",
         "DefaultSensorsSetting",
+    }
+
+    # Compiled out keys for Brave Origin detection logic
+    compiled_out_keys = {
+        "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled",
+        "BraveAIChatEnabled", "BraveLocalAiEnabled", "BraveNewsDisabled",
+        "BraveTalkDisabled", "BravePlaylistEnabled", "BraveWebDiscoveryEnabled",
+        "BraveSpeedreaderEnabled", "TorDisabled", "BraveEmailAliasesEnabled",
+        "BraveWaybackMachineEnabled"
     }
 
     root = tk.Tk()
@@ -248,7 +259,6 @@ def main():
     style = ttk.Style()
     style.theme_use("clam")
     
-    # Checkbox configuration to restore the blue highlights
     style.configure("TCheckbutton", background="#232323", foreground="white", font=("sans-serif", 9))
     style.map("TCheckbutton", 
               background=[("active", "#232323")],
@@ -302,17 +312,23 @@ def main():
         "Release": {"App": "Brave Browser", "Dir": "Brave-Browser", "Execs": ["brave", "brave-browser", "brave-browser-stable"]},
         "Beta": {"App": "Brave Browser Beta", "Dir": "Brave-Browser-Beta", "Execs": ["brave-browser-beta", "brave-beta"]},
         "Dev": {"App": "Brave Browser Dev", "Dir": "Brave-Browser-Dev", "Execs": ["brave-browser-dev", "brave-dev"]},
-        "Nightly": {"App": "Brave Browser Nightly", "Dir": "Brave-Browser-Nightly", "Execs": ["brave-browser-nightly", "brave-nightly"]}
+        "Nightly": {"App": "Brave Browser Nightly", "Dir": "Brave-Browser-Nightly", "Execs": ["brave-browser-nightly", "brave-nightly"]},
+        "Origin": {"App": "Brave Origin", "Dir": "Brave-Browser", "Execs": ["brave-origin", "brave-browser-origin"]}
     }
     
     installed_channels = {}
     for name, info in channels_dict.items():
-        if os.path.exists(os.path.expanduser(f"~/.config/BraveSoftware/{info['Dir']}")):
-            installed_channels[name] = info
+        if name == "Origin":
+            if os.path.exists("/opt/brave-origin-bin") or os.path.exists("/opt/brave.com/brave-origin") or shutil.which("brave-origin") or shutil.which("brave-browser-origin"):
+                installed_channels[name] = info
+        else:
+            if os.path.exists(os.path.expanduser(f"~/.config/BraveSoftware/{info['Dir']}")) or any(shutil.which(x) for x in info["Execs"]):
+                installed_channels[name] = info
     
     if not installed_channels:
         installed_channels["Release"] = channels_dict["Release"]
 
+    is_origin_only = len(installed_channels) == 1 and "Origin" in installed_channels
     current_channel_info = list(installed_channels.values())[0]
     update_paths_for_channel(current_channel_info)
 
@@ -341,8 +357,16 @@ def main():
                 save_status_label.config(fg="#aaaaaa")
 
     def get_ui_snapshot():
+        features_list = []
+        for key, var in all_feature_vars.items():
+            if var.get() == 1:
+                # Exclude compiled-out keys from local state JSON & Exports if Origin-only
+                if is_origin_only and key in compiled_out_keys:
+                    continue
+                features_list.append(key)
+                
         return {
-            "Features": [key for key, var in all_feature_vars.items() if var.get() == 1],
+            "Features": features_list,
             "Permissions": {key: var.get() for key, var in all_perm_vars.items() if var.get() != "Not Set"},
             "SafeBrowsing": sb_var.get(),
             "DnsMode": dns_var.get(),
@@ -628,14 +652,16 @@ def main():
             if all_feature_vars[feat["Key"]].get() != 1:
                 continue
 
+            actual_key = feat.get("RealKey", feat["Key"])
+
             if feat["Type"] == "bool":
-                payload[feat["Key"]] = bool(feat["Value"])
+                payload[actual_key] = bool(feat["Value"])
             elif feat["Type"] == "int":
-                payload[feat["Key"]] = int(feat["Value"])
+                payload[actual_key] = int(feat["Value"])
             elif feat["Type"] == "string":
-                payload[feat["Key"]] = str(feat["Value"])
+                payload[actual_key] = str(feat["Value"])
             elif feat["Type"] == "array":
-                payload[feat["Key"]] = list(feat["Value"])
+                payload[actual_key] = list(feat["Value"])
 
         for perm in permission_settings:
             sel = all_perm_vars[perm["Key"]].get()
@@ -677,6 +703,11 @@ def main():
         if tpl and dns_mode in ["Secure", "Custom"]:
             payload["DnsOverHttpsTemplates"] = tpl
 
+        # Discard compiled-out policies if the user exclusively uses Brave Origin
+        if is_origin_only:
+            for k in compiled_out_keys:
+                payload.pop(k, None)
+
         return payload
 
     def apply_payload_to_ui(payload):
@@ -693,10 +724,11 @@ def main():
 
         for feat in ALL_FEATURES:
             key = feat["Key"]
-            if key not in payload:
+            actual_key = feat.get("RealKey", key)
+            if actual_key not in payload:
                 continue
 
-            value = payload[key]
+            value = payload[actual_key]
             if feat["Type"] == "array":
                 if isinstance(value, list) and len(value) > 0:
                     all_feature_vars[key].set(1)
@@ -827,8 +859,6 @@ def main():
         set_status(status)
 
     def pgrep_exact(pattern):
-        # Using -x strictly matches the executable name, ignoring SlimBrave-Linux.py
-        # and preventing false flags on things like ungoogled-chromium
         try:
             res = run_cmd(["pgrep", "-x", pattern])
             return bool(res.stdout.strip())
@@ -993,6 +1023,11 @@ def main():
             set_status("Import aborted.")
             return
 
+        if is_origin_only:
+            skipped_keys = [k for k in data.get("Features", []) if k in compiled_out_keys]
+            if skipped_keys:
+                messagebox.showinfo("Brave Origin", "Some imported settings were left unmanaged because your system only has Brave Origin installed. Origin inherently handles (compiles out) those features.")
+
         apply_json_state_to_ui(data)
         set_status("JSON loaded.")
 
@@ -1019,7 +1054,6 @@ def main():
 
             progress.step(55, "Applying System Policy via pkexec/sudo...")
             if cleaned_payload:
-                # Write to temp file then move to policy dir
                 fd, temp_path = tempfile.mkstemp(prefix="slimbrave-", suffix=".json")
                 os.close(fd)
                 try:
@@ -1318,8 +1352,8 @@ def main():
                 "BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled",
                 "PromotionsEnabled", "BraveNewsDisabled", "BraveRewardsDisabled", "BraveWalletDisabled",
                 "BraveVPNDisabled", "BraveTalkDisabled", "BravePlaylistEnabled",
-                "HighEfficiencyModeEnabled", "HardwareAccelerationModeEnabled",
-                "EnableMediaRouter", "SpellcheckEnabled"
+                "HighEfficiencyModeEnabled", "HardwareAccelerationModeEnabled_Force",
+                "EnableMediaRouter", "SpellcheckEnabled", "BraveLocalAiEnabled"
             ]
             for key in perf_keys:
                 if key in all_feature_vars:
@@ -1334,7 +1368,8 @@ def main():
                 "BrowserGuestModeEnabled", "ExtensionInstallBlocklist",
                 "SafeSitesFilterBehavior", "ForceGoogleSafeSearch", "IncognitoModeAvailability",
                 "SpellCheckServiceEnabled", "BraveAIChatEnabled", "TorDisabled", "BraveLocalAiEnabled",
-                "PromptForDownloadLocation", "DefaultBrowserSettingEnabled", "SyncDisabled"
+                "PromptForDownloadLocation", "DefaultBrowserSettingEnabled", "SyncDisabled",
+                "RemoteDebuggingAllowed"
             ]
             for key in parental_keys:
                 if key in all_feature_vars:
@@ -1349,7 +1384,10 @@ def main():
                 "BraveP3AEnabled", "BraveStatsPingEnabled", "WebRtcIPHandling",
                 "BlockThirdPartyCookies", "EnableDoNotTrack", "GlobalPrivacyControlEnabled",
                 "BraveDeAMPEnabled", "BraveDebouncingEnabled", "BraveTrackersStrippingEnabled",
-                "BraveRewardsDisabled", "BraveWalletDisabled", "BraveNewsDisabled", "BravePlaylistEnabled"
+                "BraveRewardsDisabled", "BraveWalletDisabled", "BraveNewsDisabled", "BravePlaylistEnabled",
+                "BraveLocalAiEnabled", "DNSInterceptionChecksEnabled", "RemoteDebuggingAllowed",
+                "BasicAuthOverHttpEnabled", "BlockExternalExtensions", "ChromeVariations",
+                "SpellCheckServiceEnabled"
             ]
             for key in balanced_keys:
                 if key in all_feature_vars:
@@ -1362,7 +1400,8 @@ def main():
         elif preset_type == "Developer":
             dev_keys = [
                 "BraveRewardsDisabled", "BraveWalletDisabled", "BraveNewsDisabled", "BravePlaylistEnabled",
-                "EnableDoNotTrack", "BraveDeAMPEnabled", "BraveDebouncingEnabled"
+                "EnableDoNotTrack", "BraveDeAMPEnabled", "BraveDebouncingEnabled",
+                "ChromeVariations", "BraveLocalAiEnabled", "DNSInterceptionChecksEnabled", "SpellCheckServiceEnabled"
             ]
             for key in dev_keys:
                 if key in all_feature_vars:
@@ -1373,6 +1412,21 @@ def main():
             dns_var.set("Off")
             dns_tpl_var.set("")
             set_status("Developer preset loaded.")
+
+        elif preset_type == "Brave Origin":
+            origin_keys = [
+                "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled",
+                "BraveLocalAiEnabled", "BraveNewsDisabled", "BraveTalkDisabled", "BravePlaylistEnabled",
+                "BraveWebDiscoveryEnabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled",
+                "BraveEmailAliasesEnabled", "TorDisabled", "BraveP3AEnabled", "BraveStatsPingEnabled"
+            ]
+            for key in origin_keys:
+                if key in all_feature_vars:
+                    all_feature_vars[key].set(1)
+            sb_var.set("")
+            dns_var.set("Automatic")
+            dns_tpl_var.set("")
+            set_status("Brave Origin preset loaded.")
 
         suspend_dirty_tracking = False
         check_dirty_state()
@@ -1416,7 +1470,7 @@ def main():
         
     preset_var.trace_add("write", on_preset_change)
     
-    preset_cb = ttk.Combobox(inner_top, textvariable=preset_var, values=["Maximum Privacy", "High Security", "Performance Focused", "Strict Parental Controls", "Balanced Privacy", "Developer"], state="readonly", width=22, style="Dark.TCombobox")
+    preset_cb = ttk.Combobox(inner_top, textvariable=preset_var, values=["Maximum Privacy", "High Security", "Performance Focused", "Strict Parental Controls", "Balanced Privacy", "Developer", "Brave Origin"], state="readonly", width=22, style="Dark.TCombobox")
     preset_cb.pack(side="left", padx=5)
     create_tooltip(preset_cb, "Select a preset to automatically configure recommended settings.")
 
@@ -1506,6 +1560,18 @@ def main():
     populate_checkboxes(mid_panel, "Brave Features", brave_features)
     populate_checkboxes(mid_panel, "Performance and Bloat", perf_features)
     populate_checkboxes(right_panel, "Permissions & Access", access_features)
+    
+    def enforce_mutually_exclusive(key1, key2):
+        def trace_func(*args, trigger=None):
+            if all_feature_vars[key1].get() == 1 and all_feature_vars[key2].get() == 1:
+                if trigger == key1:
+                    all_feature_vars[key2].set(0)
+                else:
+                    all_feature_vars[key1].set(0)
+        all_feature_vars[key1].trace_add("write", lambda *a: trace_func(*a, trigger=key1))
+        all_feature_vars[key2].trace_add("write", lambda *a: trace_func(*a, trigger=key2))
+        
+    enforce_mutually_exclusive("HardwareAccelerationModeEnabled_Force", "HardwareAccelerationModeEnabled_Disable")
 
     tk.Label(right_panel, text="Site Default Permissions", font=("sans-serif", 11, "bold"), fg="#FFA07A", bg="#232323").pack(anchor="w", pady=(12, 6), padx=12)
 
@@ -1587,3 +1653,4 @@ def main():
 if __name__ == "__main__":
     dependency_setup()
     main()
+    

@@ -1,4 +1,5 @@
-# Slimbrave - Revived - v1.1.2 (Windows)
+# Slimbrave - Revived - v1.1.3 (Windows)
+
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Start-Process powershell -ArgumentList "-File `"$($MyInvocation.MyCommand.Path)`"" -Verb RunAs
     exit
@@ -117,7 +118,7 @@ $form.Controls.Add($presetLabel)
 
 $presetDropdown = New-Object System.Windows.Forms.ComboBox
 $presetDropdown.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-[void]$presetDropdown.Items.AddRange(@("Maximum Privacy", "High Security", "Performance Focused", "Strict Parental Controls", "Balanced Privacy", "Developer"))
+[void]$presetDropdown.Items.AddRange(@("Maximum Privacy", "High Security", "Performance Focused", "Strict Parental Controls", "Balanced Privacy", "Developer", "Brave Origin"))
 $presetDropdown.SelectedIndex = 0
 $presetDropdown.Size = New-Object System.Drawing.Size(200, 20)
 $presetDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 45, 45, 45)
@@ -166,27 +167,27 @@ $presetDropdown.Add_SelectedIndexChanged({
             $dnsTplInput.Text = ""
         }
         "Performance Focused" {
-            $keys = @("BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled", "PromotionsEnabled", "BraveNewsDisabled", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveTalkDisabled", "BravePlaylistEnabled", "HighEfficiencyModeEnabled", "HardwareAccelerationModeEnabled", "EnableMediaRouter", "SpellcheckEnabled")
+            $keys = @("BackgroundModeEnabled", "MediaRecommendationsEnabled", "ShoppingListEnabled", "PromotionsEnabled", "BraveNewsDisabled", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveTalkDisabled", "BravePlaylistEnabled", "HighEfficiencyModeEnabled", "HardwareAccelerationModeEnabled_Force", "EnableMediaRouter", "SpellcheckEnabled", "BraveLocalAiEnabled")
             foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
             $sbDropdown.SelectedItem = "On"
             $dnsDropdown.SelectedItem = "Automatic"
             $dnsTplInput.Text = ""
         }
         "Strict Parental Controls" {
-            $keys = @("BrowserGuestModeEnabled", "ExtensionInstallBlocklist", "SafeSitesFilterBehavior", "ForceGoogleSafeSearch", "IncognitoModeAvailability", "SpellCheckServiceEnabled", "BraveAIChatEnabled", "TorDisabled", "BraveLocalAiEnabled", "PromptForDownloadLocation", "DefaultBrowserSettingEnabled", "SyncDisabled")
+            $keys = @("BrowserGuestModeEnabled", "ExtensionInstallBlocklist", "SafeSitesFilterBehavior", "ForceGoogleSafeSearch", "IncognitoModeAvailability", "SpellCheckServiceEnabled", "BraveAIChatEnabled", "TorDisabled", "BraveLocalAiEnabled", "PromptForDownloadLocation", "DefaultBrowserSettingEnabled", "SyncDisabled", "RemoteDebuggingAllowed")
             foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
             $sbDropdown.SelectedItem = "On"
             $dnsDropdown.SelectedItem = "Secure"
         }
         "Balanced Privacy" {
-            $keys = @("MetricsReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "WebRtcIPHandling", "BlockThirdPartyCookies", "EnableDoNotTrack", "GlobalPrivacyControlEnabled", "BraveDeAMPEnabled", "BraveDebouncingEnabled", "BraveTrackersStrippingEnabled", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveNewsDisabled", "BravePlaylistEnabled")
+            $keys = @("MetricsReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "WebRtcIPHandling", "BlockThirdPartyCookies", "EnableDoNotTrack", "GlobalPrivacyControlEnabled", "BraveDeAMPEnabled", "BraveDebouncingEnabled", "BraveTrackersStrippingEnabled", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveNewsDisabled", "BravePlaylistEnabled", "BraveLocalAiEnabled", "DNSInterceptionChecksEnabled", "RemoteDebuggingAllowed", "BasicAuthOverHttpEnabled", "BlockExternalExtensions", "ChromeVariations", "SpellCheckServiceEnabled")
             foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
             $sbDropdown.SelectedItem = "On"
             $dnsDropdown.SelectedItem = "Automatic"
             $dnsTplInput.Text = ""
         }
         "Developer" {
-            $keys = @("BraveRewardsDisabled", "BraveWalletDisabled", "BraveNewsDisabled", "BravePlaylistEnabled", "EnableDoNotTrack", "BraveDeAMPEnabled", "BraveDebouncingEnabled")
+            $keys = @("BraveRewardsDisabled", "BraveWalletDisabled", "BraveNewsDisabled", "BravePlaylistEnabled", "EnableDoNotTrack", "BraveDeAMPEnabled", "BraveDebouncingEnabled", "ChromeVariations", "BraveLocalAiEnabled", "DNSInterceptionChecksEnabled", "SpellCheckServiceEnabled")
             foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
             foreach ($perm in $allPerms) {
                 if ($perm.Tag.Key -in @("DefaultLocalFontsSetting", "DefaultClipboardSetting")) {
@@ -195,6 +196,13 @@ $presetDropdown.Add_SelectedIndexChanged({
             }
             $sbDropdown.SelectedItem = "Off"
             $dnsDropdown.SelectedItem = "Off"
+            $dnsTplInput.Text = ""
+        }
+        "Brave Origin" {
+            $keys = @("BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "BraveLocalAiEnabled", "BraveNewsDisabled", "BraveTalkDisabled", "BravePlaylistEnabled", "BraveWebDiscoveryEnabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BraveEmailAliasesEnabled", "TorDisabled", "BraveP3AEnabled", "BraveStatsPingEnabled")
+            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
+            $sbDropdown.SelectedIndex = -1
+            $dnsDropdown.SelectedItem = "Automatic"
             $dnsTplInput.Text = ""
         }
     }
@@ -283,7 +291,7 @@ $telemetryFeatures = @(
     @{ Name = "Disable P3A Telemetry"; Key = "BraveP3AEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Privacy-Preserving Product Analytics completely.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Daily Stats Ping"; Key = "BraveStatsPingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops the daily active user ping.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Web Discovery"; Key = "BraveWebDiscoveryEnabled"; Value = 0; Type = "DWord"; ToolTip = "Prevents anonymous search/browsing data from being sent to Brave Search.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
-    @{ Name = "Disable Variations / Experiments"; Key = "ChromeVariations"; Value = 1; Type = "DWord"; ToolTip = "Stops Brave from fetching feature-flip seeds from variations.brave.com.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" }
+    @{ Name = "Limit Variations (Critical Fixes)"; Key = "ChromeVariations"; Value = 2; Type = "DWord"; ToolTip = "Stops Brave from fetching general feature-flip seeds from variations.brave.com, limiting to critical security updates.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" }
 )
 
 [int]$leftY = 40
@@ -402,7 +410,8 @@ $braveFeatures = @(
     @{ Name = "Disable Brave News"; Key = "BraveNewsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the Brave News feed bloat from the New Tab page.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Brave Talk"; Key = "BraveTalkDisabled"; Value = 1; Type = "DWord"; ToolTip = "Removes the built-in video calling integration.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Speedreader"; Key = "BraveSpeedreaderEnabled"; Value = 0; Type = "DWord"; ToolTip = "Completely disables the Speedreader feature, reader mode, and automatic prompts.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
-    @{ Name = "Disable Wayback Machine Prompts"; Key = "BraveWaybackMachineEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from asking to search the Internet Archive when you hit a 404 error.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" }
+    @{ Name = "Disable Wayback Machine Prompts"; Key = "BraveWaybackMachineEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Brave from asking to search the Internet Archive when you hit a 404 error.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
+    @{ Name = "Disable Email Aliases"; Key = "BraveEmailAliasesEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Brave's Email Aliases forwarding feature.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" }
 )
 
 foreach ($feature in $braveFeatures) {
@@ -455,7 +464,8 @@ $perfFeatures = @(
     @{ Name = "Disable Developer Tools"; Key = "DeveloperToolsDisabled"; Value = 1; Type = "DWord"; ToolTip = "Disables F12 / Inspect Element.`n`nSuggested Settings for Privacy: Unticked | Security: Ticked" },
     @{ Name = "Disable Brave Playlist"; Key = "BravePlaylistEnabled"; Value = 0; Type = "DWord"; ToolTip = "Removes the Brave Playlist media feature.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Enable Memory Saver"; Key = "HighEfficiencyModeEnabled"; Value = 1; Type = "DWord"; ToolTip = "Forces Chromium High Efficiency Mode on to aggressively save RAM.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
-    @{ Name = "Force Hardware Acceleration"; Key = "HardwareAccelerationModeEnabled"; Value = 1; Type = "DWord"; ToolTip = "Pins the default hardware acceleration on so it can't drift.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Force Hardware Acceleration"; Key = "HardwareAccelerationModeEnabled_Force"; RegistryName = "HardwareAccelerationModeEnabled"; Value = 1; Type = "DWord"; ToolTip = "Pins the default hardware acceleration on so it can't drift.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
+    @{ Name = "Disable Hardware Acceleration"; Key = "HardwareAccelerationModeEnabled_Disable"; RegistryName = "HardwareAccelerationModeEnabled"; Value = 0; Type = "DWord"; ToolTip = "Troubleshooting setting to turn off GPU acceleration. Fixes driver faults, screen-sharing bugs, and YouTube playback crashes.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
     @{ Name = "Disable Media Router (Cast)"; Key = "EnableMediaRouter"; Value = 0; Type = "DWord"; ToolTip = "Disables Chromecast casting support.`n`nSuggested Settings for Privacy: Unticked | Security: Unticked" },
     @{ Name = "Disable DNS Interception Probes"; Key = "DNSInterceptionChecksEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops Chromium from resolving random hostnames to check for captive portals.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" }
 )
@@ -561,7 +571,7 @@ $permissionSettings = @(
     @{ Name = "HID Devices"; Key = "DefaultWebHidGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to request access to Human Interface Devices (e.g. controllers).`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "File Editing"; Key = "DefaultFileSystemReadGuardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read and save files directly to your local file system.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "Clipboard"; Key = "DefaultClipboardSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to read text and images copied to your clipboard.`n`nSuggested Settings for Privacy: Block | Security: Block" },
-    @{ Name = "Window Management"; Key = "DefaultWindowPlacementSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to open windows on specific monitors or in fullscreen.`n`nSuggested Settings for Privacy: Block | Security: Block" },
+    @{ Name = "Window Management"; Key = "DefaultWindowPlacementSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to open windows on specific monitors or in fullscreen.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "Local Fonts"; Key = "DefaultLocalFontsSetting"; Options = @("Not Set", "Ask", "Block"); ToolTip = "Allows sites to fingerprint your device based on locally installed fonts.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "Payment Handlers"; Key = "PaymentMethodQueryEnabled"; Options = @("Not Set", "Block", "Allow"); ToolTip = "Allows sites to check if you have local payment apps installed.`n`nSuggested Settings for Privacy: Block | Security: Block" },
     @{ Name = "Motion Sensors"; Key = "DefaultSensorsSetting"; Options = @("Not Set", "Ask", "Block", "Allow"); ToolTip = "Allows sites to access device orientation and motion sensors.`n`nSuggested Settings for Privacy: Block | Security: Block" }
@@ -597,6 +607,14 @@ $permPad = New-Object System.Windows.Forms.Label
 $permPad.Location = New-Object System.Drawing.Point(0, $permY)
 $permPad.Size = New-Object System.Drawing.Size(10, 40)
 [void]$rightPanel.Controls.Add($permPad)
+
+# Mutual Exclusivity Logic for Hardware Acceleration
+$haForceCb = $allFeatures | Where-Object { $_.Tag.Key -eq "HardwareAccelerationModeEnabled_Force" }
+$haDisableCb = $allFeatures | Where-Object { $_.Tag.Key -eq "HardwareAccelerationModeEnabled_Disable" }
+if ($haForceCb -and $haDisableCb) {
+    $haForceCb.Add_CheckedChanged({ if ($this.Checked -and $haDisableCb.Checked) { $haDisableCb.Checked = $false } })
+    $haDisableCb.Add_CheckedChanged({ if ($this.Checked -and $haForceCb.Checked) { $haForceCb.Checked = $false } })
+}
 
 $sbLabel = New-Object System.Windows.Forms.Label
 $sbLabel.Text = "Safe Browsing:"
@@ -992,13 +1010,15 @@ function Reload-UIFromRegistry {
     if ($null -ne $regProps) {
         foreach ($checkbox in $allFeatures) {
             $feature = $checkbox.Tag
+            $regName = if ($feature.RegistryName) { $feature.RegistryName } else { $feature.Key }
+            
             if ($feature.Type -eq "List") {
-                $listPath = Join-Path $global:registryPath $feature.Key
+                $listPath = Join-Path $global:registryPath $regName
                 if (Test-Path $listPath) {
                     $checkbox.Checked = $true
                 }
             } else {
-                $val = $regProps.($feature.Key)
+                $val = $regProps.($regName)
                 if ($null -ne $val -and $val -eq $feature.Value) {
                     $checkbox.Checked = $true
                 }
@@ -1077,11 +1097,13 @@ $saveButton.Add_Click({
     Update-Status "Applying settings to registry..."
     
     foreach ($checkbox in $allFeatures) {
+        $feature = $checkbox.Tag
+        $regName = if ($feature.RegistryName) { $feature.RegistryName } else { $feature.Key }
+        
         if ($checkbox.Checked) {
-            $feature = $checkbox.Tag
             try {
                 if ($feature.Type -eq "List") {
-                    $listPath = Join-Path $global:registryPath $feature.Key
+                    $listPath = Join-Path $global:registryPath $regName
                     if (-not (Test-Path $listPath)) { [void](New-Item -Path $listPath -Force) }
                     $i = 1
                     foreach ($item in $feature.Value) {
@@ -1089,22 +1111,34 @@ $saveButton.Add_Click({
                         $i++
                     }
                 } else {
-                    [void](Set-ItemProperty -Path $global:registryPath -Name $feature.Key -Value $feature.Value -Type $feature.Type -Force)
+                    [void](Set-ItemProperty -Path $global:registryPath -Name $regName -Value $feature.Value -Type $feature.Type -Force)
                 }
-                Write-Log "Successfully applied policy: $($feature.Key)"
+                Write-Log "Successfully applied policy: $regName"
             } catch {
-                Write-Log "Failed to apply policy $($feature.Key): $_"
+                Write-Log "Failed to apply policy $regName: $_"
             }
         } else {
-            $feature = $checkbox.Tag
-            try {
-                if ($feature.Type -eq "List") {
-                    $listPath = Join-Path $global:registryPath $feature.Key
-                    if (Test-Path $listPath) { Remove-Item -Path $listPath -Recurse -Force -ErrorAction SilentlyContinue }
-                } else {
-                    Remove-ItemProperty -Path $global:registryPath -Name $feature.Key -ErrorAction SilentlyContinue
+            # Smart removal: Check if another enabled property shares this exact RegistryName
+            $isManagedByOther = $false
+            foreach ($otherCb in $allFeatures) {
+                if ($otherCb -ne $checkbox -and $otherCb.Checked) {
+                    $otherRegName = if ($otherCb.Tag.RegistryName) { $otherCb.Tag.RegistryName } else { $otherCb.Tag.Key }
+                    if ($otherRegName -eq $regName) { 
+                        $isManagedByOther = $true
+                        break 
+                    }
                 }
-            } catch { }
+            }
+            if (-not $isManagedByOther) {
+                try {
+                    if ($feature.Type -eq "List") {
+                        $listPath = Join-Path $global:registryPath $regName
+                        if (Test-Path $listPath) { Remove-Item -Path $listPath -Recurse -Force -ErrorAction SilentlyContinue }
+                    } else {
+                        Remove-ItemProperty -Path $global:registryPath -Name $regName -ErrorAction SilentlyContinue
+                    }
+                } catch { }
+            }
         }
     }
 
@@ -1210,11 +1244,13 @@ function Reset-AllSettings {
         try {
             foreach ($cb in $allFeatures) {
                 $feature = $cb.Tag
+                $regName = if ($feature.RegistryName) { $feature.RegistryName } else { $feature.Key }
+                
                 if ($feature.Type -eq "List") {
-                    $listPath = Join-Path $global:registryPath $feature.Key
+                    $listPath = Join-Path $global:registryPath $regName
                     if (Test-Path $listPath) { Remove-Item -Path $listPath -Recurse -Force -ErrorAction SilentlyContinue }
                 } else {
-                    Remove-ItemProperty -Path $global:registryPath -Name $feature.Key -ErrorAction SilentlyContinue
+                    Remove-ItemProperty -Path $global:registryPath -Name $regName -ErrorAction SilentlyContinue
                 }
             }
 
@@ -1282,7 +1318,18 @@ $exportButton.Add_Click({
     $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
     $saveFileDialog.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*"
     $saveFileDialog.Title = "Export SlimBrave Settings"
-    $saveFileDialog.InitialDirectory = [Environment]::GetFolderPath("MyDocuments")
+    
+    $docsPath = [Environment]::GetFolderPath("MyDocuments")
+    try {
+        $invokingUser = (Get-CimInstance Win32_ComputerSystem).UserName
+        if ($invokingUser) {
+            $username = $invokingUser.Split('\')[-1]
+            $testPath = "C:\Users\$username\Documents"
+            if (Test-Path $testPath) { $docsPath = $testPath }
+        }
+    } catch {}
+    
+    $saveFileDialog.InitialDirectory = $docsPath
     $saveFileDialog.FileName = "SlimBraveSettings.json"
     
     if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
@@ -1302,7 +1349,18 @@ $importButton.Add_Click({
     $openFileDialog = New-Object System.Windows.Forms.OpenFileDialog
     $openFileDialog.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*"
     $openFileDialog.Title = "Import SlimBrave Settings"
-    $openFileDialog.InitialDirectory = [Environment]::GetFolderPath("MyDocuments")
+    
+    $docsPath = [Environment]::GetFolderPath("MyDocuments")
+    try {
+        $invokingUser = (Get-CimInstance Win32_ComputerSystem).UserName
+        if ($invokingUser) {
+            $username = $invokingUser.Split('\')[-1]
+            $testPath = "C:\Users\$username\Documents"
+            if (Test-Path $testPath) { $docsPath = $testPath }
+        }
+    } catch {}
+    
+    $openFileDialog.InitialDirectory = $docsPath
     
     if ($openFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         try {
