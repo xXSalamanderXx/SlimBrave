@@ -1115,7 +1115,7 @@ $saveButton.Add_Click({
                 }
                 Write-Log "Successfully applied policy: $regName"
             } catch {
-                Write-Log "Failed to apply policy $regName: $_"
+                Write-Log "Failed to apply policy $($regName): $_"
             }
         } else {
             # Smart removal: Check if another enabled property shares this exact RegistryName
