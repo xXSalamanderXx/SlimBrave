@@ -219,7 +219,7 @@ def main():
         {"Name": "Disable P3A Telemetry", "Key": "BraveP3AEnabled", "Value": False, "Type": "bool", "ToolTip": "Disables Privacy-Preserving Product Analytics completely.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Daily Stats Ping", "Key": "BraveStatsPingEnabled", "Value": False, "Type": "bool", "ToolTip": "Stops the daily active user ping.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
         {"Name": "Disable Web Discovery", "Key": "BraveWebDiscoveryEnabled", "Value": False, "Type": "bool", "ToolTip": "Prevents anonymous search/browsing data from being sent to Brave Search.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
-        {"Name": "Limit Variations (Critical Fixes)", "Key": "ChromeVariations", "Value": 2, "Type": "int", "ToolTip": "Stops Brave from fetching general feature-flip seeds from variations.brave.com, limiting to critical security updates.\n\nSuggested Settings for Privacy: Ticked | Security: Unticked"},
+        {"Name": "Limit Variations", "Key": "ChromeVariations", "Value": 2, "Type": "int", "ToolTip": "Stops Brave from fetching general feature-flip seeds from variations.brave.com, limiting to critical security updates only.\n\nSuggested Settings for Privacy: Ticked | Security: Unticked"},
     ]
 
     privacy_features = [
@@ -338,7 +338,7 @@ def main():
     }
 
     root = tk.Tk()
-    root.title("SlimBrave - Revived v1.1.2 (macOS)")
+    root.title("SlimBrave - Revived v1.1.3 (macOS)")
     root.geometry("1100x600")
     root.minsize(980, 450)
     root.configure(bg="#191919")
@@ -1993,4 +1993,3 @@ def main():
 if __name__ == "__main__":
     dependency_setup()
     main()
-    

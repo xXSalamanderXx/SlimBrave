@@ -40,7 +40,7 @@ if (-not (Test-Path -Path $global:registryPath)) {
 
 Clear-Host
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "SlimBrave - Revived v1.1.2"
+$form.Text = "SlimBrave - Revived v1.1.3"
 $form.ForeColor = [System.Drawing.Color]::White
 $form.Size = New-Object System.Drawing.Size(1300, 850) 
 $form.MinimumSize = New-Object System.Drawing.Size(1300, 850)
@@ -291,7 +291,7 @@ $telemetryFeatures = @(
     @{ Name = "Disable P3A Telemetry"; Key = "BraveP3AEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Privacy-Preserving Product Analytics completely.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Daily Stats Ping"; Key = "BraveStatsPingEnabled"; Value = 0; Type = "DWord"; ToolTip = "Stops the daily active user ping.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
     @{ Name = "Disable Web Discovery"; Key = "BraveWebDiscoveryEnabled"; Value = 0; Type = "DWord"; ToolTip = "Prevents anonymous search/browsing data from being sent to Brave Search.`n`nSuggested Settings for Privacy: Ticked | Security: Ticked" },
-    @{ Name = "Limit Variations (Critical Fixes)"; Key = "ChromeVariations"; Value = 2; Type = "DWord"; ToolTip = "Stops Brave from fetching general feature-flip seeds from variations.brave.com, limiting to critical security updates.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" }
+    @{ Name = "Limit Variations"; Key = "ChromeVariations"; Value = 2; Type = "DWord"; ToolTip = "Stops Brave from fetching general feature-flip seeds from variations.brave.com, limiting to critical security updates only.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" }
 )
 
 [int]$leftY = 40
