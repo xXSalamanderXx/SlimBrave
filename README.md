@@ -72,6 +72,11 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 > [!TIP]
 > Better if you run Powershell as Administrator
 ```ps1
+iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave-Windows.ps1" -OutFile "SlimBrave-Windows.ps1"; .\SlimBrave-Windows.ps1
+```
+> [!IMPORTANT]
+> Use this command if the previous one is denied by Windows policies.
+```ps1
 iwr "https://raw.githubusercontent.com/xXSalamanderXx/SlimBrave/main/SlimBrave-Windows.ps1" -OutFile "SlimBrave-Windows.ps1"; powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\SlimBrave-Windows.ps1"
 ```
 ## or
