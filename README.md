@@ -157,13 +157,13 @@ Your support helps keep development active and appreciated. 💙
 
 You might also like these projects:
 
-[🔎 RLSBB-Search-Plus](https://github.com/xXSalamanderXx/RLSBB-Search-Plus)
-
-[🎬 HDEncode-Search-Plus](https://github.com/xXSalamanderXx/HDEncode-Search-Plus)
-
-[🦎 salamander-trackers](https://github.com/xXSalamanderXx/salamander-trackers)
-
-[📷️ Caesium Image Compressor - Linux](https://github.com/xXSalamanderXx/caesium-image-compressor-linux)
+- [🦎 salamander-trackers](https://github.com/xXSalamanderXx/salamander-trackers)
+- [📜 Salamander-Userscripts](https://github.com/xXSalamanderXx/Salamander-Userscripts)
+- [🔎 RLSBB-Search-Plus](https://github.com/xXSalamanderXx/RLSBB-Search-Plus)
+- [🎬 HDEncode-Search-Plus](https://github.com/xXSalamanderXx/HDEncode-Search-Plus)
+- [📷️ Caesium Image Compressor - Linux](https://github.com/xXSalamanderXx/caesium-image-compressor-linux)
+- [📚 Arvio-Catalogs](https://github.com/xXSalamanderXx/Arvio-Catalogs)
+- [🐺 librewolf-one](https://github.com/xXSalamanderXx/librewolf-one)
 
 ---
 
