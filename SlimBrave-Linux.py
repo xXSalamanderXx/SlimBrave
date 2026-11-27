@@ -295,7 +295,7 @@ def main():
                 self.tooltip_window = None
 
     def create_tooltip(widget, text):
-        ToolTip(widget, text)
+        return ToolTip(widget, text)
 
     style = ttk.Style()
     style.theme_use("clam")
@@ -357,16 +357,35 @@ def main():
         if suspend_dirty_tracking:
             return
         for key, widget in feature_widgets.items():
+            widget, marker, reason_tip = widget
             checked = bool(all_feature_vars[key].get())
             if preset_preview is None:
+                reason_tip.on_leave()
+                marker.pack_forget()
                 widget.configure(style="TCheckbutton")
                 continue
-            retained, seen = preset_preview
+            retained, seen, selected = preset_preview
             if checked:
                 seen.add(key)
             state = ("Retained" if key in retained else "Added") if checked else (
                 "Removed" if key in seen else "Neutral")
             widget.configure(style=f"{state}.TCheckbutton")
+            if state == "Added":
+                reason = "Added by Preset" if key in selected else "Manually Added, Preset Disabled This"
+                color = "#90EE90"
+            elif state == "Removed":
+                reason = "Removed from Preset" if key in selected else "Removed from your Current Configuration"
+                color = "#FF8585"
+            else:
+                reason_tip.on_leave()
+                marker.pack_forget()
+                continue
+            if reason_tip.text != reason:
+                reason_tip.on_leave()
+                reason_tip.text = reason
+            marker.configure(fg=color)
+            if not marker.winfo_manager():
+                marker.pack(side="left", padx=(4, 0))
 
     all_perm_vars = {}
 
@@ -1539,7 +1558,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
         features, permissions, safe_browsing, dns_mode = PRESETS[preset_type]
         before = {key for key, var in all_feature_vars.items() if var.get()}
         selected = {key for key in features if not (is_origin_only and key in compiled_out_keys)}
-        preset_preview = (before & selected, before | selected)
+        preset_preview = (before & selected, before | selected, selected)
         suspend_dirty_tracking = True
         try:
             for key, var in all_feature_vars.items():
@@ -1695,9 +1714,13 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             var = tk.IntVar()
             all_feature_vars[feat["Key"]] = var
             var.trace_add("write", check_dirty_state)
-            cb = ttk.Checkbutton(parent, text=feat["Name"], variable=var)
-            cb.pack(anchor="w", padx=16, pady=1)
-            feature_widgets[feat["Key"]] = cb
+            row = tk.Frame(parent, bg="#232323")
+            row.pack(anchor="w", padx=16, pady=1)
+            cb = ttk.Checkbutton(row, text=feat["Name"], variable=var)
+            cb.pack(side="left")
+            marker = tk.Label(row, text="(?)", bg="#232323", padx=0, pady=0,
+                              font=("sans-serif", 9))
+            feature_widgets[feat["Key"]] = (cb, marker, create_tooltip(marker, ""))
             var.trace_add("write", refresh_preset_colors)
             create_tooltip(cb, preset_tooltip(feat["ToolTip"], feat["Key"]))
 
