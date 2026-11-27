@@ -127,89 +127,115 @@ $presetDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $toolTip.SetToolTip($presetDropdown, "Select a preset to automatically configure recommended settings.")
 $form.Controls.Add($presetDropdown)
 
+$script:presetTable = [ordered]@{
+    "Maximum Privacy" = @{
+        Features = @('AccessibilityImageLabelsEnabled', 'AutofillAddressEnabled', 'AutofillCreditCardEnabled', 'BackgroundModeEnabled', 'BasicAuthOverHttpEnabled', 'BlockExternalExtensions', 'BlockThirdPartyCookies', 'BraveAIChatEnabled', 'BraveDeAMPEnabled', 'BraveDebouncingEnabled', 'BraveLocalAiEnabled', 'BraveNewsDisabled', 'BraveP3AEnabled', 'BravePlaylistEnabled', 'BraveRewardsDisabled', 'BraveSpeedreaderEnabled', 'BraveStatsPingEnabled', 'BraveTalkDisabled', 'BraveTrackersStrippingEnabled', 'BraveWalletDisabled', 'BraveWaybackMachineEnabled', 'BraveWebDiscoveryEnabled', 'BrowserSignin', 'DefaultJavaScriptOptimizerSetting', 'ExtensionInstallTypeBlocklist', 'ExternalProtocolDialogShowAlwaysOpenCheckbox', 'GlobalPrivacyControlEnabled', 'HttpsOnlyMode', 'MetricsReportingEnabled', 'NetworkPredictionOptions', 'OriginKeyedProcessesEnabled', 'ReduceAcceptLanguage', 'RemoteDebuggingAllowed', 'SearchSuggestEnabled', 'SitePerProcess', 'SpellCheckServiceEnabled', 'UrlKeyedAnonymizedDataCollectionEnabled', 'WebRtcIPHandling', 'XSLTEnabled', 'BraveVPNDisabled')
+        Permissions = @{DefaultGeolocationSetting = 'Block'; DefaultNotificationsSetting = 'Block'; DefaultPopupsSetting = 'Block'; DefaultWebUsbGuardSetting = 'Block'; DefaultSerialGuardSetting = 'Block'; DefaultWebHidGuardSetting = 'Block'; DefaultFileSystemReadGuardSetting = 'Block'; DefaultClipboardSetting = 'Block'; DefaultWindowPlacementSetting = 'Block'; DefaultLocalFontsSetting = 'Block'; PaymentMethodQueryEnabled = 'Block'; DefaultSensorsSetting = 'Block'}
+        SafeBrowsing = 'On'; DnsMode = 'Automatic'
+    }
+    "High Security" = @{
+        Features = @('BackgroundModeEnabled', 'BasicAuthOverHttpEnabled', 'BlockExternalExtensions', 'BlockThirdPartyCookies', 'BraveAIChatEnabled', 'BraveLocalAiEnabled', 'BraveNewsDisabled', 'BraveP3AEnabled', 'BravePlaylistEnabled', 'BraveRewardsDisabled', 'BraveSpeedreaderEnabled', 'BraveStatsPingEnabled', 'BraveTalkDisabled', 'BraveWalletDisabled', 'BraveWaybackMachineEnabled', 'BraveWebDiscoveryEnabled', 'DefaultJavaScriptOptimizerSetting', 'ExtensionInstallTypeBlocklist', 'ExternalProtocolDialogShowAlwaysOpenCheckbox', 'HttpsOnlyMode', 'MetricsReportingEnabled', 'OriginKeyedProcessesEnabled', 'RemoteDebuggingAllowed', 'SSLErrorOverrideAllowed', 'SafeBrowsingProceedAnywayDisabled', 'SitePerProcess', 'UrlKeyedAnonymizedDataCollectionEnabled', 'XSLTEnabled', 'BraveVPNDisabled')
+        Permissions = @{DefaultPopupsSetting = 'Block'; DefaultWebUsbGuardSetting = 'Block'; DefaultSerialGuardSetting = 'Block'; DefaultWebHidGuardSetting = 'Block'; DefaultFileSystemReadGuardSetting = 'Block'; DefaultClipboardSetting = 'Block'}
+        SafeBrowsing = 'On'; DnsMode = 'Automatic'
+    }
+    "Performance Focused" = @{
+        Features = @('BackgroundModeEnabled', 'BraveLocalAiEnabled', 'BraveNewsDisabled', 'BravePlaylistEnabled', 'BraveRewardsDisabled', 'BraveTalkDisabled', 'BraveWalletDisabled', 'EnableMediaRouter', 'HighEfficiencyModeEnabled', 'BraveVPNDisabled')
+        Permissions = @{}
+        SafeBrowsing = 'On'; DnsMode = ''
+    }
+    "Strict Parental Controls" = @{
+        Features = @('AllowDeletingBrowserHistory', 'BasicAuthOverHttpEnabled', 'BraveAIChatEnabled', 'BraveLocalAiEnabled', 'BrowserGuestModeEnabled', 'ExtensionInstallBlocklist', 'ExtensionInstallTypeBlocklist', 'ForceGoogleSafeSearch', 'ForceYouTubeRestrict', 'IncognitoModeAvailability', 'PromptForDownloadLocation', 'RemoteDebuggingAllowed', 'SSLErrorOverrideAllowed', 'SafeBrowsingProceedAnywayDisabled', 'SpellCheckServiceEnabled', 'SyncDisabled', 'TorDisabled')
+        Permissions = @{DefaultPopupsSetting = 'Block'; DefaultNotificationsSetting = 'Block'}
+        SafeBrowsing = 'On'; DnsMode = 'Secure'
+    }
+    "Balanced Privacy" = @{
+        Features = @('BasicAuthOverHttpEnabled', 'BlockExternalExtensions', 'BlockThirdPartyCookies', 'BraveDeAMPEnabled', 'BraveDebouncingEnabled', 'BraveLocalAiEnabled', 'BraveNewsDisabled', 'BraveP3AEnabled', 'BravePlaylistEnabled', 'BraveRewardsDisabled', 'BraveStatsPingEnabled', 'BraveTrackersStrippingEnabled', 'BraveWalletDisabled', 'ExtensionInstallTypeBlocklist', 'GlobalPrivacyControlEnabled', 'MetricsReportingEnabled', 'RemoteDebuggingAllowed', 'SpellCheckServiceEnabled', 'UrlKeyedAnonymizedDataCollectionEnabled')
+        Permissions = @{DefaultPopupsSetting = 'Block'; PaymentMethodQueryEnabled = 'Block'; DefaultSensorsSetting = 'Block'}
+        SafeBrowsing = 'On'; DnsMode = 'Automatic'
+    }
+    "Developer" = @{
+        Features = @('BraveDeAMPEnabled', 'BraveDebouncingEnabled', 'BraveLocalAiEnabled', 'BraveNewsDisabled', 'BravePlaylistEnabled', 'BraveRewardsDisabled', 'BraveWalletDisabled', 'SpellCheckServiceEnabled')
+        Permissions = @{}
+        SafeBrowsing = 'On'; DnsMode = ''
+    }
+    "Brave Origin" = @{
+        Features = @('BraveAIChatEnabled', 'BraveEmailAliasesEnabled', 'BraveLocalAiEnabled', 'BraveNewsDisabled', 'BraveP3AEnabled', 'BravePlaylistEnabled', 'BraveRewardsDisabled', 'BraveSpeedreaderEnabled', 'BraveStatsPingEnabled', 'BraveTalkDisabled', 'BraveWalletDisabled', 'BraveWaybackMachineEnabled', 'BraveWebDiscoveryEnabled', 'TorDisabled', 'BraveVPNDisabled')
+        Permissions = @{}
+        SafeBrowsing = ''; DnsMode = ''
+    }
+}
+$script:presetPreview = $null
+$script:featureMarkers = @{}
+
+function Get-PresetChoice($entry, [string]$key, [string]$kind) {
+    switch ($kind) {
+        'Permission' { if ($entry.Permissions.ContainsKey($key)) { return $entry.Permissions[$key] }; return 'Not Set' }
+        'SafeBrowsing' { if ($entry.SafeBrowsing) { return $entry.SafeBrowsing }; return 'Not Set' }
+        'DnsMode' { if ($entry.DnsMode) { return $entry.DnsMode }; return 'Not Set' }
+        'Template' { if ($entry.DnsMode -eq 'Secure') { return 'Cloudflare for Families' }; return '(Blank)' }
+        default { if ($entry.Features -contains $key) { return 'Ticked' }; return 'Unticked' }
+    }
+}
+
+function Get-PresetTooltip([string]$description, [string]$key, [string]$kind = 'Feature') {
+    $description = ($description -split '\r?\n\r?\nSuggested Settings', 2)[0]
+    $privacy = Get-PresetChoice $script:presetTable['Maximum Privacy'] $key $kind
+    $security = Get-PresetChoice $script:presetTable['High Security'] $key $kind
+    $rows = foreach ($name in $script:presetTable.Keys) {
+        "${name}: $(Get-PresetChoice $script:presetTable[$name] $key $kind)"
+    }
+    return "$description`n`nSuggested Settings for Privacy: $privacy | Security: $security`n`nPreset selections:`n$($rows -join "`n")"
+}
+
+function Update-PresetColor($cb) {
+    $key = $cb.Tag.Key
+    if (-not $script:featureMarkers.ContainsKey($key)) { return }
+    $marker = $script:featureMarkers[$key]
+    $reason = ''
+    $color = [System.Drawing.Color]::White
+    if ($cb.Checked) {
+        $color = [System.Drawing.Color]::DeepSkyBlue
+        if ($script:presetPreview) {
+            $script:presetPreview.Seen[$key] = $true
+            if (-not $script:presetPreview.Retained.ContainsKey($key)) {
+                $color = [System.Drawing.Color]::LightGreen
+                $reason = if ($script:presetPreview.Selected -contains $key) { 'Added by Preset' } else { 'Manually Added, Preset Disabled This' }
+            }
+        }
+    } elseif ($script:presetPreview -and $script:presetPreview.Seen.ContainsKey($key)) {
+        $color = [System.Drawing.Color]::LightCoral
+        $reason = if ($script:presetPreview.Selected -contains $key) { 'Removed from Preset' } else { 'Removed from your Current Configuration' }
+    }
+    $cb.ForeColor = $color
+    $marker.ForeColor = $color
+    $toolTip.SetToolTip($marker, $reason)
+    $marker.Visible = [bool]$reason
+}
+
 $presetDropdown.Add_SelectedIndexChanged({
-    if ($global:suspendPresetTriggers) { return }
-    $preset = $presetDropdown.SelectedItem
+    if ($global:suspendPresetTriggers -or -not $presetDropdown.SelectedItem) { return }
+    $name = [string]$presetDropdown.SelectedItem
+    $entry = $script:presetTable[$name]
+    if (-not $entry) { return }
+    $seen = @{}
+    $retained = @{}
+    foreach ($cb in $allFeatures) {
+        $key = $cb.Tag.Key
+        if ($cb.Checked -or $entry.Features -contains $key) { $seen[$key] = $true }
+        if ($cb.Checked -and $entry.Features -contains $key) { $retained[$key] = $true }
+    }
+    $script:presetPreview = @{ Seen = $seen; Retained = $retained; Selected = $entry.Features }
     $global:suspendDirtyTracking = $true
-    foreach ($cb in $allFeatures) { 
-         $cb.Checked = $false 
-         $cb.ForeColor = [System.Drawing.Color]::White
-    }
-    foreach ($perm in $allPerms) {
-        $n = $perm.Tag.Name
-        if ($n -eq "JavaScript") {
-            $perm.SelectedItem = "Allow"
-        } elseif ($n -in @("Camera", "Microphone")) {
-            $perm.SelectedItem = "Ask"
-        } elseif ($n -eq "Images") {
-            $perm.SelectedItem = "Not Set"
-        } else {
-            if ($perm.Items.Contains("Block")) {
-                $perm.SelectedItem = "Block"
-            } else {
-                $perm.SelectedItem = "Not Set"
-            }
-        }
-    }
-    switch ($preset) {
-        "Maximum Privacy" {
-            $keys = @("MetricsReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "AutofillAddressEnabled", "AutofillCreditCardEnabled", "PasswordManagerEnabled", "BrowserSignin", "WebRtcIPHandling", "BlockThirdPartyCookies", "PromptForDownloadLocation", "HttpsOnlyMode", "GlobalPrivacyControlEnabled", "BraveDeAMPEnabled", "BraveDebouncingEnabled", "BraveTrackersStrippingEnabled", "ReduceAcceptLanguage", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BackgroundModeEnabled", "SearchSuggestEnabled", "DefaultBrowserSettingEnabled", "BravePlaylistEnabled", "NetworkPredictionOptions", "PasswordLeakDetectionEnabled", "BraveLocalAiEnabled", "BasicAuthOverHttpEnabled", "RemoteDebuggingAllowed", "BlockExternalExtensions", "XSLTEnabled", "DefaultJavaScriptOptimizerSetting", "SitePerProcess", "OriginKeyedProcessesEnabled", "AccessibilityImageLabelsEnabled", "ExtensionInstallTypeBlocklist")
-            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
-            $sbDropdown.SelectedItem = "On"
-            $dnsDropdown.SelectedItem = "Off"
-            $dnsTplInput.Text = ""
-        }
-        "High Security" {
-            $keys = @("MetricsReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "BraveWebDiscoveryEnabled", "WebRtcIPHandling", "QuicAllowed", "BlockThirdPartyCookies", "ForceGoogleSafeSearch", "PromptForDownloadLocation", "HttpsOnlyMode", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "TorDisabled", "SyncDisabled", "BraveNewsDisabled", "BraveTalkDisabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BackgroundModeEnabled", "DeveloperToolsDisabled", "BravePlaylistEnabled", "RemoteDebuggingAllowed", "BlockExternalExtensions", "BasicAuthOverHttpEnabled", "BraveLocalAiEnabled", "SitePerProcess", "SafeBrowsingProceedAnywayDisabled", "SSLErrorOverrideAllowed")
-            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
-            $sbDropdown.SelectedItem = "On"
-            $dnsDropdown.SelectedItem = "Automatic"
-            $dnsTplInput.Text = ""
-        }
-        "Performance Focused" {
-            $keys = @("BackgroundModeEnabled", "BraveNewsDisabled", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveTalkDisabled", "BravePlaylistEnabled", "HighEfficiencyModeEnabled", "EnableMediaRouter", "SpellcheckEnabled", "BraveLocalAiEnabled")
-            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
-            $sbDropdown.SelectedItem = "On"
-            $dnsDropdown.SelectedItem = "Automatic"
-            $dnsTplInput.Text = ""
-        }
-        "Strict Parental Controls" {
-            $keys = @("BrowserGuestModeEnabled", "ExtensionInstallBlocklist", "ForceGoogleSafeSearch", "IncognitoModeAvailability", "SpellCheckServiceEnabled", "BraveAIChatEnabled", "TorDisabled", "BraveLocalAiEnabled", "PromptForDownloadLocation", "DefaultBrowserSettingEnabled", "SyncDisabled", "RemoteDebuggingAllowed", "ForceYouTubeRestrict", "SafeBrowsingProceedAnywayDisabled", "SSLErrorOverrideAllowed", "AllowDeletingBrowserHistory")
-            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
-            $sbDropdown.SelectedItem = "On"
-            $dnsDropdown.SelectedItem = "Secure"
-            $dnsTplInput.Text = "https://family.cloudflare-dns.com/dns-query{?dns}"
-        }
-        "Balanced Privacy" {
-            $keys = @("MetricsReportingEnabled", "UrlKeyedAnonymizedDataCollectionEnabled", "BraveP3AEnabled", "BraveStatsPingEnabled", "WebRtcIPHandling", "BlockThirdPartyCookies", "GlobalPrivacyControlEnabled", "BraveDeAMPEnabled", "BraveDebouncingEnabled", "BraveTrackersStrippingEnabled", "BraveRewardsDisabled", "BraveWalletDisabled", "BraveNewsDisabled", "BravePlaylistEnabled", "BraveLocalAiEnabled", "RemoteDebuggingAllowed", "BasicAuthOverHttpEnabled", "BlockExternalExtensions", "SpellCheckServiceEnabled", "AccessibilityImageLabelsEnabled", "ExtensionInstallTypeBlocklist")
-            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
-            $sbDropdown.SelectedItem = "On"
-            $dnsDropdown.SelectedItem = "Automatic"
-            $dnsTplInput.Text = ""
-        }
-        "Developer" {
-            $keys = @("BraveRewardsDisabled", "BraveWalletDisabled", "BraveNewsDisabled", "BravePlaylistEnabled", "BraveDeAMPEnabled", "BraveDebouncingEnabled", "BraveLocalAiEnabled", "SpellCheckServiceEnabled", "AccessibilityImageLabelsEnabled")
-            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
-            foreach ($perm in $allPerms) {
-                if ($perm.Tag.Key -in @("DefaultLocalFontsSetting", "DefaultClipboardSetting")) {
-                    $perm.SelectedItem = "Not Set"
-                }
-            }
-            $sbDropdown.SelectedItem = "On"
-            $dnsDropdown.SelectedItem = "Off"
-            $dnsTplInput.Text = ""
-        }
-        "Brave Origin" {
-            $keys = @("BraveRewardsDisabled", "BraveWalletDisabled", "BraveVPNDisabled", "BraveAIChatEnabled", "BraveLocalAiEnabled", "BraveNewsDisabled", "BraveTalkDisabled", "BravePlaylistEnabled", "BraveWebDiscoveryEnabled", "BraveSpeedreaderEnabled", "BraveWaybackMachineEnabled", "BraveEmailAliasesEnabled", "TorDisabled", "BraveP3AEnabled", "BraveStatsPingEnabled")
-            foreach ($key in $keys) { foreach ($cb in $allFeatures) { if ($cb.Tag.Key -eq $key) { $cb.Checked = $true; break } } }
-            $sbDropdown.SelectedIndex = -1
-            $dnsDropdown.SelectedItem = "Automatic"
-            $dnsTplInput.Text = ""
-        }
-    }
-    $global:suspendDirtyTracking = $false
+    try {
+        foreach ($cb in $allFeatures) { $cb.Checked = ($entry.Features -contains $cb.Tag.Key) }
+        foreach ($perm in $allPerms) { $perm.SelectedItem = (Get-PresetChoice $entry $perm.Tag.Key 'Permission') }
+        if ($entry.SafeBrowsing) { $sbDropdown.SelectedItem = $entry.SafeBrowsing } else { $sbDropdown.SelectedIndex = -1 }
+        if ($entry.DnsMode) { $dnsDropdown.SelectedItem = $entry.DnsMode } else { $dnsDropdown.SelectedIndex = -1 }
+        $dnsTplInput.Text = if ($entry.DnsMode -eq 'Secure') { 'https://family.cloudflare-dns.com/dns-query{?dns}' } else { '' }
+    } finally { $global:suspendDirtyTracking = $false }
+    foreach ($cb in $allFeatures) { Update-PresetColor $cb }
     Check-DirtyState
-    Update-Status "Loaded: $preset preset."
+    Update-Status "${name} preview: green = added, blue = kept, red = unticked. Apply to save."
 })
 
 $statusBar = New-Object System.Windows.Forms.Label
@@ -240,7 +266,8 @@ function Set-DirtyState([bool]$dirty) {
         $saveStatusLabel.Text = "Changes Need To Be Saved..."
         $saveStatusLabel.ForeColor = [System.Drawing.Color]::Gold
     } else {
-        $saveStatusLabel.Text = "Changes Applied [OK]"
+        $snap = Get-UIStateSnapshot
+        $saveStatusLabel.Text = if ($snap.Features.Count -or $snap.Permissions.Count -or $snap.SafeBrowsing -or $snap.DnsMode) { "Profile Active [OK]" } else { "Unmanaged" }
         $saveStatusLabel.ForeColor = [System.Drawing.Color]::LightGreen
     }
     $statusPanel.Refresh()
@@ -377,9 +404,16 @@ foreach ($feature in $telemetryFeatures) {
         }
         Check-DirtyState
     })
-    $toolTip.SetToolTip($checkbox, $feature.ToolTip)
+    $toolTip.SetToolTip($checkbox, (Get-PresetTooltip $feature.ToolTip $feature.Key))
     $leftPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
+    $marker = New-Object System.Windows.Forms.Label
+    $marker.Text = '(?)'
+    $marker.Size = New-Object System.Drawing.Size(27, 20)
+    $marker.Visible = $false
+    $leftPanel.Controls.Add($marker)
+    $script:featureMarkers[$feature.Key] = $marker
+    $checkbox.Add_CheckedChanged({ if (-not $global:suspendDirtyTracking) { Update-PresetColor $this } })
     $leftY += 28
 }
 
@@ -432,9 +466,16 @@ foreach ($feature in $privacyFeatures) {
         }
         Check-DirtyState
     })
-    $toolTip.SetToolTip($checkbox, $feature.ToolTip)
+    $toolTip.SetToolTip($checkbox, (Get-PresetTooltip $feature.ToolTip $feature.Key))
     $leftPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
+    $marker = New-Object System.Windows.Forms.Label
+    $marker.Text = '(?)'
+    $marker.Size = New-Object System.Drawing.Size(27, 20)
+    $marker.Visible = $false
+    $leftPanel.Controls.Add($marker)
+    $script:featureMarkers[$feature.Key] = $marker
+    $checkbox.Add_CheckedChanged({ if (-not $global:suspendDirtyTracking) { Update-PresetColor $this } })
     $leftY += 28
 }
 
@@ -508,9 +549,16 @@ foreach ($feature in $braveFeatures) {
         }
         Check-DirtyState
     })
-    $toolTip.SetToolTip($checkbox, $feature.ToolTip)
+    $toolTip.SetToolTip($checkbox, (Get-PresetTooltip $feature.ToolTip $feature.Key))
     $midPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
+    $marker = New-Object System.Windows.Forms.Label
+    $marker.Text = '(?)'
+    $marker.Size = New-Object System.Drawing.Size(27, 20)
+    $marker.Visible = $false
+    $midPanel.Controls.Add($marker)
+    $script:featureMarkers[$feature.Key] = $marker
+    $checkbox.Add_CheckedChanged({ if (-not $global:suspendDirtyTracking) { Update-PresetColor $this } })
     $midY += 28
 }
 
@@ -560,9 +608,16 @@ foreach ($feature in $perfFeatures) {
         }
         Check-DirtyState
     })
-    $toolTip.SetToolTip($checkbox, $feature.ToolTip)
+    $toolTip.SetToolTip($checkbox, (Get-PresetTooltip $feature.ToolTip $feature.Key))
     $midPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
+    $marker = New-Object System.Windows.Forms.Label
+    $marker.Text = '(?)'
+    $marker.Size = New-Object System.Drawing.Size(27, 20)
+    $marker.Visible = $false
+    $midPanel.Controls.Add($marker)
+    $script:featureMarkers[$feature.Key] = $marker
+    $checkbox.Add_CheckedChanged({ if (-not $global:suspendDirtyTracking) { Update-PresetColor $this } })
     $midY += 28
 }
 
@@ -612,9 +667,16 @@ foreach ($feature in $accessFeatures) {
         if ($this.Checked) { $this.ForeColor = [System.Drawing.Color]::DeepSkyBlue } else { $this.ForeColor = [System.Drawing.Color]::White }
         Check-DirtyState
     })
-    $toolTip.SetToolTip($checkbox, $feature.ToolTip)
+    $toolTip.SetToolTip($checkbox, (Get-PresetTooltip $feature.ToolTip $feature.Key))
     $rightPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
+    $marker = New-Object System.Windows.Forms.Label
+    $marker.Text = '(?)'
+    $marker.Size = New-Object System.Drawing.Size(27, 20)
+    $marker.Visible = $false
+    $rightPanel.Controls.Add($marker)
+    $script:featureMarkers[$feature.Key] = $marker
+    $checkbox.Add_CheckedChanged({ if (-not $global:suspendDirtyTracking) { Update-PresetColor $this } })
     $permY += 28
 }
 
@@ -651,7 +713,7 @@ foreach ($p in $permissionSettings) {
     $lbl.Size = New-Object System.Drawing.Size(165, 20)
     $lbl.Location = New-Object System.Drawing.Point(30, $permY)
     $lbl.ForeColor = [System.Drawing.Color]::White
-    $toolTip.SetToolTip($lbl, $p.ToolTip)
+    $toolTip.SetToolTip($lbl, (Get-PresetTooltip $p.ToolTip $p.Key "Permission"))
     [void]$rightPanel.Controls.Add($lbl)
 
     $cb = New-Object System.Windows.Forms.ComboBox
@@ -665,7 +727,7 @@ foreach ($p in $permissionSettings) {
     $cb.ForeColor = [System.Drawing.Color]::White
     $cb.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $cb.Add_SelectedIndexChanged({ Check-DirtyState })
-    $toolTip.SetToolTip($cb, $p.ToolTip)
+    $toolTip.SetToolTip($cb, (Get-PresetTooltip $p.ToolTip $p.Key "Permission"))
     [void]$rightPanel.Controls.Add($cb)
     $allPerms += $cb
     $permY += 35
@@ -698,7 +760,7 @@ $sbDropdown.ForeColor = [System.Drawing.Color]::White
 $sbDropdown.Add_SelectedIndexChanged({ Check-DirtyState })
 $form.Controls.Add($sbDropdown)
 
-$sbTooltip = "On = Standard Safe Browsing. Off = Disabled entirely.`n`nSuggested Settings for Privacy: Off | Security: On"
+$sbTooltip = Get-PresetTooltip 'On uses Standard Safe Browsing. Off disables it. Not Set leaves Brave defaults.' '' 'SafeBrowsing'
 $toolTip.SetToolTip($sbDropdown, $sbTooltip)
 $toolTip.SetToolTip($sbLabel, $sbTooltip)
 
@@ -716,7 +778,7 @@ $dnsDropdown.ForeColor = [System.Drawing.Color]::White
 $dnsDropdown.Add_SelectedIndexChanged({ Check-DirtyState })
 $form.Controls.Add($dnsDropdown)
 
-$dnsTooltip = "Forces encrypted DNS lookups.`n`nSuggested Settings for Privacy: Off | Security: On"
+$dnsTooltip = Get-PresetTooltip 'Automatic can fall back to unencrypted DNS. Secure requires an HTTPS resolver.' '' 'DnsMode'
 $toolTip.SetToolTip($dnsDropdown, $dnsTooltip)
 $toolTip.SetToolTip($dnsLabel, $dnsTooltip)
 
@@ -733,7 +795,7 @@ $dnsTplInput.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
 $dnsTplInput.Add_TextChanged({ Check-DirtyState })
 $form.Controls.Add($dnsTplInput)
 
-$dnsTplTooltip = "Specifies the DoH resolver URL template when 'Custom' or 'Secure' is selected.`n`nSuggested Settings for Privacy: (Blank) | Security: (Blank)"
+$dnsTplTooltip = Get-PresetTooltip 'Optional for Automatic; required for Secure or Custom.' '' 'Template'
 $toolTip.SetToolTip($dnsTplInput, $dnsTplTooltip)
 $toolTip.SetToolTip($dnsTplLabel, $dnsTplTooltip)
 
@@ -814,6 +876,11 @@ function Get-UIStateSnapshot {
 }
 
 function Update-Baseline {
+    $script:presetPreview = $null
+    foreach ($cb in $allFeatures) { Update-PresetColor $cb }
+    $priorPresetSuspend = $global:suspendPresetTriggers
+    $global:suspendPresetTriggers = $true
+    try { $presetDropdown.SelectedIndex = -1 } finally { $global:suspendPresetTriggers = $priorPresetSuspend }
     $global:baselineStateJson = Get-UIStateSnapshot | ConvertTo-Json -Depth 3 -Compress
 }
 
@@ -1011,7 +1078,23 @@ function Update-Layout {
     $rightPanel.Size = New-Object System.Drawing.Size($panelWidth, $panelHeight)
 
     foreach ($cb in $allFeatures) {
-        $cb.Width = $panelWidth - 60
+        $cb.Width = $panelWidth - 95
+        $marker = $script:featureMarkers[$cb.Tag.Key]
+        $marker.Location = New-Object System.Drawing.Point(($cb.Right + 2), ($cb.Top + 3))
+    }
+
+    foreach ($panel in @($leftPanel, $midPanel, $rightPanel)) {
+        $offset = $panel.AutoScrollPosition.Y
+        $bottom = 0
+        foreach ($control in $panel.Controls) {
+            if ($control.Bottom - $offset -gt $bottom) { $bottom = $control.Bottom - $offset }
+        }
+        if ($bottom -le $panel.ClientSize.Height) {
+            $panel.AutoScrollPosition = [System.Drawing.Point]::Empty
+            $panel.AutoScroll = $false
+        } else {
+            $panel.AutoScroll = $true
+        }
     }
 
     $bottomY = $leftPanel.Bottom + 20
@@ -1481,7 +1564,10 @@ $importButton.Add_Click({
         try {
             $result = Read-SlimBraveImport $openFileDialog.FileName
             $prior = Get-UIStateSnapshot | ConvertTo-Json -Depth 4 | ConvertFrom-Json
-            try { Restore-StateToUI $result.State } catch {
+            try {
+                Restore-StateToUI $result.State
+                foreach ($cb in $allFeatures) { Update-PresetColor $cb }
+            } catch {
                 Restore-StateToUI $prior
                 throw
             }
@@ -1505,7 +1591,6 @@ $form.Add_Shown({
 })
 
 Reload-UIFromRegistry
-Check-StateChanges
 Update-Layout
 
 [void] $form.ShowDialog()
