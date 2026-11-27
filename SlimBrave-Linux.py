@@ -300,6 +300,12 @@ def main():
     style = ttk.Style()
     style.theme_use("clam")
     
+    for state, color in {"Retained": "#87CEFA", "Added": "#90EE90",
+                         "Removed": "#FF8585", "Neutral": "white"}.items():
+        name = f"{state}.TCheckbutton"
+        style.configure(name, foreground=color)
+        style.map(name, foreground=[("!disabled", color)])
+
     style.configure("TCheckbutton", background="#232323", foreground="white", font=("sans-serif", 9))
     style.map("TCheckbutton", 
               background=[("active", "#232323")],
@@ -344,6 +350,24 @@ def main():
     suspend_dirty_tracking = False
     baseline_state = ""
     all_feature_vars = {}
+    feature_widgets = {}
+    preset_preview = None
+
+    def refresh_preset_colors(*_):
+        if suspend_dirty_tracking:
+            return
+        for key, widget in feature_widgets.items():
+            checked = bool(all_feature_vars[key].get())
+            if preset_preview is None:
+                widget.configure(style="TCheckbutton")
+                continue
+            retained, seen = preset_preview
+            if checked:
+                seen.add(key)
+            state = ("Retained" if key in retained else "Added") if checked else (
+                "Removed" if key in seen else "Neutral")
+            widget.configure(style=f"{state}.TCheckbutton")
+
     all_perm_vars = {}
 
     status_var = tk.StringVar(value="Ready.")
@@ -415,8 +439,10 @@ def main():
         }
 
     def update_baseline():
-        nonlocal baseline_state
+        nonlocal baseline_state, preset_preview
         baseline_state = json.dumps(get_ui_snapshot(), sort_keys=True)
+        preset_preview = None
+        refresh_preset_colors()
 
     def check_dirty_state(*args):
         if suspend_dirty_tracking:
@@ -1100,6 +1126,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             return
         apply_json_state_to_ui(dict(Features=list(selected.values()), Permissions=cleaned,
                                    SafeBrowsing=sb, DnsMode=mode, DnsTemplate=template))
+        refresh_preset_colors()
         set_status("Settings staged. Review before applying.")
         if notes:
             messagebox.showinfo("Import notes", "\n".join(notes[:5]) +
@@ -1506,10 +1533,13 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
         return f"{description}\n\n{reference}\n\nPreset selections:\n{states}"
 
     def apply_preset(preset_type):
-        nonlocal suspend_dirty_tracking
+        nonlocal suspend_dirty_tracking, preset_preview
         if preset_type not in PRESETS:
             return
         features, permissions, safe_browsing, dns_mode = PRESETS[preset_type]
+        before = {key for key, var in all_feature_vars.items() if var.get()}
+        selected = {key for key in features if not (is_origin_only and key in compiled_out_keys)}
+        preset_preview = (before & selected, before | selected)
         suspend_dirty_tracking = True
         try:
             for key, var in all_feature_vars.items():
@@ -1521,8 +1551,9 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             dns_tpl_var.set(FAMILY_DOH if dns_mode == "Secure" else "")
         finally:
             suspend_dirty_tracking = False
+        refresh_preset_colors()
         check_dirty_state()
-        set_status(f"{preset_type} preset loaded.")
+        set_status(f"{preset_type} preview: green = added, blue = kept, red = unticked. Apply to save.")
 
     root.grid_rowconfigure(0, weight=1)
     root.grid_rowconfigure(1, weight=0)
@@ -1666,6 +1697,8 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             var.trace_add("write", check_dirty_state)
             cb = ttk.Checkbutton(parent, text=feat["Name"], variable=var)
             cb.pack(anchor="w", padx=16, pady=1)
+            feature_widgets[feat["Key"]] = cb
+            var.trace_add("write", refresh_preset_colors)
             create_tooltip(cb, preset_tooltip(feat["ToolTip"], feat["Key"]))
 
     populate_checkboxes(left_panel, "Telemetry and Reporting", telemetry_features)
