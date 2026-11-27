@@ -523,7 +523,7 @@ def main():
             if preset_preview is None:
                 tip.on_leave()
                 marker.pack_forget()
-                widget.configure(style="TCheckbutton")
+                widget.configure(style="Retained.TCheckbutton" if checked else "Neutral.TCheckbutton")
                 continue
             retained, seen, selected = preset_preview
             if checked:
