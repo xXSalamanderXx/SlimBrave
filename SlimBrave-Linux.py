@@ -172,20 +172,20 @@ def main():
     ]
 
     access_features = [
-        {'Name': 'Remove Always Allow for External Apps', 'Key': 'ExternalProtocolDialogShowAlwaysOpenCheckbox', 'Value': False, 'Type': 'bool', 'ToolTip': 'Removes the remember-choice checkbox from external app prompts.'},
-        {'Name': 'Block Camera Access', 'Key': 'VideoCaptureAllowed', 'Value': False, 'Type': 'bool', 'ToolTip': 'Blocks camera requests except applicable policy exceptions.'},
-        {'Name': 'Block Microphone Access', 'Key': 'AudioCaptureAllowed', 'Value': False, 'Type': 'bool', 'ToolTip': 'Blocks microphone requests except applicable policy exceptions.'},
-        {'Name': 'Block Local Network Access', 'Key': 'LocalNetworkAccessBlockedForUrls', 'Value': ['*'], 'Type': 'array', 'ToolTip': 'Can break local integrations, casting and device web interfaces.'},
-        {'Name': 'Prevent Deleting History', 'Key': 'AllowDeletingBrowserHistory', 'Value': False, 'Type': 'bool', 'ToolTip': 'Disables user-initiated history deletion, not history collection.'},
-        {'Name': 'Block Certificate Warning Bypass', 'Key': 'SSLErrorOverrideAllowed', 'Value': False, 'Type': 'bool', 'ToolTip': 'Disables proceeding past certificate errors.'},
-        {'Name': 'Block Safe Browsing Bypass', 'Key': 'SafeBrowsingProceedAnywayDisabled', 'Value': True, 'Type': 'bool', 'ToolTip': 'Disables proceeding past Safe Browsing warnings.'},
-        {'Name': 'Force YouTube Restricted Mode', 'Key': 'ForceYouTubeRestrict', 'Value': 2, 'Type': 'int', 'ToolTip': 'Enforces Strict Restricted Mode.'},
-        {'Name': 'Block Command-Line Extensions', 'Key': 'ExtensionInstallTypeBlocklist', 'Value': ['command_line'], 'Type': 'array', 'ToolTip': 'Blocks --load-extension; may affect development shortcuts.'},
-        {'Name': 'Disable Google Image Descriptions', 'Key': 'AccessibilityImageLabelsEnabled', 'Value': False, 'Type': 'bool', 'ToolTip': 'Prevents server-generated labels for screen-reader users.'},
-        {'Name': 'Isolate Origins', 'Key': 'OriginKeyedProcessesEnabled', 'Value': True, 'Type': 'bool', 'ToolTip': 'Separates most origins into processes; may increase RAM use.'},
-        {'Name': 'Force Site Isolation', 'Key': 'SitePerProcess', 'Value': True, 'Type': 'bool', 'ToolTip': 'Locks site isolation on; restart required.'},
-        {'Name': 'Disable JavaScript Optimization', 'Key': 'DefaultJavaScriptOptimizerSetting', 'Value': 2, 'Type': 'int', 'ToolTip': 'Hardens JavaScript execution at a possible performance cost.'},
-        {'Name': 'Disable XSLT', 'Key': 'XSLTEnabled', 'Value': False, 'Type': 'bool', 'ToolTip': 'Disables legacy XML transformations; may affect XML and RSS rendering.'},
+        {'Name': 'Remove Always Allow for External Apps', 'Key': 'ExternalProtocolDialogShowAlwaysOpenCheckbox', 'Value': False, 'Type': 'bool', 'ToolTip': 'Removes the remember-choice checkbox from external app prompts.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked'},
+        {'Name': 'Block Camera Access', 'Key': 'VideoCaptureAllowed', 'Value': False, 'Type': 'bool', 'ToolTip': 'Blocks camera requests except applicable policy exceptions.\n\nSuggested Settings for Privacy: Unticked | Security: Unticked'},
+        {'Name': 'Block Microphone Access', 'Key': 'AudioCaptureAllowed', 'Value': False, 'Type': 'bool', 'ToolTip': 'Blocks microphone requests except applicable policy exceptions.\n\nSuggested Settings for Privacy: Unticked | Security: Unticked'},
+        {'Name': 'Block Local Network Access', 'Key': 'LocalNetworkAccessBlockedForUrls', 'Value': ['*'], 'Type': 'array', 'ToolTip': 'Can break local integrations, casting and device web interfaces.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked'},
+        {'Name': 'Prevent Deleting History', 'Key': 'AllowDeletingBrowserHistory', 'Value': False, 'Type': 'bool', 'ToolTip': 'Disables user-initiated history deletion, not history collection.\n\nSuggested Settings for Privacy: Unticked | Security: Unticked'},
+        {'Name': 'Block Certificate Warning Bypass', 'Key': 'SSLErrorOverrideAllowed', 'Value': False, 'Type': 'bool', 'ToolTip': 'Disables proceeding past certificate errors.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked'},
+        {'Name': 'Block Safe Browsing Bypass', 'Key': 'SafeBrowsingProceedAnywayDisabled', 'Value': True, 'Type': 'bool', 'ToolTip': 'Disables proceeding past Safe Browsing warnings.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked'},
+        {'Name': 'Force YouTube Restricted Mode', 'Key': 'ForceYouTubeRestrict', 'Value': 2, 'Type': 'int', 'ToolTip': 'Enforces Strict Restricted Mode.\n\nSuggested Settings for Privacy: Unticked | Security: Unticked'},
+        {'Name': 'Block Command-Line Extensions', 'Key': 'ExtensionInstallTypeBlocklist', 'Value': ['command_line'], 'Type': 'array', 'ToolTip': 'Blocks --load-extension; may affect development shortcuts.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked'},
+        {'Name': 'Disable Google Image Descriptions', 'Key': 'AccessibilityImageLabelsEnabled', 'Value': False, 'Type': 'bool', 'ToolTip': 'Prevents server-generated labels for screen-reader users.\n\nSuggested Settings for Privacy: Ticked | Security: Unticked'},
+        {'Name': 'Isolate Origins', 'Key': 'OriginKeyedProcessesEnabled', 'Value': True, 'Type': 'bool', 'ToolTip': 'Separates most origins into processes; may increase RAM use.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked'},
+        {'Name': 'Force Site Isolation', 'Key': 'SitePerProcess', 'Value': True, 'Type': 'bool', 'ToolTip': 'Locks site isolation on; restart required.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked'},
+        {'Name': 'Disable JavaScript Optimization', 'Key': 'DefaultJavaScriptOptimizerSetting', 'Value': 2, 'Type': 'int', 'ToolTip': 'Hardens JavaScript execution at a possible performance cost.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked'},
+        {'Name': 'Disable XSLT', 'Key': 'XSLTEnabled', 'Value': False, 'Type': 'bool', 'ToolTip': 'Disables legacy XML transformations; may affect XML and RSS rendering.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked'},
         {"Name": "Disable Guest Mode", "Key": "BrowserGuestModeEnabled", "Value": False, "Type": "bool", "ToolTip": "Disables the guest profile escape hatch.\n\nSuggested Settings for Privacy: Unticked | Security: Ticked"},
         {"Name": "Block All Extensions", "Key": "ExtensionInstallBlocklist", "Value": ["*"], "Type": "array", "ToolTip": "Completely blocks all extension installations.\n\nSuggested Settings for Privacy: Unticked | Security: Unticked"},
         {"Name": "Block Sideloaded Extensions", "Key": "BlockExternalExtensions", "Value": True, "Type": "bool", "ToolTip": "Blocks silent extension installs while leaving user-chosen extensions working.\n\nSuggested Settings for Privacy: Ticked | Security: Ticked"},
@@ -785,7 +785,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
         for var in all_perm_vars.values():
             var.set("Not Set")
         sb_var.set("")
-        dns_var.set("Automatic")
+        dns_var.set("")
         dns_tpl_var.set("")
 
         for feat in ALL_FEATURES:
@@ -796,7 +796,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
 
             value = payload[actual_key]
             if feat["Type"] == "array":
-                if isinstance(value, list) and len(value) > 0:
+                if value == feat["Value"]:
                     all_feature_vars[key].set(1)
             elif feat["Type"] == "bool":
                 if coerce_bool(value) == bool(feat["Value"]):
@@ -829,12 +829,9 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             except Exception:
                 continue
 
-            if iv == 3:
-                all_perm_vars[key].set("Ask")
-            elif iv == 2:
-                all_perm_vars[key].set("Block")
-            elif iv == 1:
-                all_perm_vars[key].set("Allow")
+            choice = {1: "Allow", 2: "Block", 3: "Ask"}.get(iv)
+            if choice in perm["Options"]:
+                all_perm_vars[key].set(choice)
 
         if "SafeBrowsingProtectionLevel" in payload:
             try:
@@ -896,32 +893,11 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
         check_dirty_state()
 
     def reload_ui_from_registry():
-        profile_active = is_profile_installed()
-        
-        if profile_active:
-            status = "Settings loaded. (Profile Installed ✅)"
-        else:
-            status = "No SlimBrave policies active."
-
-        if os.path.exists(STATE_FILE):
-            try:
-                with open(STATE_FILE, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                apply_json_state_to_ui(data)
-                
-                if not data.get("Features") and not data.get("Permissions"):
-                    if not profile_active:
-                        status = "Ready."
-            except Exception as e:
-                write_log(f"Failed to read local state JSON: {e}")
-                apply_payload_to_ui({})
-        else:
-            payload = merged_policy_source_for_ui()
-            apply_payload_to_ui(payload)
-            if not profile_active:
-                status = "Ready."
-
-        set_status(status)
+        # Only imports are staged. Reload reflects the installed system policy.
+        payload = merged_policy_source_for_ui()
+        apply_payload_to_ui(payload)
+        set_status("Settings loaded. (Profile Installed ✅)" if is_profile_installed()
+                   else "No SlimBrave policies active.")
 
     def pgrep_exact(pattern):
         try:
@@ -1530,7 +1506,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
         def __init__(self, parent, bg, **kwargs):
             super().__init__(parent, bg=bg, **kwargs)
             self.canvas = tk.Canvas(self, bg=bg, highlightthickness=0, bd=0)
-            self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview, style="Dark.Vertical.TScrollbar")
+            self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self._scrollbar_view, style="Dark.Vertical.TScrollbar")
             self.inner_frame = tk.Frame(self.canvas, bg=bg)
 
             self.canvas.configure(yscrollcommand=self.scrollbar.set)
@@ -1543,13 +1519,31 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             self.canvas.pack(side="left", fill="both", expand=True)
 
             self._bind_mousewheel(self.canvas)
-            self._bind_mousewheel(self.inner_frame)
+
+        def _has_overflow(self):
+            bounds = self.canvas.bbox(self.canvas_window)
+            return bool(bounds and bounds[3] > self.canvas.winfo_height())
+
+        def _sync_scrollregion(self):
+            canvas = self.canvas
+            bounds = canvas.bbox(self.canvas_window)
+            if not bounds:
+                return
+            canvas.configure(scrollregion=(0, 0, canvas.winfo_width(),
+                                           max(bounds[3], canvas.winfo_height())))
+            if not self._has_overflow():
+                canvas.yview_moveto(0)
 
         def _on_inner_configure(self, event):
-            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            self._sync_scrollregion()
 
         def _on_canvas_configure(self, event):
             self.canvas.itemconfig(self.canvas_window, width=event.width)
+            self._sync_scrollregion()
+
+        def _scrollbar_view(self, *args):
+            if self._has_overflow():
+                self.canvas.yview(*args)
 
         def _on_mousewheel(self, event):
             if event.num == 4:
@@ -1557,8 +1551,9 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             elif event.num == 5:
                 delta = 1
             else:
-                delta = -1 * int(event.delta / 120) if event.delta else 0
-            self.canvas.yview_scroll(delta, "units")
+                delta = -int(event.delta / 120) if event.delta else 0
+            self.scroll(delta)
+            return "break"
 
         def _bind_mousewheel(self, widget):
             widget.bind("<MouseWheel>", self._on_mousewheel, add="+")
@@ -1571,7 +1566,8 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             self._bind_mousewheel(self.inner_frame)
 
         def scroll(self, delta):
-            self.canvas.yview_scroll(int(delta), "units")
+            if delta and self._has_overflow():
+                self.canvas.yview_scroll(int(delta), "units")
 
     main_frame = tk.Frame(container, bg="#191919")
     main_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=(0, 5))
