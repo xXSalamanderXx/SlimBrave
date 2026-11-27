@@ -460,10 +460,16 @@ def main():
                 self.tooltip_window = None
 
     def create_tooltip(widget, text):
-        ToolTip(widget, text)
+        return ToolTip(widget, text)
 
     style = ttk.Style()
     style.theme_use("clam")
+    for state, color in {"Retained": "#87CEFA", "Added": "#90EE90",
+                         "Removed": "#FF8585", "Neutral": "white"}.items():
+        name = f"{state}.TCheckbutton"
+        style.configure(name, foreground=color)
+        style.map(name, foreground=[("!disabled", color)])
+
     style.configure("TCheckbutton", background="#232323", foreground="white", font=("sans-serif", 9))
     style.map("TCheckbutton", background=[("active", "#232323")])
 
@@ -505,6 +511,44 @@ def main():
     suspend_dirty_tracking = False
     baseline_state = ""
     all_feature_vars = {}
+    feature_widgets = {}
+    preset_preview = None
+
+    def refresh_preset_colors(*_):
+        if suspend_dirty_tracking:
+            return
+        for key, widget in feature_widgets.items():
+            widget, marker, tip = widget
+            checked = bool(all_feature_vars[key].get())
+            if preset_preview is None:
+                tip.on_leave()
+                marker.pack_forget()
+                widget.configure(style="TCheckbutton")
+                continue
+            retained, seen, selected = preset_preview
+            if checked:
+                seen.add(key)
+            state = ("Retained" if key in retained else "Added") if checked else (
+                "Removed" if key in seen else "Neutral")
+            widget.configure(style=f"{state}.TCheckbutton")
+            if state == "Added":
+                reason = "Added by Preset" if key in selected else "Manually Added, Preset Disabled This"
+                color = "#90EE90"
+            elif state == "Removed":
+                reason = "Removed from Preset" if key in selected else "Removed from your Current Configuration"
+                color = "#FF8585"
+            else:
+                tip.on_leave()
+                marker.pack_forget()
+                continue
+            if tip.text != reason:
+                tip.on_leave()
+                tip.text = reason
+            marker.configure(fg=color)
+            if not marker.winfo_manager():
+                marker.pack(side="left", padx=(4, 0))
+
+
     all_perm_vars = {}
     
     global HAS_PROMPTED_CLEANUP
@@ -533,14 +577,14 @@ def main():
     def is_profile_installed():
         try:
             profile_id = f"com.slimbrave.profile.{DOMAIN}"
-            res1 = subprocess.run(["profiles", "list"], capture_output=True, text=True)
-            if profile_id in res1.stdout or "SlimBrave Policy" in res1.stdout:
+            res1 = subprocess.run(["/usr/bin/profiles", "list"], capture_output=True, text=True)
+            if profile_id in res1.stdout:
                 return True
-            res2 = subprocess.run(["profiles", "list", "-output", "stdout-xml", "-type", "configuration"], capture_output=True, text=True)
-            if profile_id in res2.stdout or "SlimBrave Policy" in res2.stdout:
+            res2 = subprocess.run(["/usr/bin/profiles", "list", "-output", "stdout-xml", "-type", "configuration"], capture_output=True, text=True)
+            if profile_id in res2.stdout:
                 return True
-            res3 = subprocess.run(["system_profiler", "SPConfigurationProfileDataType"], capture_output=True, text=True)
-            if profile_id in res3.stdout or "SlimBrave Policy" in res3.stdout:
+            res3 = subprocess.run(["/usr/sbin/system_profiler", "SPConfigurationProfileDataType"], capture_output=True, text=True)
+            if profile_id in res3.stdout:
                 return True
             return False
         except Exception:
@@ -577,8 +621,10 @@ def main():
         }
 
     def update_baseline():
-        nonlocal baseline_state
+        nonlocal baseline_state, preset_preview
         baseline_state = json.dumps(get_ui_snapshot(), sort_keys=True)
+        preset_preview = None
+        refresh_preset_colors()
 
     def check_dirty_state(*args):
         if suspend_dirty_tracking:
@@ -1032,7 +1078,7 @@ def main():
         for var in all_perm_vars.values():
             var.set("Not Set")
         sb_var.set("")
-        dns_var.set("Automatic")
+        dns_var.set("")
         dns_tpl_var.set("")
 
         for feat in ALL_FEATURES:
@@ -1043,7 +1089,7 @@ def main():
 
             value = payload[actual_key]
             if feat["Type"] == "array":
-                if isinstance(value, list) and len(value) > 0:
+                if value == feat["Value"]:
                     all_feature_vars[key].set(1)
             elif feat["Type"] == "bool":
                 if coerce_bool(value) == bool(feat["Value"]):
@@ -1191,25 +1237,8 @@ def main():
         else:
             status = "No SlimBrave policies active."
 
-        if os.path.exists(STATE_FILE):
-            try:
-                with open(STATE_FILE, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                apply_json_state_to_ui(data)
-                
-                if not data.get("Features") and not data.get("Permissions"):
-                    if not profile_active and not has_legacy:
-                        status = "Ready."
-            except Exception as e:
-                write_log(f"Failed to read local state JSON: {e}")
-                apply_payload_to_ui({})
-        elif has_legacy:
-            payload = merged_policy_source_for_ui()
-            apply_payload_to_ui(payload)
-        else:
-            apply_payload_to_ui({})
-            if not profile_active:
-                status = "Ready."
+        payload = merged_policy_source_for_ui() if profile_active or has_legacy else {}
+        apply_payload_to_ui(payload)
 
         set_status(status)
 
@@ -1412,6 +1441,7 @@ def main():
             messagebox.showerror("Import failed", str(exc))
             return
         apply_json_state_to_ui(data)
+        refresh_preset_colors()
         set_status("Settings staged. Review before applying.")
         if notes:
             messagebox.showinfo("Import notes", "\n".join(notes[:5]) +
@@ -1688,145 +1718,219 @@ def main():
         else:
             set_status("Reset cancelled.")
 
+    PRESETS = {'Maximum Privacy': (['AccessibilityImageLabelsEnabled',
+                          'AutofillAddressEnabled',
+                          'AutofillCreditCardEnabled',
+                          'BackgroundModeEnabled',
+                          'BasicAuthOverHttpEnabled',
+                          'BlockExternalExtensions',
+                          'BlockThirdPartyCookies',
+                          'BraveAIChatEnabled',
+                          'BraveDeAMPEnabled',
+                          'BraveDebouncingEnabled',
+                          'BraveLocalAiEnabled',
+                          'BraveNewsDisabled',
+                          'BraveP3AEnabled',
+                          'BravePlaylistEnabled',
+                          'BraveRewardsDisabled',
+                          'BraveSpeedreaderEnabled',
+                          'BraveStatsPingEnabled',
+                          'BraveTalkDisabled',
+                          'BraveTrackersStrippingEnabled',
+                          'BraveWalletDisabled',
+                          'BraveWaybackMachineEnabled',
+                          'BraveWebDiscoveryEnabled',
+                          'BrowserSignin',
+                          'DefaultJavaScriptOptimizerSetting',
+                          'ExtensionInstallTypeBlocklist',
+                          'ExternalProtocolDialogShowAlwaysOpenCheckbox',
+                          'GlobalPrivacyControlEnabled',
+                          'HttpsOnlyMode',
+                          'MetricsReportingEnabled',
+                          'NetworkPredictionOptions',
+                          'OriginKeyedProcessesEnabled',
+                          'ReduceAcceptLanguage',
+                          'RemoteDebuggingAllowed',
+                          'SearchSuggestEnabled',
+                          'SitePerProcess',
+                          'SpellCheckServiceEnabled',
+                          'UrlKeyedAnonymizedDataCollectionEnabled',
+                          'WebRtcIPHandling',
+                          'XSLTEnabled'],
+                         {'DefaultGeolocationSetting': 'Block',
+                          'DefaultNotificationsSetting': 'Block',
+                          'DefaultPopupsSetting': 'Block',
+                          'DefaultWebUsbGuardSetting': 'Block',
+                          'DefaultSerialGuardSetting': 'Block',
+                          'DefaultWebHidGuardSetting': 'Block',
+                          'DefaultFileSystemReadGuardSetting': 'Block',
+                          'DefaultClipboardSetting': 'Block',
+                          'DefaultWindowPlacementSetting': 'Block',
+                          'DefaultLocalFontsSetting': 'Block',
+                          'PaymentMethodQueryEnabled': 'Block',
+                          'DefaultSensorsSetting': 'Block'},
+                         'On',
+                         'Automatic'),
+     'High Security': (['BackgroundModeEnabled',
+                        'BasicAuthOverHttpEnabled',
+                        'BlockExternalExtensions',
+                        'BlockThirdPartyCookies',
+                        'BraveAIChatEnabled',
+                        'BraveLocalAiEnabled',
+                        'BraveNewsDisabled',
+                        'BraveP3AEnabled',
+                        'BravePlaylistEnabled',
+                        'BraveRewardsDisabled',
+                        'BraveSpeedreaderEnabled',
+                        'BraveStatsPingEnabled',
+                        'BraveTalkDisabled',
+                        'BraveWalletDisabled',
+                        'BraveWaybackMachineEnabled',
+                        'BraveWebDiscoveryEnabled',
+                        'DefaultJavaScriptOptimizerSetting',
+                        'ExtensionInstallTypeBlocklist',
+                        'ExternalProtocolDialogShowAlwaysOpenCheckbox',
+                        'HttpsOnlyMode',
+                        'MetricsReportingEnabled',
+                        'OriginKeyedProcessesEnabled',
+                        'RemoteDebuggingAllowed',
+                        'SSLErrorOverrideAllowed',
+                        'SafeBrowsingProceedAnywayDisabled',
+                        'SitePerProcess',
+                        'UrlKeyedAnonymizedDataCollectionEnabled',
+                        'XSLTEnabled'],
+                       {'DefaultPopupsSetting': 'Block',
+                        'DefaultWebUsbGuardSetting': 'Block',
+                        'DefaultSerialGuardSetting': 'Block',
+                        'DefaultWebHidGuardSetting': 'Block',
+                        'DefaultFileSystemReadGuardSetting': 'Block',
+                        'DefaultClipboardSetting': 'Block'},
+                       'On',
+                       'Automatic'),
+     'Performance Focused': (['BackgroundModeEnabled',
+                              'BraveLocalAiEnabled',
+                              'BraveNewsDisabled',
+                              'BravePlaylistEnabled',
+                              'BraveRewardsDisabled',
+                              'BraveTalkDisabled',
+                              'BraveWalletDisabled',
+                              'EnableMediaRouter',
+                              'HighEfficiencyModeEnabled'],
+                             {},
+                             'On',
+                             ''),
+     'Strict Parental Controls': (['AllowDeletingBrowserHistory',
+                                   'BasicAuthOverHttpEnabled',
+                                   'BraveAIChatEnabled',
+                                   'BraveLocalAiEnabled',
+                                   'BrowserGuestModeEnabled',
+                                   'ExtensionInstallBlocklist',
+                                   'ExtensionInstallTypeBlocklist',
+                                   'ForceGoogleSafeSearch',
+                                   'ForceYouTubeRestrict',
+                                   'IncognitoModeAvailability',
+                                   'PromptForDownloadLocation',
+                                   'RemoteDebuggingAllowed',
+                                   'SSLErrorOverrideAllowed',
+                                   'SafeBrowsingProceedAnywayDisabled',
+                                   'SpellCheckServiceEnabled',
+                                   'SyncDisabled',
+                                   'TorDisabled'],
+                                  {'DefaultPopupsSetting': 'Block',
+                                   'DefaultNotificationsSetting': 'Block'},
+                                  'On',
+                                  'Secure'),
+     'Balanced Privacy': (['BasicAuthOverHttpEnabled',
+                           'BlockExternalExtensions',
+                           'BlockThirdPartyCookies',
+                           'BraveDeAMPEnabled',
+                           'BraveDebouncingEnabled',
+                           'BraveLocalAiEnabled',
+                           'BraveNewsDisabled',
+                           'BraveP3AEnabled',
+                           'BravePlaylistEnabled',
+                           'BraveRewardsDisabled',
+                           'BraveStatsPingEnabled',
+                           'BraveTrackersStrippingEnabled',
+                           'BraveWalletDisabled',
+                           'ExtensionInstallTypeBlocklist',
+                           'GlobalPrivacyControlEnabled',
+                           'MetricsReportingEnabled',
+                           'RemoteDebuggingAllowed',
+                           'SpellCheckServiceEnabled',
+                           'UrlKeyedAnonymizedDataCollectionEnabled'],
+                          {'DefaultPopupsSetting': 'Block',
+                           'PaymentMethodQueryEnabled': 'Block',
+                           'DefaultSensorsSetting': 'Block'},
+                          'On',
+                          'Automatic'),
+     'Developer': (['BraveDeAMPEnabled',
+                    'BraveDebouncingEnabled',
+                    'BraveLocalAiEnabled',
+                    'BraveNewsDisabled',
+                    'BravePlaylistEnabled',
+                    'BraveRewardsDisabled',
+                    'BraveWalletDisabled',
+                    'SpellCheckServiceEnabled'],
+                   {},
+                   'On',
+                   ''),
+     'Brave Origin': (['BraveAIChatEnabled',
+                       'BraveEmailAliasesEnabled',
+                       'BraveLocalAiEnabled',
+                       'BraveNewsDisabled',
+                       'BraveP3AEnabled',
+                       'BravePlaylistEnabled',
+                       'BraveRewardsDisabled',
+                       'BraveSpeedreaderEnabled',
+                       'BraveStatsPingEnabled',
+                       'BraveTalkDisabled',
+                       'BraveWalletDisabled',
+                       'BraveWaybackMachineEnabled',
+                       'BraveWebDiscoveryEnabled',
+                       'TorDisabled'],
+                      {},
+                      '',
+                      '')}
+    FAMILY_DOH = "https://family.cloudflare-dns.com/dns-query{?dns}"
+
+    def preset_tooltip(text, key, permission=False):
+        description = text.split("\n\nSuggested Settings", 1)[0]
+        def choice(name):
+            features, perms, _, _ = PRESETS[name]
+            if key == "SafeBrowsing":
+                return PRESETS[name][2] or "Not Set"
+            if key == "DnsMode":
+                return PRESETS[name][3] or "Not Set"
+            if permission:
+                return perms.get(key, "Not Set")
+            return "Ticked" if key in features else "Unticked"
+        reference = f"Suggested Settings for Privacy: {choice('Maximum Privacy')} | Security: {choice('High Security')}"
+        states = "\n".join(f"{name}: {choice(name)}" for name in PRESETS)
+        return f"{description}\n\n{reference}\n\nPreset selections:\n{states}"
+
     def apply_preset(preset_type):
-        nonlocal suspend_dirty_tracking
+        nonlocal suspend_dirty_tracking, preset_preview
+        if preset_type not in PRESETS:
+            return
+        features, permissions, safe_browsing, dns_mode = PRESETS[preset_type]
+        before = {key for key, var in all_feature_vars.items() if var.get()}
+        selected = set(features)
+        preset_preview = (before & selected, before | selected, selected)
         suspend_dirty_tracking = True
-
-        for var in all_feature_vars.values():
-            var.set(0)
-
-        for perm in permission_settings:
-            name = perm["Name"]
-            if name == "JavaScript":
-                all_perm_vars[perm["Key"]].set("Allow")
-            elif name in ["Camera", "Microphone"]:
-                all_perm_vars[perm["Key"]].set("Ask")
-            elif name == "Images":
-                all_perm_vars[perm["Key"]].set("Not Set")
-            else:
-                if "Block" in perm["Options"]:
-                    all_perm_vars[perm["Key"]].set("Block")
-                else:
-                    all_perm_vars[perm["Key"]].set("Not Set")
-
-        if preset_type == "Maximum Privacy":
-            privacy_keys = [
-                'MetricsReportingEnabled', 'UrlKeyedAnonymizedDataCollectionEnabled', 'BraveP3AEnabled', 'BraveStatsPingEnabled',
-                'BraveWebDiscoveryEnabled', 'AutofillAddressEnabled', 'AutofillCreditCardEnabled', 'PasswordManagerEnabled',
-                'BrowserSignin', 'WebRtcIPHandling', 'BlockThirdPartyCookies', 'PromptForDownloadLocation',
-                'HttpsOnlyMode', 'GlobalPrivacyControlEnabled', 'BraveDeAMPEnabled', 'BraveDebouncingEnabled',
-                'BraveTrackersStrippingEnabled', 'ReduceAcceptLanguage', 'BraveRewardsDisabled', 'BraveWalletDisabled',
-                'BraveVPNDisabled', 'BraveAIChatEnabled', 'TorDisabled', 'BraveNewsDisabled',
-                'BraveTalkDisabled', 'BraveSpeedreaderEnabled', 'BraveWaybackMachineEnabled', 'BackgroundModeEnabled',
-                'SearchSuggestEnabled', 'DefaultBrowserSettingEnabled', 'BravePlaylistEnabled', 'NetworkPredictionOptions',
-                'PasswordLeakDetectionEnabled', 'BraveLocalAiEnabled', 'RemoteDebuggingAllowed', 'BasicAuthOverHttpEnabled',
-                'BlockExternalExtensions', 'XSLTEnabled', 'DefaultJavaScriptOptimizerSetting', 'SitePerProcess',
-                'OriginKeyedProcessesEnabled', 'AccessibilityImageLabelsEnabled', 'ExtensionInstallTypeBlocklist',
-            ]
-            for key in privacy_keys:
-                if key in all_feature_vars:
-                    all_feature_vars[key].set(1)
-            sb_var.set("On")
-            dns_var.set("Off")
-            dns_tpl_var.set("")
-            set_status("Maximum Privacy preset loaded.")
-
-        elif preset_type == "High Security":
-            security_keys = [
-                'MetricsReportingEnabled', 'UrlKeyedAnonymizedDataCollectionEnabled', 'BraveP3AEnabled', 'BraveStatsPingEnabled',
-                'BraveWebDiscoveryEnabled', 'WebRtcIPHandling', 'QuicAllowed', 'BlockThirdPartyCookies',
-                'ForceGoogleSafeSearch', 'PromptForDownloadLocation', 'HttpsOnlyMode', 'BraveRewardsDisabled',
-                'BraveWalletDisabled', 'BraveVPNDisabled', 'BraveAIChatEnabled', 'TorDisabled',
-                'SyncDisabled', 'BraveNewsDisabled', 'BraveTalkDisabled', 'BraveSpeedreaderEnabled',
-                'BraveWaybackMachineEnabled', 'BackgroundModeEnabled', 'DeveloperToolsDisabled', 'BravePlaylistEnabled',
-                'RemoteDebuggingAllowed', 'BlockExternalExtensions', 'BasicAuthOverHttpEnabled', 'BraveLocalAiEnabled',
-            ]
-            for key in security_keys:
-                if key in all_feature_vars:
-                    all_feature_vars[key].set(1)
-            sb_var.set("On")
-            dns_var.set("Automatic")
-            dns_tpl_var.set("")
-            set_status("High Security preset loaded.")
-
-        elif preset_type == "Performance Focused":
-            perf_keys = [
-                'BackgroundModeEnabled', 'BraveNewsDisabled', 'BraveRewardsDisabled', 'BraveWalletDisabled',
-                'BraveVPNDisabled', 'BraveTalkDisabled', 'BravePlaylistEnabled', 'HighEfficiencyModeEnabled',
-                'EnableMediaRouter', 'SpellcheckEnabled', 'BraveLocalAiEnabled',
-            ]
-            for key in perf_keys:
-                if key in all_feature_vars:
-                    all_feature_vars[key].set(1)
-            sb_var.set("On")
-            dns_var.set("Automatic")
-            dns_tpl_var.set("")
-            set_status("Performance Focused preset loaded.")
-
-        elif preset_type == "Strict Parental Controls":
-            parental_keys = [
-                'BrowserGuestModeEnabled', 'ExtensionInstallBlocklist', 'ForceGoogleSafeSearch', 'IncognitoModeAvailability',
-                'SpellCheckServiceEnabled', 'BraveAIChatEnabled', 'TorDisabled', 'BraveLocalAiEnabled',
-                'PromptForDownloadLocation', 'DefaultBrowserSettingEnabled', 'SyncDisabled', 'RemoteDebuggingAllowed',
-                'ForceYouTubeRestrict', 'SafeBrowsingProceedAnywayDisabled', 'SSLErrorOverrideAllowed', 'AllowDeletingBrowserHistory',
-            ]
-            for key in parental_keys:
-                if key in all_feature_vars:
-                    all_feature_vars[key].set(1)
-            sb_var.set("On")
-            dns_var.set("Secure")
-            dns_tpl_var.set("https://family.cloudflare-dns.com/dns-query{?dns}")
-            set_status("Strict Parental Controls preset loaded.")
-
-        elif preset_type == "Balanced Privacy":
-            balanced_keys = [
-                'MetricsReportingEnabled', 'UrlKeyedAnonymizedDataCollectionEnabled', 'BraveP3AEnabled', 'BraveStatsPingEnabled',
-                'WebRtcIPHandling', 'BlockThirdPartyCookies', 'GlobalPrivacyControlEnabled', 'BraveDeAMPEnabled',
-                'BraveDebouncingEnabled', 'BraveTrackersStrippingEnabled', 'BraveRewardsDisabled', 'BraveWalletDisabled',
-                'BraveNewsDisabled', 'BravePlaylistEnabled', 'BraveLocalAiEnabled', 'RemoteDebuggingAllowed',
-                'BasicAuthOverHttpEnabled', 'BlockExternalExtensions', 'SpellCheckServiceEnabled', 'AccessibilityImageLabelsEnabled',
-                'ExtensionInstallTypeBlocklist',
-            ]
-            for key in balanced_keys:
-                if key in all_feature_vars:
-                    all_feature_vars[key].set(1)
-            sb_var.set("On")
-            dns_var.set("Automatic")
-            dns_tpl_var.set("")
-            set_status("Balanced Privacy preset loaded.")
-
-        elif preset_type == "Developer":
-            dev_keys = [
-                'BraveRewardsDisabled', 'BraveWalletDisabled', 'BraveNewsDisabled', 'BravePlaylistEnabled',
-                'BraveDeAMPEnabled', 'BraveDebouncingEnabled', 'BraveLocalAiEnabled', 'SpellCheckServiceEnabled',
-                'AccessibilityImageLabelsEnabled',
-            ]
-            for key in dev_keys:
-                if key in all_feature_vars:
-                    all_feature_vars[key].set(1)
-            all_perm_vars["DefaultClipboardSetting"].set("Allow")
-            sb_var.set("On")
-            dns_var.set("Off")
-            dns_tpl_var.set("")
-            set_status("Developer preset loaded.")
-
-        elif preset_type == "Brave Origin":
-            origin_keys = [
-                'BraveRewardsDisabled', 'BraveWalletDisabled', 'BraveVPNDisabled', 'BraveAIChatEnabled',
-                'BraveLocalAiEnabled', 'BraveNewsDisabled', 'BraveTalkDisabled', 'BravePlaylistEnabled',
-                'BraveWebDiscoveryEnabled', 'BraveSpeedreaderEnabled', 'BraveWaybackMachineEnabled', 'BraveEmailAliasesEnabled',
-                'TorDisabled', 'BraveP3AEnabled', 'BraveStatsPingEnabled',
-            ]
-            for key in origin_keys:
-                if key in all_feature_vars:
-                    all_feature_vars[key].set(1)
-            sb_var.set("")
-            dns_var.set("Automatic")
-            dns_tpl_var.set("")
-            set_status("Brave Origin preset loaded.")
-
-        suspend_dirty_tracking = False
+        try:
+            for key, var in all_feature_vars.items():
+                var.set(int(key in features))
+            for key, var in all_perm_vars.items():
+                var.set(permissions.get(key, "Not Set"))
+            sb_var.set(safe_browsing)
+            dns_var.set(dns_mode)
+            dns_tpl_var.set(FAMILY_DOH if dns_mode == "Secure" else "")
+        finally:
+            suspend_dirty_tracking = False
+        refresh_preset_colors()
         check_dirty_state()
+        set_status(f"{preset_type} preview: green = added, blue = kept, red = unticked. Apply to generate a profile.")
 
     root.grid_rowconfigure(0, weight=1)
     root.grid_rowconfigure(1, weight=0)
@@ -1878,7 +1982,7 @@ def main():
         def __init__(self, parent, bg, **kwargs):
             super().__init__(parent, bg=bg, **kwargs)
             self.canvas = tk.Canvas(self, bg=bg, highlightthickness=0, bd=0)
-            self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview, style="Dark.Vertical.TScrollbar")
+            self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self._scrollbar_view, style="Dark.Vertical.TScrollbar")
             self.inner_frame = tk.Frame(self.canvas, bg=bg)
 
             self.canvas.configure(yscrollcommand=self.scrollbar.set)
@@ -1891,13 +1995,31 @@ def main():
             self.canvas.pack(side="left", fill="both", expand=True)
 
             self._bind_mousewheel(self.canvas)
-            self._bind_mousewheel(self.inner_frame)
+
+        def _has_overflow(self):
+            bounds = self.canvas.bbox(self.canvas_window)
+            return bool(bounds and bounds[3] > self.canvas.winfo_height())
+
+        def _sync_scrollregion(self):
+            canvas = self.canvas
+            bounds = canvas.bbox(self.canvas_window)
+            if not bounds:
+                return
+            canvas.configure(scrollregion=(0, 0, canvas.winfo_width(),
+                                           max(bounds[3], canvas.winfo_height())))
+            if not self._has_overflow():
+                canvas.yview_moveto(0)
 
         def _on_inner_configure(self, event):
-            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            self._sync_scrollregion()
 
         def _on_canvas_configure(self, event):
             self.canvas.itemconfig(self.canvas_window, width=event.width)
+            self._sync_scrollregion()
+
+        def _scrollbar_view(self, *args):
+            if self._has_overflow():
+                self.canvas.yview(*args)
 
         def _on_mousewheel(self, event):
             if event.num == 4:
@@ -1908,7 +2030,8 @@ def main():
                 delta = -1 * int(event.delta / 120) if event.delta else 0
                 if sys.platform == "darwin" and event.delta:
                     delta = -1 if event.delta > 0 else 1
-            self.canvas.yview_scroll(delta, "units")
+            self.scroll(delta)
+            return "break"
 
         def _bind_mousewheel(self, widget):
             widget.bind("<MouseWheel>", self._on_mousewheel, add="+")
@@ -1921,7 +2044,8 @@ def main():
             self._bind_mousewheel(self.inner_frame)
 
         def scroll(self, delta):
-            self.canvas.yview_scroll(int(delta), "units")
+            if delta and self._has_overflow():
+                self.canvas.yview_scroll(int(delta), "units")
 
     main_frame = tk.Frame(container, bg="#191919")
     main_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=(0, 5))
@@ -1950,9 +2074,14 @@ def main():
             var = tk.IntVar()
             all_feature_vars[feat["Key"]] = var
             var.trace_add("write", check_dirty_state)
-            cb = ttk.Checkbutton(parent, text=feat["Name"], variable=var)
-            cb.pack(anchor="w", padx=16, pady=1)
-            create_tooltip(cb, feat["ToolTip"])
+            row = tk.Frame(parent, bg="#232323")
+            row.pack(anchor="w", padx=16, pady=1)
+            cb = ttk.Checkbutton(row, text=feat["Name"], variable=var)
+            cb.pack(side="left")
+            marker = tk.Label(row, text="(?)", bg="#232323", padx=0, pady=0)
+            feature_widgets[feat["Key"]] = (cb, marker, create_tooltip(marker, ""))
+            var.trace_add("write", refresh_preset_colors)
+            create_tooltip(cb, preset_tooltip(feat["ToolTip"], feat["Key"]))
 
     populate_checkboxes(left_panel, "Telemetry and Reporting", telemetry_features)
     populate_checkboxes(left_panel, "Privacy and Security", privacy_features)
@@ -1979,14 +2108,14 @@ def main():
         frame.pack(fill="x", padx=16, pady=1)
         lbl = tk.Label(frame, text=perm["Name"], fg="white", bg="#232323", width=16, anchor="w", font=("sans-serif", 9))
         lbl.pack(side="left")
-        create_tooltip(lbl, perm["ToolTip"])
+        create_tooltip(lbl, preset_tooltip(perm["ToolTip"], perm["Key"], permission=True))
 
         var = tk.StringVar(value="Not Set")
         all_perm_vars[perm["Key"]] = var
         var.trace_add("write", check_dirty_state)
         cb = ttk.Combobox(frame, textvariable=var, values=perm["Options"], state="readonly", width=10, style="Dark.TCombobox")
         cb.pack(side="right")
-        create_tooltip(cb, perm["ToolTip"])
+        create_tooltip(cb, preset_tooltip(perm["ToolTip"], perm["Key"], permission=True))
 
     spacer = tk.Frame(right_panel, bg="#232323", height=8)
     spacer.pack(fill="x")
@@ -1999,7 +2128,7 @@ def main():
     sb_var.trace_add("write", check_dirty_state)
     sb_cb = ttk.Combobox(sb_f, textvariable=sb_var, values=["On", "Off"], state="readonly", width=10, style="Dark.TCombobox")
     sb_cb.pack(side="left", padx=8)
-    sb_tt = "On = Standard Safe Browsing. Off = Disabled entirely.\n\nSuggested Settings for Privacy: Off | Security: On"
+    sb_tt = preset_tooltip("On uses Standard Safe Browsing. Off removes phishing and malware warnings. Not Set leaves the browser default.", "SafeBrowsing")
     create_tooltip(sb_lbl, sb_tt)
     create_tooltip(sb_cb, sb_tt)
 
@@ -2011,7 +2140,7 @@ def main():
     dns_var.trace_add("write", check_dirty_state)
     dns_cb = ttk.Combobox(dns_f, textvariable=dns_var, values=["Automatic", "Off", "Secure", "Custom"], state="readonly", width=10, style="Dark.TCombobox")
     dns_cb.pack(side="left", padx=8)
-    dns_tt = "Forces encrypted DNS lookups.\n\nSuggested Settings for Privacy: Off | Security: On"
+    dns_tt = preset_tooltip("Automatic can fall back to unencrypted DNS. Secure requires a trusted DoH endpoint. Off disables browser DoH, not system DNS encryption.", "DnsMode")
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
 
