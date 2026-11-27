@@ -530,6 +530,7 @@ $braveFeatures = @(
     @{ Name = "Disable Email Aliases"; Key = "BraveEmailAliasesEnabled"; Value = 0; Type = "DWord"; ToolTip = "Disables Brave's Email Aliases forwarding feature.`n`nSuggested Settings for Privacy: Ticked | Security: Unticked" }
 )
 
+$midY += $braveLabel.Height + 8
 foreach ($feature in $braveFeatures) {
     $checkbox = New-Object System.Windows.Forms.CheckBox
     $checkbox.Text = $feature.Name
@@ -1052,6 +1053,60 @@ function Check-StateChanges {
     }
 }
 
+function Set-MiddleColumnLayout {
+    $scrollY = -$midPanel.AutoScrollPosition.Y
+    $midPanel.SuspendLayout()
+    try {
+        $midPanel.AutoScrollPosition = [System.Drawing.Point]::Empty
+        $inset = 28
+        $rowLeft = 30
+        # Reserve room for the preview marker and a vertical scrollbar.
+        $width = [Math]::Max(1, $midPanel.ClientSize.Width - $rowLeft - 36 - [System.Windows.Forms.SystemInformation]::VerticalScrollBarWidth)
+        $y = 10
+        foreach ($group in @(@{ Header = $braveLabel; Rows = $braveFeatures }, @{ Header = $perfLabel; Rows = $perfFeatures })) {
+            $header = $group.Header
+            $headerHeight = [Math]::Max(25, $header.Font.Height + 5)
+            $header.SetBounds($inset, $y, $width, $headerHeight)
+            $y += $headerHeight + 8
+            foreach ($feature in $group.Rows) {
+                $cb = $script:middleCheckboxes[$feature.Key]
+                $marker = $script:featureMarkers[$feature.Key]
+                $textWidth = [Math]::Max(1, $width - 34)
+                $words = $feature.Name -split '\s+'
+                $lines = @()
+                $line = ''
+                foreach ($word in $words) {
+                    $candidate = if ($line) { "$line $word" } else { $word }
+                    if ($line -and [System.Windows.Forms.TextRenderer]::MeasureText($candidate, $cb.Font).Width -gt $textWidth) {
+                        $lines += $line
+                        $line = $word
+                    } else { $line = $candidate }
+                }
+                if ($line) { $lines += $line }
+                $cb.Text = $lines -join "`r`n"
+                $rowHeight = [Math]::Max(25, $lines.Count * ($cb.Font.Height + 2) + 8)
+                $cb.SetBounds($rowLeft, $y, $width, $rowHeight)
+                $marker.Location = New-Object System.Drawing.Point(($cb.Right + 2), ($y + [int](($rowHeight - $marker.Height) / 2)))
+                $y += $rowHeight + 3
+            }
+            $y += 10
+        }
+        $midPad.Top = $y
+        $midPad.Height = 8
+        $midPanel.AutoScroll = ($midPad.Bottom -gt $midPanel.ClientSize.Height)
+    } finally {
+        $midPanel.ResumeLayout($true)
+    }
+    if ($midPanel.AutoScroll -and $scrollY -gt 0) {
+        $midPanel.AutoScrollPosition = New-Object System.Drawing.Point(0, $scrollY)
+    }
+}
+
+$script:middleCheckboxes = @{}
+foreach ($cb in $allFeatures) {
+    if ($cb.Parent -eq $midPanel) { $script:middleCheckboxes[$cb.Tag.Key] = $cb }
+}
+
 function Update-Layout {
     if ($form.ClientSize.Width -eq 0) { return }
 
@@ -1077,13 +1132,16 @@ function Update-Layout {
     $rightPanel.Location = New-Object System.Drawing.Point(($midPanel.Right + 20), 70)
     $rightPanel.Size = New-Object System.Drawing.Size($panelWidth, $panelHeight)
 
+    Set-MiddleColumnLayout
+
     foreach ($cb in $allFeatures) {
+        if ($cb.Parent -eq $midPanel) { continue }
         $cb.Width = $panelWidth - 95
         $marker = $script:featureMarkers[$cb.Tag.Key]
         $marker.Location = New-Object System.Drawing.Point(($cb.Right + 2), ($cb.Top + 3))
     }
 
-    foreach ($panel in @($leftPanel, $midPanel, $rightPanel)) {
+    foreach ($panel in @($leftPanel, $rightPanel)) {
         $offset = $panel.AutoScrollPosition.Y
         $bottom = 0
         foreach ($control in $panel.Controls) {
