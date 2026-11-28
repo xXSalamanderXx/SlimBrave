@@ -1,4 +1,4 @@
-﻿# Slimbrave - Revived - v1.2.0 (Windows)
+# Slimbrave - Revived - v1.2.1 (Windows)
 
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Start-Process powershell -ArgumentList "-File `"$($MyInvocation.MyCommand.Path)`"" -Verb RunAs
@@ -40,11 +40,11 @@ if (-not (Test-Path -Path $global:registryPath)) {
 
 Clear-Host
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "SlimBrave - Revived v1.2.0"
+$form.Text = "SlimBrave - Revived v1.2.1"
 $form.ForeColor = [System.Drawing.Color]::White
-$form.Size = New-Object System.Drawing.Size(1300, 850) 
+$form.Size = New-Object System.Drawing.Size(1300, 850)
 $form.MinimumSize = New-Object System.Drawing.Size(1300, 850)
-$form.MaximumSize = New-Object System.Drawing.Size([int](1300 * 1.25), [int](850 * 1.25)) 
+$form.MaximumSize = New-Object System.Drawing.Size([int](1300 * 1.25), [int](850 * 1.25))
 $form.StartPosition = "CenterScreen"
 $form.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $form.MaximizeBox = $true
@@ -53,7 +53,54 @@ $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
 $allFeatures = @()
 $allPerms = @()
 $toolTip = New-Object System.Windows.Forms.ToolTip
+$toolTip.AutoPopDelay = 15000
+$toolTip.InitialDelay = 400
+$toolTip.ReshowDelay = 100
+$toolTip.ShowAlways = $true
 $boldFont = New-Object System.Drawing.Font("Microsoft Sans Serif", 9.5, [System.Drawing.FontStyle]::Bold)
+
+$script:familyDoH = 'https://family.cloudflare-dns.com/dns-query{?dns}'
+$script:colourLegend = 'red = disabled setting, green = enabled setting, blue = unchanged setting'
+$script:presetPreview = $null
+$script:activePreset = ''
+$script:switchingPreset = $false
+$script:featureMarkers = @{}
+$script:valueItems = [ordered]@{}
+$script:baselineSnapshot = $null
+$global:baselineStateJson = ""
+
+$script:drawColoredCombo = {
+    param($sender, $e)
+    $isEdit = ($e.State -band [System.Windows.Forms.DrawItemState]::ComboBoxEdit) -ne 0
+    $isSelected = ($e.State -band [System.Windows.Forms.DrawItemState]::Selected) -ne 0
+    $bgColor = if ($isEdit) {
+        $sender.BackColor
+    } elseif ($isSelected) {
+        [System.Drawing.Color]::FromArgb(255, 65, 65, 65)
+    } else {
+        $sender.BackColor
+    }
+    $bgBrush = New-Object System.Drawing.SolidBrush($bgColor)
+    try {
+        $e.Graphics.FillRectangle($bgBrush, $e.Bounds)
+        if ($e.Index -ge 0 -and $e.Index -lt $sender.Items.Count) {
+            $fgColor = if ($isEdit) { $sender.ForeColor } else { [System.Drawing.Color]::White }
+            $fgBrush = New-Object System.Drawing.SolidBrush($fgColor)
+            $sf = New-Object System.Drawing.StringFormat
+            $sf.LineAlignment = [System.Drawing.StringAlignment]::Center
+            try {
+                $text = [string]$sender.Items[$e.Index]
+                $rect = New-Object System.Drawing.RectangleF(($e.Bounds.X + 2), $e.Bounds.Y, ($e.Bounds.Width - 2), $e.Bounds.Height)
+                $e.Graphics.DrawString($text, $e.Font, $fgBrush, $rect, $sf)
+            } finally {
+                $fgBrush.Dispose()
+                $sf.Dispose()
+            }
+        }
+    } finally {
+        $bgBrush.Dispose()
+    }
+}
 
 $channelLabel = New-Object System.Windows.Forms.Label
 $channelLabel.Text = "Target Channel:"
@@ -101,11 +148,11 @@ $channelDropdown.Add_SelectedIndexChanged({
     } elseif ($channelDropdown.SelectedItem -eq "Nightly") {
         $global:registryPath = "HKLM:\SOFTWARE\Policies\BraveSoftware\BraveNightly"
     }
-        if (-not (Test-Path -Path $global:registryPath)) {
+    if (-not (Test-Path -Path $global:registryPath)) {
         [void](New-Item -Path $global:registryPath -Force)
         Write-Log "Created new Brave Policy registry key for $($channelDropdown.SelectedItem)."
     }
-        Reload-UIFromRegistry
+    Reload-UIFromRegistry
     Update-Status "Target channel switched to $($channelDropdown.SelectedItem). UI reloaded."
 })
 
@@ -119,7 +166,7 @@ $form.Controls.Add($presetLabel)
 $presetDropdown = New-Object System.Windows.Forms.ComboBox
 $presetDropdown.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
 [void]$presetDropdown.Items.AddRange(@("Maximum Privacy", "High Security", "Performance Focused", "Strict Parental Controls", "Balanced Privacy", "Developer", "Brave Origin"))
-$presetDropdown.SelectedIndex = 0
+$presetDropdown.SelectedIndex = -1
 $presetDropdown.Size = New-Object System.Drawing.Size(200, 20)
 $presetDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 45, 45, 45)
 $presetDropdown.ForeColor = [System.Drawing.Color]::White
@@ -164,12 +211,10 @@ $script:presetTable = [ordered]@{
         SafeBrowsing = ''; DnsMode = ''
     }
 }
-$script:presetPreview = $null
-$script:featureMarkers = @{}
 
 function Get-PresetChoice($entry, [string]$key, [string]$kind) {
     switch ($kind) {
-        'Permission' { if ($entry.Permissions.ContainsKey($key)) { return $entry.Permissions[$key] }; return 'Not Set' }
+        'Permission' { if ($entry.Permissions.Contains($key)) { return $entry.Permissions[$key] }; return 'Not Set' }
         'SafeBrowsing' { if ($entry.SafeBrowsing) { return $entry.SafeBrowsing }; return 'Not Set' }
         'DnsMode' { if ($entry.DnsMode) { return $entry.DnsMode }; return 'Not Set' }
         'Template' { if ($entry.DnsMode -eq 'Secure') { return 'Cloudflare for Families' }; return '(Blank)' }
@@ -187,55 +232,323 @@ function Get-PresetTooltip([string]$description, [string]$key, [string]$kind = '
     return "$description`n`nSuggested Settings for Privacy: $privacy | Security: $security`n`nPreset selections:`n$($rows -join "`n")"
 }
 
-function Update-PresetColor($cb) {
+function Get-NormalizedComboValue($combo) {
+    if ($null -eq $combo.SelectedItem) { return $null }
+    $val = [string]$combo.SelectedItem
+    if ([string]::IsNullOrWhiteSpace($val) -or $val -ceq 'Not Set') { return $null }
+    return $val
+}
+
+function Format-DisplayValue($value, [string]$unsetLabel) {
+    if ($null -eq $value) { return $unsetLabel }
+    $text = ([string]$value).Trim()
+    if ([string]::IsNullOrEmpty($text) -or $text -ceq 'Not Set') { return $unsetLabel }
+    return $text
+}
+
+function Get-StateColor([string]$state) {
+    switch ($state) {
+        'Applied'  { return [System.Drawing.Color]::DeepSkyBlue }
+        'Retained' { return [System.Drawing.Color]::DeepSkyBlue }
+        'Added'    { return [System.Drawing.Color]::LightGreen }
+        'Removed'  { return [System.Drawing.Color]::LightCoral }
+        default    { return [System.Drawing.Color]::White }
+    }
+}
+
+function Set-MarkerToolTip($marker, [string]$text) {
+    if ($toolTip.GetToolTip($marker) -cne $text) {
+        $toolTip.SetToolTip($marker, $text)
+    }
+}
+
+function Update-FeatureVisual($cb) {
     $key = $cb.Tag.Key
     if (-not $script:featureMarkers.ContainsKey($key)) { return }
     $marker = $script:featureMarkers[$key]
-    $reason = ''
-    $color = [System.Drawing.Color]::White
-    if ($cb.Checked) {
-        $color = [System.Drawing.Color]::DeepSkyBlue
-        if ($script:presetPreview) {
-            $script:presetPreview.Seen[$key] = $true
-            if (-not $script:presetPreview.Retained.ContainsKey($key)) {
-                $color = [System.Drawing.Color]::LightGreen
-                $reason = if ($script:presetPreview.Selected -contains $key) { 'Added by Preset' } else { 'Manually Added, Preset Disabled This' }
-            }
-        }
-    } elseif ($script:presetPreview -and $script:presetPreview.Seen.ContainsKey($key)) {
-        $color = [System.Drawing.Color]::LightCoral
-        $reason = if ($script:presetPreview.Selected -contains $key) { 'Removed from Preset' } else { 'Removed from your Current Configuration' }
+    $appliedFeatures = if ($script:baselineSnapshot) { $script:baselineSnapshot.Features } else { @() }
+    $checked = [bool]$cb.Checked
+    $hasPreset = ($null -ne $script:presetPreview)
+    $wasEnabled = ($appliedFeatures -contains $key)
+    $presetEnabled = if ($hasPreset) { ($script:presetPreview.Selected -contains $key) } else { $wasEnabled }
+
+    if (-not $hasPreset -and ($checked -eq $wasEnabled)) {
+        $color = if ($checked) { Get-StateColor 'Retained' } else { Get-StateColor 'Neutral' }
+        $cb.ForeColor = $color
+        Set-MarkerToolTip $marker ''
+        $marker.Visible = $false
+        return
     }
+
+    $state = if ($checked) {
+        if ($wasEnabled) { 'Retained' } else { 'Added' }
+    } else {
+        if ($wasEnabled -or $presetEnabled) { 'Removed' } else { 'Neutral' }
+    }
+    $color = Get-StateColor $state
+
+    $current = if ($wasEnabled) { 'Enabled' } else { 'Disabled' }
+    $target = if ($presetEnabled) { 'enabled' } else { 'disabled' }
+    $action = if ($wasEnabled -eq $presetEnabled) { 'Kept' } else { 'Changed to' }
+
+    $reason = if ($hasPreset) {
+        "$current on your current configuration, $action $target by this preset."
+    } else {
+        "$current on your current configuration."
+    }
+    if (-not $hasPreset -or ($checked -ne $presetEnabled)) {
+        $staged = if ($checked) { 'enabled' } else { 'disabled' }
+        $reason += "`nYour unsaved selection: $staged."
+    }
+
     $cb.ForeColor = $color
     $marker.ForeColor = $color
-    $toolTip.SetToolTip($marker, $reason)
-    $marker.Visible = [bool]$reason
+    Set-MarkerToolTip $marker $reason
+    $marker.Visible = $true
+}
+
+function Update-ValueVisual([string]$key) {
+    if (-not $script:valueItems.Contains($key)) { return }
+    $item = $script:valueItems[$key]
+    $field = $item.Field
+    $unset = if ($field -eq 'DnsTemplate') { '(Blank)' } else { 'Not Set' }
+
+    $beforeRaw = if ($field) {
+        if ($script:baselineSnapshot) { $script:baselineSnapshot[$field] } else { $null }
+    } else {
+        if ($script:baselineSnapshot -and $script:baselineSnapshot.Permissions.Contains($key)) {
+            $script:baselineSnapshot.Permissions[$key]
+        } else {
+            $null
+        }
+    }
+    $before = Format-DisplayValue $beforeRaw $unset
+
+    $stagedRaw = if ($field -eq 'DnsTemplate') { $item.Control.Text } else { $item.Control.SelectedItem }
+    $staged = Format-DisplayValue $stagedRaw $unset
+
+    if ($before -ceq $staged) {
+        $state = if ($staged -ceq $unset) { 'Neutral' } else { 'Applied' }
+    } else {
+        if ($staged -ceq $unset -or ($field -eq 'DnsMode' -and $staged -ceq 'Off')) {
+            $state = 'Removed'
+        } else {
+            $state = 'Added'
+        }
+    }
+    $color = Get-StateColor $state
+
+    $item.Label.ForeColor = $color
+    $item.Control.ForeColor = $color
+    if ($item.Control -is [System.Windows.Forms.ComboBox]) {
+        $item.Control.Invalidate()
+    }
+
+    $hasPreset = ($null -ne $script:presetPreview)
+    if (-not $hasPreset -and ($staged -ceq $before)) {
+        Set-MarkerToolTip $item.Marker ''
+        $item.Marker.Visible = $false
+        return
+    }
+
+    $reason = "Current configuration: $before."
+    $target = $before
+    if ($hasPreset) {
+        $entry = $script:presetPreview.Entry
+        $targetRaw = switch ($field) {
+            'SafeBrowsing' { $entry.SafeBrowsing }
+            'DnsMode'      { $entry.DnsMode }
+            'DnsTemplate'  { if ($entry.DnsMode -eq 'Secure') { $script:familyDoH } else { '' } }
+            default        { if ($entry.Permissions.Contains($key)) { $entry.Permissions[$key] } else { '' } }
+        }
+        $target = Format-DisplayValue $targetRaw $unset
+        $presetLine = if ($before -ceq $target) {
+            "Kept as $target by this preset."
+        } else {
+            "Changed to $target by this preset."
+        }
+        $reason = "Current configuration: $before.`n$presetLine"
+    }
+    if (-not $hasPreset -or ($staged -cne $target)) {
+        $reason += "`nYour unsaved selection: $staged."
+    }
+
+    $item.Marker.ForeColor = $color
+    Set-MarkerToolTip $item.Marker $reason
+    $item.Marker.Visible = $true
+}
+
+function Refresh-AllVisuals {
+    foreach ($cb in $allFeatures) {
+        Update-FeatureVisual $cb
+    }
+    foreach ($vKey in @($script:valueItems.Keys)) {
+        Update-ValueVisual $vKey
+    }
+}
+
+function Get-SnapshotSignature ($snap) {
+    $features = if ($snap.Features) { (@($snap.Features | Sort-Object -Unique) -join ',') } else { '' }
+    $permPairs = @()
+    if ($snap.Permissions) {
+        $isDict = $snap.Permissions -is [System.Collections.IDictionary]
+        $permKeys = if ($isDict) {
+            @($snap.Permissions.Keys | Sort-Object)
+        } else {
+            @($snap.Permissions.PSObject.Properties.Name | Sort-Object)
+        }
+        foreach ($pk in $permKeys) {
+            $pv = if ($isDict) { $snap.Permissions[$pk] } else { $snap.Permissions.$pk }
+            if ($pv -and $pv -cne 'Not Set') {
+                $permPairs += "${pk}=${pv}"
+            }
+        }
+    }
+    $sb = if ($snap.SafeBrowsing -and $snap.SafeBrowsing -cne 'Not Set') { [string]$snap.SafeBrowsing } else { '' }
+    $dns = if ($snap.DnsMode -and $snap.DnsMode -cne 'Not Set') { [string]$snap.DnsMode } else { '' }
+    $tpl = if ($null -ne $snap.DnsTemplate) { ([string]$snap.DnsTemplate).Trim() } else { '' }
+    return "$features|$($permPairs -join ',')|$sb|$dns|$tpl"
+}
+
+function Test-MatchesAnyPreset ($snap) {
+    $sig = Get-SnapshotSignature $snap
+    foreach ($entry in $script:presetTable.Values) {
+        $presetSnap = [ordered]@{
+            Features     = $entry.Features
+            Permissions  = $entry.Permissions
+            SafeBrowsing = $entry.SafeBrowsing
+            DnsMode      = $entry.DnsMode
+            DnsTemplate  = if ($entry.DnsMode -eq 'Secure') { $script:familyDoH } else { '' }
+        }
+        if ($sig -ceq (Get-SnapshotSignature $presetSnap)) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Show-PresetSwitchWarning {
+    $dlg = New-Object System.Windows.Forms.Form
+    $dlg.Text = "Unsaved Selections"
+    $dlg.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
+    $dlg.ForeColor = [System.Drawing.Color]::White
+    $dlg.Size = New-Object System.Drawing.Size(510, 200)
+    $dlg.StartPosition = "CenterParent"
+    $dlg.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+    $dlg.MaximizeBox = $false
+    $dlg.MinimizeBox = $false
+    $dlg.KeyPreview = $true
+
+    $msgLabel = New-Object System.Windows.Forms.Label
+    $msgLabel.Text = "You have unsaved selections that don't match a preset.`nUse `"Apply Settings`" to save them before comparing another preset.`n`nDo you want to save your changes now?"
+    $msgLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9.5, [System.Drawing.FontStyle]::Regular)
+    $msgLabel.ForeColor = [System.Drawing.Color]::White
+    $msgLabel.Location = New-Object System.Drawing.Point(20, 18)
+    $msgLabel.Size = New-Object System.Drawing.Size(455, 80)
+    [void]$dlg.Controls.Add($msgLabel)
+
+    $btnApply = New-Object System.Windows.Forms.Button
+    $btnApply.Text = "Yes, Apply My Settings Selections"
+    $btnApply.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9, [System.Drawing.FontStyle]::Bold)
+    $btnApply.Location = New-Object System.Drawing.Point(20, 112)
+    $btnApply.Size = New-Object System.Drawing.Size(255, 36)
+    $btnApply.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $btnApply.FlatAppearance.BorderSize = 0
+    $btnApply.BackColor = [System.Drawing.Color]::FromArgb(255, 46, 125, 50)
+    $btnApply.ForeColor = [System.Drawing.Color]::White
+    $btnApply.DialogResult = [System.Windows.Forms.DialogResult]::Yes
+    [void]$dlg.Controls.Add($btnApply)
+
+    $btnDiscard = New-Object System.Windows.Forms.Button
+    $btnDiscard.Text = "No, Discard Selections"
+    $btnDiscard.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9, [System.Drawing.FontStyle]::Bold)
+    $btnDiscard.Location = New-Object System.Drawing.Point(287, 112)
+    $btnDiscard.Size = New-Object System.Drawing.Size(188, 36)
+    $btnDiscard.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $btnDiscard.FlatAppearance.BorderSize = 0
+    $btnDiscard.BackColor = [System.Drawing.Color]::FromArgb(255, 198, 40, 40)
+    $btnDiscard.ForeColor = [System.Drawing.Color]::White
+    $btnDiscard.DialogResult = [System.Windows.Forms.DialogResult]::No
+    [void]$dlg.Controls.Add($btnDiscard)
+
+    $dlg.AcceptButton = $btnApply
+    $dlg.Add_KeyDown({
+        if ($_.KeyCode -eq [System.Windows.Forms.Keys]::Escape) {
+            $dlg.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+            $dlg.Close()
+        }
+    })
+
+    $res = $dlg.ShowDialog($form)
+    $dlg.Dispose()
+    if ($res -eq [System.Windows.Forms.DialogResult]::Yes) { return 'Apply' }
+    if ($res -eq [System.Windows.Forms.DialogResult]::No) { return 'Discard' }
+    return 'Cancel'
+}
+
+function Apply-Preset ([string]$presetName) {
+    $entry = $script:presetTable[$presetName]
+    if (-not $entry) { return }
+    $script:presetPreview = @{
+        Name     = $presetName
+        Selected = $entry.Features
+        Entry    = $entry
+    }
+    $global:suspendDirtyTracking = $true
+    try {
+        foreach ($cb in $allFeatures) {
+            $cb.Checked = ($entry.Features -contains $cb.Tag.Key)
+        }
+        foreach ($perm in $allPerms) {
+            $perm.SelectedItem = (Get-PresetChoice $entry $perm.Tag.Key 'Permission')
+        }
+        $sbDropdown.SelectedItem = if ($entry.SafeBrowsing) { $entry.SafeBrowsing } else { 'Not Set' }
+        $dnsDropdown.SelectedItem = if ($entry.DnsMode) { $entry.DnsMode } else { 'Not Set' }
+        $dnsTplInput.Text = if ($entry.DnsMode -eq 'Secure') { $script:familyDoH } else { '' }
+    } finally {
+        $global:suspendDirtyTracking = $false
+    }
+    Refresh-AllVisuals
+    Check-DirtyState
+    Update-Status "${presetName} preview: $($script:colourLegend). Apply to save."
 }
 
 $presetDropdown.Add_SelectedIndexChanged({
-    if ($global:suspendPresetTriggers -or -not $presetDropdown.SelectedItem) { return }
-    $name = [string]$presetDropdown.SelectedItem
-    $entry = $script:presetTable[$name]
-    if (-not $entry) { return }
-    $seen = @{}
-    $retained = @{}
-    foreach ($cb in $allFeatures) {
-        $key = $cb.Tag.Key
-        if ($cb.Checked -or $entry.Features -contains $key) { $seen[$key] = $true }
-        if ($cb.Checked -and $entry.Features -contains $key) { $retained[$key] = $true }
-    }
-    $script:presetPreview = @{ Seen = $seen; Retained = $retained; Selected = $entry.Features }
-    $global:suspendDirtyTracking = $true
+    if ($global:suspendPresetTriggers -or $script:switchingPreset -or -not $presetDropdown.SelectedItem) { return }
+    $requested = [string]$presetDropdown.SelectedItem
+    $script:switchingPreset = $true
     try {
-        foreach ($cb in $allFeatures) { $cb.Checked = ($entry.Features -contains $cb.Tag.Key) }
-        foreach ($perm in $allPerms) { $perm.SelectedItem = (Get-PresetChoice $entry $perm.Tag.Key 'Permission') }
-        if ($entry.SafeBrowsing) { $sbDropdown.SelectedItem = $entry.SafeBrowsing } else { $sbDropdown.SelectedIndex = -1 }
-        if ($entry.DnsMode) { $dnsDropdown.SelectedItem = $entry.DnsMode } else { $dnsDropdown.SelectedIndex = -1 }
-        $dnsTplInput.Text = if ($entry.DnsMode -eq 'Secure') { 'https://family.cloudflare-dns.com/dns-query{?dns}' } else { '' }
-    } finally { $global:suspendDirtyTracking = $false }
-    foreach ($cb in $allFeatures) { Update-PresetColor $cb }
-    Check-DirtyState
-    Update-Status "${name} preview: green = added, blue = kept, red = unticked. Apply to save."
+        $current = Get-UIStateSnapshot
+        $currentSig = Get-SnapshotSignature $current
+        if ($currentSig -cne $global:baselineStateJson -and -not (Test-MatchesAnyPreset $current)) {
+            $decision = Show-PresetSwitchWarning
+            if ($decision -eq 'Cancel' -or ($decision -eq 'Apply' -and -not (Invoke-ApplySettings))) {
+                $global:suspendPresetTriggers = $true
+                try {
+                    if ($script:activePreset) {
+                        $presetDropdown.SelectedItem = $script:activePreset
+                    } else {
+                        $presetDropdown.SelectedIndex = -1
+                    }
+                } finally {
+                    $global:suspendPresetTriggers = $false
+                }
+                return
+            }
+            if ($decision -eq 'Apply') {
+                $global:suspendPresetTriggers = $true
+                try {
+                    $presetDropdown.SelectedItem = $requested
+                } finally {
+                    $global:suspendPresetTriggers = $false
+                }
+            }
+        }
+        Apply-Preset $requested
+        $script:activePreset = $requested
+    } finally {
+        $script:switchingPreset = $false
+    }
 })
 
 $statusBar = New-Object System.Windows.Forms.Label
@@ -278,7 +591,6 @@ function Update-Status ($text) {
     $form.Refresh()
     Write-Log $text
 }
-
 
 function Assert-DoHTemplate ([string]$Mode, [string]$Template) {
     if ($Template -match '[\p{Cc}\p{Cf}]') { throw 'DoH template contains control or formatting characters.' }
@@ -364,7 +676,7 @@ function Set-RoundedCorners($ctrl, $r) {
 $leftPanel = New-Object System.Windows.Forms.Panel
 $leftPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $leftPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-$leftPanel.AutoScroll = $true 
+$leftPanel.AutoScroll = $true
 $form.Controls.Add($leftPanel)
 
 $telemetryLabel = New-Object System.Windows.Forms.Label
@@ -390,30 +702,28 @@ foreach ($feature in $telemetryFeatures) {
     $checkbox.Text = $feature.Name
     $checkbox.Tag = $feature
     $checkbox.Location = New-Object System.Drawing.Point(30, $leftY)
-    $checkbox.Size = New-Object System.Drawing.Size(340, 25) 
+    $checkbox.Size = New-Object System.Drawing.Size(340, 25)
     $checkbox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left
     $checkbox.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $checkbox.FlatAppearance.BorderSize = 1
     $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
     $checkbox.FlatAppearance.CheckedBackColor = [System.Drawing.Color]::DodgerBlue
     $checkbox.Add_CheckedChanged({
-        if ($this.Checked) {
-            $this.ForeColor = [System.Drawing.Color]::DeepSkyBlue
-        } else {
-            $this.ForeColor = [System.Drawing.Color]::White
-        }
+        if ($global:suspendDirtyTracking) { return }
+        Update-FeatureVisual $this
         Check-DirtyState
     })
     $toolTip.SetToolTip($checkbox, (Get-PresetTooltip $feature.ToolTip $feature.Key))
     $leftPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
+
     $marker = New-Object System.Windows.Forms.Label
     $marker.Text = '(?)'
     $marker.Size = New-Object System.Drawing.Size(27, 20)
+    $marker.BackColor = $leftPanel.BackColor
     $marker.Visible = $false
     $leftPanel.Controls.Add($marker)
     $script:featureMarkers[$feature.Key] = $marker
-    $checkbox.Add_CheckedChanged({ if (-not $global:suspendDirtyTracking) { Update-PresetColor $this } })
     $leftY += 28
 }
 
@@ -459,23 +769,21 @@ foreach ($feature in $privacyFeatures) {
     $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
     $checkbox.FlatAppearance.CheckedBackColor = [System.Drawing.Color]::DodgerBlue
     $checkbox.Add_CheckedChanged({
-        if ($this.Checked) {
-            $this.ForeColor = [System.Drawing.Color]::DeepSkyBlue
-        } else {
-            $this.ForeColor = [System.Drawing.Color]::White
-        }
+        if ($global:suspendDirtyTracking) { return }
+        Update-FeatureVisual $this
         Check-DirtyState
     })
     $toolTip.SetToolTip($checkbox, (Get-PresetTooltip $feature.ToolTip $feature.Key))
     $leftPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
+
     $marker = New-Object System.Windows.Forms.Label
     $marker.Text = '(?)'
     $marker.Size = New-Object System.Drawing.Size(27, 20)
+    $marker.BackColor = $leftPanel.BackColor
     $marker.Visible = $false
     $leftPanel.Controls.Add($marker)
     $script:featureMarkers[$feature.Key] = $marker
-    $checkbox.Add_CheckedChanged({ if (-not $global:suspendDirtyTracking) { Update-PresetColor $this } })
     $leftY += 28
 }
 
@@ -487,7 +795,7 @@ $leftPad.Size = New-Object System.Drawing.Size(10, 40)
 $midPanel = New-Object System.Windows.Forms.Panel
 $midPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $midPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-$midPanel.AutoScroll = $true 
+$midPanel.AutoScroll = $true
 $form.Controls.Add($midPanel)
 
 [int]$midY = 10
@@ -543,23 +851,21 @@ foreach ($feature in $braveFeatures) {
     $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
     $checkbox.FlatAppearance.CheckedBackColor = [System.Drawing.Color]::DodgerBlue
     $checkbox.Add_CheckedChanged({
-        if ($this.Checked) {
-            $this.ForeColor = [System.Drawing.Color]::DeepSkyBlue
-        } else {
-            $this.ForeColor = [System.Drawing.Color]::White
-        }
+        if ($global:suspendDirtyTracking) { return }
+        Update-FeatureVisual $this
         Check-DirtyState
     })
     $toolTip.SetToolTip($checkbox, (Get-PresetTooltip $feature.ToolTip $feature.Key))
     $midPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
+
     $marker = New-Object System.Windows.Forms.Label
     $marker.Text = '(?)'
     $marker.Size = New-Object System.Drawing.Size(27, 20)
+    $marker.BackColor = $midPanel.BackColor
     $marker.Visible = $false
     $midPanel.Controls.Add($marker)
     $script:featureMarkers[$feature.Key] = $marker
-    $checkbox.Add_CheckedChanged({ if (-not $global:suspendDirtyTracking) { Update-PresetColor $this } })
     $midY += 28
 }
 
@@ -602,23 +908,21 @@ foreach ($feature in $perfFeatures) {
     $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
     $checkbox.FlatAppearance.CheckedBackColor = [System.Drawing.Color]::DodgerBlue
     $checkbox.Add_CheckedChanged({
-        if ($this.Checked) {
-            $this.ForeColor = [System.Drawing.Color]::DeepSkyBlue
-        } else {
-            $this.ForeColor = [System.Drawing.Color]::White
-        }
+        if ($global:suspendDirtyTracking) { return }
+        Update-FeatureVisual $this
         Check-DirtyState
     })
     $toolTip.SetToolTip($checkbox, (Get-PresetTooltip $feature.ToolTip $feature.Key))
     $midPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
+
     $marker = New-Object System.Windows.Forms.Label
     $marker.Text = '(?)'
     $marker.Size = New-Object System.Drawing.Size(27, 20)
+    $marker.BackColor = $midPanel.BackColor
     $marker.Visible = $false
     $midPanel.Controls.Add($marker)
     $script:featureMarkers[$feature.Key] = $marker
-    $checkbox.Add_CheckedChanged({ if (-not $global:suspendDirtyTracking) { Update-PresetColor $this } })
     $midY += 28
 }
 
@@ -630,7 +934,7 @@ $midPad.Size = New-Object System.Drawing.Size(10, 40)
 $rightPanel = New-Object System.Windows.Forms.Panel
 $rightPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $rightPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-$rightPanel.AutoScroll = $true 
+$rightPanel.AutoScroll = $true
 $form.Controls.Add($rightPanel)
 
 [int]$permY = 10
@@ -665,19 +969,21 @@ foreach ($feature in $accessFeatures) {
     $checkbox.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 80, 80, 80)
     $checkbox.FlatAppearance.CheckedBackColor = [System.Drawing.Color]::DodgerBlue
     $checkbox.Add_CheckedChanged({
-        if ($this.Checked) { $this.ForeColor = [System.Drawing.Color]::DeepSkyBlue } else { $this.ForeColor = [System.Drawing.Color]::White }
+        if ($global:suspendDirtyTracking) { return }
+        Update-FeatureVisual $this
         Check-DirtyState
     })
     $toolTip.SetToolTip($checkbox, (Get-PresetTooltip $feature.ToolTip $feature.Key))
     $rightPanel.Controls.Add($checkbox)
     $allFeatures += $checkbox
+
     $marker = New-Object System.Windows.Forms.Label
     $marker.Text = '(?)'
     $marker.Size = New-Object System.Drawing.Size(27, 20)
+    $marker.BackColor = $rightPanel.BackColor
     $marker.Visible = $false
     $rightPanel.Controls.Add($marker)
     $script:featureMarkers[$feature.Key] = $marker
-    $checkbox.Add_CheckedChanged({ if (-not $global:suspendDirtyTracking) { Update-PresetColor $this } })
     $permY += 28
 }
 
@@ -711,7 +1017,7 @@ $permissionSettings = @(
 foreach ($p in $permissionSettings) {
     $lbl = New-Object System.Windows.Forms.Label
     $lbl.Text = $p.Name
-    $lbl.Size = New-Object System.Drawing.Size(165, 20)
+    $lbl.Size = New-Object System.Drawing.Size(158, 20)
     $lbl.Location = New-Object System.Drawing.Point(30, $permY)
     $lbl.ForeColor = [System.Drawing.Color]::White
     $toolTip.SetToolTip($lbl, (Get-PresetTooltip $p.ToolTip $p.Key "Permission"))
@@ -720,17 +1026,38 @@ foreach ($p in $permissionSettings) {
     $cb = New-Object System.Windows.Forms.ComboBox
     $cb.Tag = $p
     $cb.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+    $cb.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawFixed
+    $cb.Add_DrawItem($script:drawColoredCombo)
     [void]$cb.Items.AddRange($p.Options)
     $cb.SelectedIndex = 0
-    $cb.Size = New-Object System.Drawing.Size(130, 20)
-    $cb.Location = New-Object System.Drawing.Point(200, [int]($permY - 3))
+    $cb.Size = New-Object System.Drawing.Size(125, 20)
+    $cb.Location = New-Object System.Drawing.Point(194, [int]($permY - 3))
     $cb.BackColor = [System.Drawing.Color]::FromArgb(255, 45, 45, 45)
     $cb.ForeColor = [System.Drawing.Color]::White
     $cb.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $cb.Add_SelectedIndexChanged({ Check-DirtyState })
+    $cb.Add_SelectedIndexChanged({
+        if ($global:suspendDirtyTracking) { return }
+        Update-ValueVisual $this.Tag.Key
+        Check-DirtyState
+    })
     $toolTip.SetToolTip($cb, (Get-PresetTooltip $p.ToolTip $p.Key "Permission"))
     [void]$rightPanel.Controls.Add($cb)
     $allPerms += $cb
+
+    $pMarker = New-Object System.Windows.Forms.Label
+    $pMarker.Text = '(?)'
+    $pMarker.Size = New-Object System.Drawing.Size(27, 20)
+    $pMarker.Location = New-Object System.Drawing.Point(($cb.Right + 12), $permY)
+    $pMarker.BackColor = $rightPanel.BackColor
+    $pMarker.Visible = $false
+    [void]$rightPanel.Controls.Add($pMarker)
+
+    $script:valueItems[$p.Key] = @{
+        Marker  = $pMarker
+        Control = $cb
+        Label   = $lbl
+        Field   = $null
+    }
     $permY += 35
 }
 
@@ -749,17 +1076,40 @@ if ($haForceCb -and $haDisableCb) {
 
 $sbLabel = New-Object System.Windows.Forms.Label
 $sbLabel.Text = "Safe Browsing:"
-$sbLabel.Size = New-Object System.Drawing.Size(110, 20)
+$sbLabel.Size = New-Object System.Drawing.Size(115, 20)
+$sbLabel.ForeColor = [System.Drawing.Color]::White
 $form.Controls.Add($sbLabel)
 
 $sbDropdown = New-Object System.Windows.Forms.ComboBox
-$sbDropdown.Size = New-Object System.Drawing.Size(150, 20)
-[void]$sbDropdown.Items.AddRange(@("On", "Enhanced", "Off"))
+$sbDropdown.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+$sbDropdown.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawFixed
+$sbDropdown.Add_DrawItem($script:drawColoredCombo)
+$sbDropdown.Size = New-Object System.Drawing.Size(145, 20)
+[void]$sbDropdown.Items.AddRange(@("Not Set", "On", "Enhanced", "Off"))
+$sbDropdown.SelectedIndex = 0
 $sbDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$sbDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
+$sbDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $sbDropdown.ForeColor = [System.Drawing.Color]::White
-$sbDropdown.Add_SelectedIndexChanged({ Check-DirtyState })
+$sbDropdown.Add_SelectedIndexChanged({
+    if ($global:suspendDirtyTracking) { return }
+    Update-ValueVisual 'SafeBrowsing'
+    Check-DirtyState
+})
 $form.Controls.Add($sbDropdown)
+
+$sbMarker = New-Object System.Windows.Forms.Label
+$sbMarker.Text = '(?)'
+$sbMarker.Size = New-Object System.Drawing.Size(27, 20)
+$sbMarker.BackColor = $form.BackColor
+$sbMarker.Visible = $false
+$form.Controls.Add($sbMarker)
+
+$script:valueItems['SafeBrowsing'] = @{
+    Marker  = $sbMarker
+    Control = $sbDropdown
+    Label   = $sbLabel
+    Field   = 'SafeBrowsing'
+}
 
 $sbTooltip = Get-PresetTooltip 'On uses Standard Safe Browsing. Off disables it. Not Set leaves Brave defaults.' '' 'SafeBrowsing'
 $toolTip.SetToolTip($sbDropdown, $sbTooltip)
@@ -767,17 +1117,40 @@ $toolTip.SetToolTip($sbLabel, $sbTooltip)
 
 $dnsLabel = New-Object System.Windows.Forms.Label
 $dnsLabel.Text = "DNS Over HTTPS:"
-$dnsLabel.Size = New-Object System.Drawing.Size(130, 20)
+$dnsLabel.Size = New-Object System.Drawing.Size(125, 20)
+$dnsLabel.ForeColor = [System.Drawing.Color]::White
 $form.Controls.Add($dnsLabel)
 
 $dnsDropdown = New-Object System.Windows.Forms.ComboBox
-$dnsDropdown.Size = New-Object System.Drawing.Size(150, 20)
-[void]$dnsDropdown.Items.AddRange(@("Automatic", "Off", "Secure", "Custom"))
+$dnsDropdown.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+$dnsDropdown.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawFixed
+$dnsDropdown.Add_DrawItem($script:drawColoredCombo)
+$dnsDropdown.Size = New-Object System.Drawing.Size(145, 20)
+[void]$dnsDropdown.Items.AddRange(@("Not Set", "Automatic", "Off", "Secure", "Custom"))
+$dnsDropdown.SelectedIndex = 0
 $dnsDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$dnsDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
+$dnsDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $dnsDropdown.ForeColor = [System.Drawing.Color]::White
-$dnsDropdown.Add_SelectedIndexChanged({ Check-DirtyState })
+$dnsDropdown.Add_SelectedIndexChanged({
+    if ($global:suspendDirtyTracking) { return }
+    Update-ValueVisual 'DnsMode'
+    Check-DirtyState
+})
 $form.Controls.Add($dnsDropdown)
+
+$dnsMarker = New-Object System.Windows.Forms.Label
+$dnsMarker.Text = '(?)'
+$dnsMarker.Size = New-Object System.Drawing.Size(27, 20)
+$dnsMarker.BackColor = $form.BackColor
+$dnsMarker.Visible = $false
+$form.Controls.Add($dnsMarker)
+
+$script:valueItems['DnsMode'] = @{
+    Marker  = $dnsMarker
+    Control = $dnsDropdown
+    Label   = $dnsLabel
+    Field   = 'DnsMode'
+}
 
 $dnsTooltip = Get-PresetTooltip 'Automatic can fall back to unencrypted DNS. Secure requires an HTTPS resolver.' '' 'DnsMode'
 $toolTip.SetToolTip($dnsDropdown, $dnsTooltip)
@@ -785,16 +1158,35 @@ $toolTip.SetToolTip($dnsLabel, $dnsTooltip)
 
 $dnsTplLabel = New-Object System.Windows.Forms.Label
 $dnsTplLabel.Text = "DoH Template:"
-$dnsTplLabel.Size = New-Object System.Drawing.Size(110, 20)
+$dnsTplLabel.Size = New-Object System.Drawing.Size(105, 20)
+$dnsTplLabel.ForeColor = [System.Drawing.Color]::White
 $form.Controls.Add($dnsTplLabel)
 
 $dnsTplInput = New-Object System.Windows.Forms.TextBox
-$dnsTplInput.Size = New-Object System.Drawing.Size(300, 20)
-$dnsTplInput.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
+$dnsTplInput.Size = New-Object System.Drawing.Size(360, 20)
+$dnsTplInput.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $dnsTplInput.ForeColor = [System.Drawing.Color]::White
 $dnsTplInput.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
-$dnsTplInput.Add_TextChanged({ Check-DirtyState })
+$dnsTplInput.Add_TextChanged({
+    if ($global:suspendDirtyTracking) { return }
+    Update-ValueVisual 'DnsTemplate'
+    Check-DirtyState
+})
 $form.Controls.Add($dnsTplInput)
+
+$dnsTplMarker = New-Object System.Windows.Forms.Label
+$dnsTplMarker.Text = '(?)'
+$dnsTplMarker.Size = New-Object System.Drawing.Size(27, 20)
+$dnsTplMarker.BackColor = $form.BackColor
+$dnsTplMarker.Visible = $false
+$form.Controls.Add($dnsTplMarker)
+
+$script:valueItems['DnsTemplate'] = @{
+    Marker  = $dnsTplMarker
+    Control = $dnsTplInput
+    Label   = $dnsTplLabel
+    Field   = 'DnsTemplate'
+}
 
 $dnsTplTooltip = Get-PresetTooltip 'Optional for Automatic; required for Secure or Custom.' '' 'Template'
 $toolTip.SetToolTip($dnsTplInput, $dnsTplTooltip)
@@ -850,15 +1242,13 @@ $resetButton.ForeColor = [System.Drawing.Color]::LightCoral
 $toolTip.SetToolTip($resetButton, "Erase SlimBrave policy settings from the registry and restore to default.")
 $form.Controls.Add($resetButton)
 
-$global:baselineStateJson = ""
-
 function Get-UIStateSnapshot {
     $snap = [ordered]@{
-        Features = @()
-        Permissions = [ordered]@{}
-        SafeBrowsing = $sbDropdown.SelectedItem
-        DnsMode = $dnsDropdown.SelectedItem
-        DnsTemplate = $dnsTplInput.Text
+        Features     = @()
+        Permissions  = [ordered]@{}
+        SafeBrowsing = (Get-NormalizedComboValue $sbDropdown)
+        DnsMode      = (Get-NormalizedComboValue $dnsDropdown)
+        DnsTemplate  = $dnsTplInput.Text
     }
     $fList = @()
     foreach ($checkbox in $allFeatures) {
@@ -867,9 +1257,9 @@ function Get-UIStateSnapshot {
         }
     }
     $snap.Features = $fList
-    
+
     foreach ($perm in $allPerms) {
-        if ($perm.SelectedItem -and $perm.SelectedItem -ne "Not Set") {
+        if ($perm.SelectedItem -and $perm.SelectedItem -cne "Not Set") {
             $snap.Permissions[$perm.Tag.Key] = $perm.SelectedItem
         }
     }
@@ -877,21 +1267,31 @@ function Get-UIStateSnapshot {
 }
 
 function Update-Baseline {
+    $script:baselineSnapshot = Get-UIStateSnapshot
+    $global:baselineStateJson = Get-SnapshotSignature $script:baselineSnapshot
     $script:presetPreview = $null
-    foreach ($cb in $allFeatures) { Update-PresetColor $cb }
+    $script:activePreset = ''
     $priorPresetSuspend = $global:suspendPresetTriggers
     $global:suspendPresetTriggers = $true
-    try { $presetDropdown.SelectedIndex = -1 } finally { $global:suspendPresetTriggers = $priorPresetSuspend }
-    $global:baselineStateJson = Get-UIStateSnapshot | ConvertTo-Json -Depth 3 -Compress
+    try {
+        $presetDropdown.SelectedIndex = -1
+    } finally {
+        $global:suspendPresetTriggers = $priorPresetSuspend
+    }
+    Refresh-AllVisuals
 }
 
 function Check-DirtyState {
     if ($global:suspendDirtyTracking) { return }
-    $currentJson = Get-UIStateSnapshot | ConvertTo-Json -Depth 3 -Compress
-    if ($currentJson -ne $global:baselineStateJson) {
-        Set-DirtyState $true
-    } else {
-        Set-DirtyState $false
+    $currentSig = Get-SnapshotSignature (Get-UIStateSnapshot)
+    $dirty = ($currentSig -cne $global:baselineStateJson)
+    Set-DirtyState $dirty
+    if ($null -ne $script:presetPreview) {
+        $statusBar.Text = "$($script:presetPreview.Name) preview: $($script:colourLegend). Apply to save."
+    } elseif ($dirty) {
+        $statusBar.Text = "Unsaved changes: $($script:colourLegend). Apply to save."
+    } elseif ($statusBar.Text.StartsWith("Unsaved changes:")) {
+        $statusBar.Text = "No unsaved changes."
     }
 }
 
@@ -907,40 +1307,53 @@ function Save-CurrentState {
 function Restore-StateToUI ($stateObj) {
     $global:suspendDirtyTracking = $true
     $global:suspendPresetTriggers = $true
-    
-    foreach ($checkbox in $allFeatures) {
-        $checkbox.Checked = $false
-        $checkbox.ForeColor = [System.Drawing.Color]::White
-    }
-    if ($stateObj.Features) {
-        foreach ($featureKey in $stateObj.Features) {
-            foreach ($checkbox in $allFeatures) {
-                if ($checkbox.Tag.Key -eq $featureKey) {
-                    $checkbox.Checked = $true
-                    break
+    $script:presetPreview = $null
+    $script:activePreset = ''
+    $presetDropdown.SelectedIndex = -1
+
+    try {
+        foreach ($checkbox in $allFeatures) {
+            $checkbox.Checked = $false
+        }
+        if ($stateObj.Features) {
+            foreach ($featureKey in $stateObj.Features) {
+                foreach ($checkbox in $allFeatures) {
+                    if ($checkbox.Tag.Key -eq $featureKey) {
+                        $checkbox.Checked = $true
+                        break
+                    }
                 }
             }
         }
-    }
 
-    foreach ($perm in $allPerms) { $perm.SelectedItem = "Not Set" }
-    if ($stateObj.Permissions -and $stateObj.Permissions.PSObject.Properties) {
-        foreach ($prop in $stateObj.Permissions.PSObject.Properties) {
-            foreach ($perm in $allPerms) {
-                if ($perm.Tag.Key -eq $prop.Name) {
-                    $perm.SelectedItem = $prop.Value
-                    break
+        foreach ($perm in $allPerms) { $perm.SelectedItem = "Not Set" }
+        if ($stateObj.Permissions -and $stateObj.Permissions.PSObject.Properties) {
+            foreach ($prop in $stateObj.Permissions.PSObject.Properties) {
+                foreach ($perm in $allPerms) {
+                    if ($perm.Tag.Key -eq $prop.Name) {
+                        $perm.SelectedItem = $prop.Value
+                        break
+                    }
                 }
             }
         }
-    }
 
-    if ($stateObj.SafeBrowsing) { $sbDropdown.SelectedItem = $stateObj.SafeBrowsing } else { $sbDropdown.SelectedIndex = -1 }
-    if ($stateObj.DnsMode) { $dnsDropdown.SelectedItem = $stateObj.DnsMode } else { $dnsDropdown.SelectedIndex = -1 }
-    if ($null -ne $stateObj.DnsTemplate) { $dnsTplInput.Text = $stateObj.DnsTemplate } else { $dnsTplInput.Text = "" }
-    
-    $global:suspendPresetTriggers = $false
-    $global:suspendDirtyTracking = $false
+        if ($stateObj.SafeBrowsing -and $sbDropdown.Items.Contains($stateObj.SafeBrowsing)) {
+            $sbDropdown.SelectedItem = $stateObj.SafeBrowsing
+        } else {
+            $sbDropdown.SelectedItem = "Not Set"
+        }
+        if ($stateObj.DnsMode -and $dnsDropdown.Items.Contains($stateObj.DnsMode)) {
+            $dnsDropdown.SelectedItem = $stateObj.DnsMode
+        } else {
+            $dnsDropdown.SelectedItem = "Not Set"
+        }
+        if ($null -ne $stateObj.DnsTemplate) { $dnsTplInput.Text = $stateObj.DnsTemplate } else { $dnsTplInput.Text = "" }
+    } finally {
+        $global:suspendPresetTriggers = $false
+        $global:suspendDirtyTracking = $false
+    }
+    Refresh-AllVisuals
     Check-DirtyState
 }
 
@@ -971,7 +1384,7 @@ function Check-StateChanges {
             $savedVal = $savedState.Permissions.PSObject.Properties[$key].Value
         }
         $currVal = "Not Set"
-        if ($null -ne $currentSnap.Permissions[$key]) {
+        if ($currentSnap.Permissions.Contains($key)) {
             $currVal = $currentSnap.Permissions[$key]
         }
         if ($savedVal -ne $currVal) {
@@ -1013,8 +1426,8 @@ function Check-StateChanges {
         $lbDiffs.ForeColor = [System.Drawing.Color]::LightSalmon
         $lbDiffs.Font = New-Object System.Drawing.Font("Consolas", 9.5, [System.Drawing.FontStyle]::Regular)
         $lbDiffs.IntegralHeight = $false
-        foreach ($d in $diffs) { 
-             foreach($line in $d -split "`n") { [void]$lbDiffs.Items.Add($line) }
+        foreach ($d in $diffs) {
+            foreach ($line in $d -split "`n") { [void]$lbDiffs.Items.Add($line) }
             [void]$lbDiffs.Items.Add("--------------------------------------------------")
         }
         $diffForm.Controls.Add($lbDiffs)
@@ -1042,8 +1455,8 @@ function Check-StateChanges {
         $result = $diffForm.ShowDialog()
         if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
             Restore-StateToUI $savedState
-            Update-Status "Prior settings loaded to UI. Click 'Apply Settings' to enforce."
-            [System.Windows.Forms.MessageBox]::Show("Your previous SlimBrave settings have been mapped to the UI.`n`nClick 'Apply Settings' when you are ready to write them to the registry.", "Revert Initiated", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+            Update-Status "Prior settings loaded to UI: $($script:colourLegend). Click 'Apply Settings' to enforce."
+            [void][System.Windows.Forms.MessageBox]::Show("Your previous SlimBrave settings have been mapped to the UI.`n`nClick 'Apply Settings' when you are ready to write them to the registry.", "Revert Initiated", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         } else {
             Save-CurrentState
             Update-Baseline
@@ -1061,7 +1474,7 @@ function Set-MiddleColumnLayout {
         $inset = 28
         $rowLeft = 30
         # Reserve room for the preview marker and a vertical scrollbar.
-        $width = [Math]::Max(1, $midPanel.ClientSize.Width - $rowLeft - 36 - [System.Windows.Forms.SystemInformation]::VerticalScrollBarWidth)
+        $width = [Math]::Max(1, $midPanel.ClientSize.Width - $rowLeft - 42 - [System.Windows.Forms.SystemInformation]::VerticalScrollBarWidth)
         $y = 10
         foreach ($group in @(@{ Header = $braveLabel; Rows = $braveFeatures }, @{ Header = $perfLabel; Rows = $perfFeatures })) {
             $header = $group.Header
@@ -1086,7 +1499,7 @@ function Set-MiddleColumnLayout {
                 $cb.Text = $lines -join "`r`n"
                 $rowHeight = [Math]::Max(25, $lines.Count * ($cb.Font.Height + 2) + 8)
                 $cb.SetBounds($rowLeft, $y, $width, $rowHeight)
-                $marker.Location = New-Object System.Drawing.Point(($cb.Right + 2), ($y + [int](($rowHeight - $marker.Height) / 2)))
+                $marker.Location = New-Object System.Drawing.Point(($cb.Right + 6), ($y + [int](($rowHeight - $marker.Height) / 2)))
                 $y += $rowHeight + 3
             }
             $y += 10
@@ -1114,18 +1527,18 @@ function Update-Layout {
     $channelDropdown.Location = New-Object System.Drawing.Point(($channelLabel.Right + 15), 22)
 
     $totalTopWidth = $presetLabel.Width + $presetDropdown.Width + 10
-    $startX = ($form.ClientSize.Width - $totalTopWidth) / 2
+    $startX = [int](($form.ClientSize.Width - $totalTopWidth) / 2)
     $presetLabel.Location = New-Object System.Drawing.Point($startX, 24)
     $presetDropdown.Location = New-Object System.Drawing.Point(($presetLabel.Right + 5), 22)
-    
+
     $statusPanel.Location = New-Object System.Drawing.Point(($form.ClientSize.Width - $statusPanel.Width - 20), 18)
 
     $panelWidth = [int](($form.ClientSize.Width - 80) / 3)
     $panelHeight = [int]($form.ClientSize.Height - 250)
-    
+
     $leftPanel.Location = New-Object System.Drawing.Point(20, 70)
     $leftPanel.Size = New-Object System.Drawing.Size($panelWidth, $panelHeight)
-    
+
     $midPanel.Location = New-Object System.Drawing.Point(($leftPanel.Right + 20), 70)
     $midPanel.Size = New-Object System.Drawing.Size($panelWidth, $panelHeight)
 
@@ -1136,9 +1549,16 @@ function Update-Layout {
 
     foreach ($cb in $allFeatures) {
         if ($cb.Parent -eq $midPanel) { continue }
-        $cb.Width = $panelWidth - 95
+        $cb.Width = $panelWidth - 100
         $marker = $script:featureMarkers[$cb.Tag.Key]
-        $marker.Location = New-Object System.Drawing.Point(($cb.Right + 2), ($cb.Top + 3))
+        $marker.Location = New-Object System.Drawing.Point(($cb.Right + 6), ($cb.Top + 3))
+    }
+
+    foreach ($perm in $allPerms) {
+        $vItem = $script:valueItems[$perm.Tag.Key]
+        if ($vItem) {
+            $vItem.Marker.Location = New-Object System.Drawing.Point(($perm.Right + 12), ($perm.Top + 3))
+        }
     }
 
     foreach ($panel in @($leftPanel, $rightPanel)) {
@@ -1156,19 +1576,23 @@ function Update-Layout {
     }
 
     $bottomY = $leftPanel.Bottom + 20
-    
+
     $sbLabel.Location = New-Object System.Drawing.Point($leftPanel.Left, ($bottomY + 3))
     $dnsLabel.Location = New-Object System.Drawing.Point($leftPanel.Left, ($bottomY + 35))
 
-    $alignedDropdownX = $dnsLabel.Right + 5
+    $alignedDropdownX = $dnsLabel.Right + 6
     $sbDropdown.Location = New-Object System.Drawing.Point($alignedDropdownX, $bottomY)
-    $dnsDropdown.Location = New-Object System.Drawing.Point($alignedDropdownX, ($bottomY + 32))
+    $sbMarker.Location = New-Object System.Drawing.Point(($sbDropdown.Right + 12), ($bottomY + 3))
 
-    $dnsTplLabel.Location = New-Object System.Drawing.Point(($dnsDropdown.Right + 20), ($bottomY + 35))
-    $dnsTplInput.Location = New-Object System.Drawing.Point(($dnsTplLabel.Right + 5), ($bottomY + 32))
+    $dnsDropdown.Location = New-Object System.Drawing.Point($alignedDropdownX, ($bottomY + 32))
+    $dnsMarker.Location = New-Object System.Drawing.Point(($dnsDropdown.Right + 12), ($bottomY + 35))
+
+    $dnsTplLabel.Location = New-Object System.Drawing.Point(($dnsMarker.Right + 24), ($bottomY + 35))
+    $dnsTplInput.Location = New-Object System.Drawing.Point(($dnsTplLabel.Right + 6), ($bottomY + 32))
+    $dnsTplMarker.Location = New-Object System.Drawing.Point(($dnsTplInput.Right + 12), ($bottomY + 35))
 
     $buttonY = $form.ClientSize.Height - $statusBar.Height - 55
-    $btnWidth = 200 
+    $btnWidth = 200
     $exportButton.Size = New-Object System.Drawing.Size($btnWidth, 38)
     $importButton.Size = New-Object System.Drawing.Size($btnWidth, 38)
     $pullButton.Size = New-Object System.Drawing.Size($btnWidth, 38)
@@ -1203,74 +1627,69 @@ function Reload-UIFromRegistry {
     $global:suspendDirtyTracking = $true
     $global:suspendPresetTriggers = $true
 
-    foreach ($checkbox in $allFeatures) {
-        $checkbox.Checked = $false
-        $checkbox.ForeColor = [System.Drawing.Color]::White
-    }
-    foreach ($perm in $allPerms) {
-        $perm.SelectedItem = "Not Set"
-    }
-    $sbDropdown.SelectedIndex = -1
-    $dnsDropdown.SelectedIndex = -1
-    $dnsTplInput.Text = ""
-
-    $regProps = Get-ItemProperty -Path $global:registryPath -ErrorAction SilentlyContinue
-
-    if ($null -ne $regProps) {
+    try {
         foreach ($checkbox in $allFeatures) {
-            $feature = $checkbox.Tag
-            $regName = if ($feature.RegistryName) { $feature.RegistryName } else { $feature.Key }
-            
-            if ($feature.Type -eq "List") {
-                $listPath = Join-Path $global:registryPath $regName
-                if (Test-SlimBraveList $feature) {
-                    $checkbox.Checked = $true
-                }
-            } else {
-                $val = $regProps.($regName)
-                if ($null -ne $val -and $val -eq $feature.Value) {
-                    $checkbox.Checked = $true
-                }
-            }
+            $checkbox.Checked = $false
         }
-
         foreach ($perm in $allPerms) {
-            $k = $perm.Tag.Key
-            $val = $regProps.$k
-            if ($null -ne $val) {
-                if ($val -eq 3 -and $perm.Items.Contains("Ask")) { $perm.SelectedItem = "Ask" }
-                elseif ($val -eq 1 -and $perm.Items.Contains("Allow")) { $perm.SelectedItem = "Allow" }
-                elseif ($k -eq "PaymentMethodQueryEnabled" -and $val -eq 0) { $perm.SelectedItem = "Block" }
-                elseif ($val -eq 2) { $perm.SelectedItem = "Block" }
-                else { $perm.SelectedItem = "Not Set" }
-            }
+            $perm.SelectedItem = "Not Set"
         }
+        $sbDropdown.SelectedItem = "Not Set"
+        $dnsDropdown.SelectedItem = "Not Set"
+        $dnsTplInput.Text = ""
 
-        if ($null -ne $regProps.SafeBrowsingProtectionLevel) {
-            if ($regProps.SafeBrowsingProtectionLevel -eq 1) { $sbDropdown.SelectedItem = "On" }
-            elseif ($regProps.SafeBrowsingProtectionLevel -eq 2) { $sbDropdown.SelectedItem = "Enhanced" }
-            elseif ($regProps.SafeBrowsingProtectionLevel -eq 0) { $sbDropdown.SelectedItem = "Off" }
-        }
+        $regProps = Get-ItemProperty -Path $global:registryPath -ErrorAction SilentlyContinue
 
-        if ($null -ne $regProps.DnsOverHttpsMode) {
-            if ($regProps.DnsOverHttpsMode -eq "automatic") { $dnsDropdown.SelectedItem = "Automatic" }
-            elseif ($regProps.DnsOverHttpsMode -eq "off") { $dnsDropdown.SelectedItem = "Off" }
-            elseif ($regProps.DnsOverHttpsMode -eq "secure") {
-                if ([string]::IsNullOrWhiteSpace($regProps.DnsOverHttpsTemplates)) {
-                    $dnsDropdown.SelectedItem = "Secure"
+        if ($null -ne $regProps) {
+            foreach ($checkbox in $allFeatures) {
+                $feature = $checkbox.Tag
+                $regName = if ($feature.RegistryName) { $feature.RegistryName } else { $feature.Key }
+
+                if ($feature.Type -eq "List") {
+                    if (Test-SlimBraveList $feature) {
+                        $checkbox.Checked = $true
+                    }
                 } else {
-                    $dnsDropdown.SelectedItem = "Secure"
+                    $val = $regProps.($regName)
+                    if ($null -ne $val -and $val -eq $feature.Value) {
+                        $checkbox.Checked = $true
+                    }
                 }
             }
+
+            foreach ($perm in $allPerms) {
+                $k = $perm.Tag.Key
+                $val = $regProps.$k
+                if ($null -ne $val) {
+                    if ($val -eq 3 -and $perm.Items.Contains("Ask")) { $perm.SelectedItem = "Ask" }
+                    elseif ($val -eq 1 -and $perm.Items.Contains("Allow")) { $perm.SelectedItem = "Allow" }
+                    elseif ($k -eq "PaymentMethodQueryEnabled" -and $val -eq 0) { $perm.SelectedItem = "Block" }
+                    elseif ($val -eq 2) { $perm.SelectedItem = "Block" }
+                    else { $perm.SelectedItem = "Not Set" }
+                }
+            }
+
+            if ($null -ne $regProps.SafeBrowsingProtectionLevel) {
+                if ($regProps.SafeBrowsingProtectionLevel -eq 1) { $sbDropdown.SelectedItem = "On" }
+                elseif ($regProps.SafeBrowsingProtectionLevel -eq 2) { $sbDropdown.SelectedItem = "Enhanced" }
+                elseif ($regProps.SafeBrowsingProtectionLevel -eq 0) { $sbDropdown.SelectedItem = "Off" }
+            }
+
+            if ($null -ne $regProps.DnsOverHttpsMode) {
+                if ($regProps.DnsOverHttpsMode -eq "automatic") { $dnsDropdown.SelectedItem = "Automatic" }
+                elseif ($regProps.DnsOverHttpsMode -eq "off") { $dnsDropdown.SelectedItem = "Off" }
+                elseif ($regProps.DnsOverHttpsMode -eq "secure") { $dnsDropdown.SelectedItem = "Secure" }
+            }
+
+            if ($null -ne $regProps.DnsOverHttpsTemplates) {
+                $dnsTplInput.Text = $regProps.DnsOverHttpsTemplates
+            }
         }
-        
-        if ($null -ne $regProps.DnsOverHttpsTemplates) {
-            $dnsTplInput.Text = $regProps.DnsOverHttpsTemplates
-        }
+    } finally {
+        $global:suspendPresetTriggers = $false
+        $global:suspendDirtyTracking = $false
     }
 
-    $global:suspendPresetTriggers = $false
-    $global:suspendDirtyTracking = $false
     Update-Baseline
     Check-DirtyState
 }
@@ -1280,36 +1699,36 @@ $pullButton.Add_Click({
     Update-Status "UI reloaded from current Brave registry settings."
 })
 
-$saveButton.Add_Click({
-    $mode = $dnsDropdown.SelectedItem
+function Invoke-ApplySettings {
+    $mode = Get-NormalizedComboValue $dnsDropdown
     try { Assert-DoHTemplate $mode $dnsTplInput.Text } catch {
         [void][System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'DNS validation failed')
-        return
+        return $false
     }
 
     $restorePrompt = [System.Windows.Forms.MessageBox]::Show("Would you like to create a System Restore point before applying these changes? (Recommended)", "System Restore", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
-    
-    if ($restorePrompt -eq "Yes") {
+
+    if ($restorePrompt -eq [System.Windows.Forms.DialogResult]::Yes) {
         $form.Cursor = [System.Windows.Forms.Cursors]::WaitCursor
         Update-Status "Creating System Restore point (This may take a moment)..."
         try {
-            Enable-ComputerRestore -Drive "C:\" -ErrorAction SilentlyContinue
-            Checkpoint-Computer -Description "SlimBrave Pre-Apply Backup" -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop
+            [void](Enable-ComputerRestore -Drive "C:\" -ErrorAction SilentlyContinue)
+            [void](Checkpoint-Computer -Description "SlimBrave Pre-Apply Backup" -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop)
             Write-Log "System Restore point created successfully."
         } catch {
             Write-Log "Failed to create System Restore point: $_"
-            [System.Windows.Forms.MessageBox]::Show("Failed to create System Restore point. This can happen if System Protection is fully disabled or if Windows is rate-limiting checkpoints (1 per 24 hours).`n`nContinuing with settings application...", "Restore Point Notice", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+            [void][System.Windows.Forms.MessageBox]::Show("Failed to create System Restore point. This can happen if System Protection is fully disabled or if Windows is rate-limiting checkpoints (1 per 24 hours).`n`nContinuing with settings application...", "Restore Point Notice", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
         }
         $form.Cursor = [System.Windows.Forms.Cursors]::Default
     }
 
     Update-Status "Applying settings to registry..."
-    
+
     try {
         foreach ($checkbox in $allFeatures) {
             $feature = $checkbox.Tag
             $regName = if ($feature.RegistryName) { $feature.RegistryName } else { $feature.Key }
-            
+
             if ($checkbox.Checked) {
                 try {
                     if ($feature.Type -eq "List") {
@@ -1337,16 +1756,15 @@ $saveButton.Add_Click({
                 foreach ($otherCb in $allFeatures) {
                     if ($otherCb -ne $checkbox -and $otherCb.Checked) {
                         $otherRegName = if ($otherCb.Tag.RegistryName) { $otherCb.Tag.RegistryName } else { $otherCb.Tag.Key }
-                        if ($otherRegName -eq $regName) { 
+                        if ($otherRegName -eq $regName) {
                             $isManagedByOther = $true
-                            break 
+                            break
                         }
                     }
                 }
                 if (-not $isManagedByOther) {
                     try {
                         if ($feature.Type -eq "List") {
-                            $listPath = Join-Path $global:registryPath $regName
                             Remove-SlimBraveList $feature
                         } else {
                             Remove-BravePolicyValue $regName
@@ -1382,25 +1800,27 @@ $saveButton.Add_Click({
                 }
             }
         }
-        
-        if ($sbDropdown.SelectedItem) {
-            if ($sbDropdown.SelectedItem -eq "On") {
-                [void](Set-ItemProperty -Path $global:registryPath -Name "SafeBrowsingProtectionLevel" -Value 1 -Type DWord -Force -ErrorAction Stop)
-                Write-Log "Set SafeBrowsingProtectionLevel to 1 (On)"
-            } elseif ($sbDropdown.SelectedItem -eq "Off") {
-                [void](Set-ItemProperty -Path $global:registryPath -Name "SafeBrowsingProtectionLevel" -Value 0 -Type DWord -Force -ErrorAction Stop)
-                Write-Log "Set SafeBrowsingProtectionLevel to 0 (Off)"
-            } elseif ($sbDropdown.SelectedItem -eq 'Enhanced') {
-                [void](Set-ItemProperty -Path $global:registryPath -Name 'SafeBrowsingProtectionLevel' -Value 2 -Type DWord -ErrorAction Stop)
-            } else {
-                Remove-BravePolicyValue "SafeBrowsingProtectionLevel"
-            }
+
+        $sbMode = Get-NormalizedComboValue $sbDropdown
+        if ($sbMode -eq "On") {
+            [void](Set-ItemProperty -Path $global:registryPath -Name "SafeBrowsingProtectionLevel" -Value 1 -Type DWord -Force -ErrorAction Stop)
+            Write-Log "Set SafeBrowsingProtectionLevel to 1 (On)"
+        } elseif ($sbMode -eq "Off") {
+            [void](Set-ItemProperty -Path $global:registryPath -Name "SafeBrowsingProtectionLevel" -Value 0 -Type DWord -Force -ErrorAction Stop)
+            Write-Log "Set SafeBrowsingProtectionLevel to 0 (Off)"
+        } elseif ($sbMode -eq 'Enhanced') {
+            [void](Set-ItemProperty -Path $global:registryPath -Name 'SafeBrowsingProtectionLevel' -Value 2 -Type DWord -Force -ErrorAction Stop)
+            Write-Log "Set SafeBrowsingProtectionLevel to 2 (Enhanced)"
+        } else {
+            Remove-BravePolicyValue "SafeBrowsingProtectionLevel"
         }
 
         if ($mode -in @('Automatic','Secure','Custom')) {
             if ($dnsTplInput.Text.Trim()) {
                 [void](Set-ItemProperty -Path $global:registryPath -Name 'DnsOverHttpsTemplates' -Value $dnsTplInput.Text.Trim() -Type String -Force -ErrorAction Stop)
-            } else { Remove-BravePolicyValue 'DnsOverHttpsTemplates' }
+            } else {
+                Remove-BravePolicyValue 'DnsOverHttpsTemplates'
+            }
             if ($mode -eq 'Automatic') { Set-DnsMode 'automatic' } else { Set-DnsMode 'secure' }
         } elseif ($mode -eq 'Off') {
             Set-DnsMode 'off'
@@ -1415,7 +1835,7 @@ $saveButton.Add_Click({
         Set-DirtyState $true
         Update-Status 'Apply failed; earlier registry writes may have succeeded.'
         [void][System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Apply failed')
-        return
+        return $false
     }
 
     Save-CurrentState
@@ -1424,26 +1844,30 @@ $saveButton.Add_Click({
     Update-Status "Settings applied successfully!"
 
     [void][System.Windows.Forms.MessageBox]::Show('Settings applied. Restart Brave normally if needed, then check brave://policy.', 'SlimBrave')
+    return $true
+}
+
+$saveButton.Add_Click({
+    [void](Invoke-ApplySettings)
 })
 
 function Reset-AllSettings {
     $confirm = [System.Windows.Forms.MessageBox]::Show(
-        "Warning: This will erase all SlimBrave policy settings from the registry. Do you wish to continue?", 
-        "Confirm SlimBrave Reset", 
-        [System.Windows.Forms.MessageBoxButtons]::YesNo, 
+        "Warning: This will erase all SlimBrave policy settings from the registry. Do you wish to continue?",
+        "Confirm SlimBrave Reset",
+        [System.Windows.Forms.MessageBoxButtons]::YesNo,
         [System.Windows.Forms.MessageBoxIcon]::Warning
     )
-    
-    if ($confirm -eq "Yes") {
+
+    if ($confirm -eq [System.Windows.Forms.DialogResult]::Yes) {
         Update-Status "Resetting SlimBrave settings..."
         try {
             Remove-RetiredPolicies
             foreach ($cb in $allFeatures) {
                 $feature = $cb.Tag
                 $regName = if ($feature.RegistryName) { $feature.RegistryName } else { $feature.Key }
-                
+
                 if ($feature.Type -eq "List") {
-                    $listPath = Join-Path $global:registryPath $regName
                     Remove-SlimBraveList $feature
                 } else {
                     Remove-BravePolicyValue $regName
@@ -1461,35 +1885,33 @@ function Reset-AllSettings {
 
             $global:suspendPresetTriggers = $true
             $global:suspendDirtyTracking = $true
-            
-            foreach ($cb in $allFeatures) { 
-                 $cb.Checked = $false 
-                 $cb.ForeColor = [System.Drawing.Color]::White 
-             }
-            foreach ($perm in $allPerms) { $perm.SelectedItem = "Not Set" }
-            $sbDropdown.SelectedIndex = -1
-            $dnsDropdown.SelectedIndex = -1
-            $dnsTplInput.Text = ""
-            
-            $global:suspendDirtyTracking = $false
-            $global:suspendPresetTriggers = $false
+            try {
+                foreach ($cb in $allFeatures) { $cb.Checked = $false }
+                foreach ($perm in $allPerms) { $perm.SelectedItem = "Not Set" }
+                $sbDropdown.SelectedItem = "Not Set"
+                $dnsDropdown.SelectedItem = "Not Set"
+                $dnsTplInput.Text = ""
+            } finally {
+                $global:suspendDirtyTracking = $false
+                $global:suspendPresetTriggers = $false
+            }
 
             Write-Log "SlimBrave settings successfully wiped from registry."
-            
-            [System.Windows.Forms.MessageBox]::Show(
-                "All SlimBrave policy settings have been successfully reset.", 
-                "Reset Successful", 
-                [System.Windows.Forms.MessageBoxButtons]::OK, 
+
+            [void][System.Windows.Forms.MessageBox]::Show(
+                "All SlimBrave policy settings have been successfully reset.",
+                "Reset Successful",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
             Update-Status "Reset successful."
             return $true
         } catch {
             Write-Log "Failed to reset settings: $_"
-            [System.Windows.Forms.MessageBox]::Show(
-                "An error occurred while resetting the settings: $_", 
-                "Reset Failed", 
-                [System.Windows.Forms.MessageBoxButtons]::OK, 
+            [void][System.Windows.Forms.MessageBox]::Show(
+                "An error occurred while resetting the settings: $_",
+                "Reset Failed",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Error
             )
             Update-Status "Reset failed."
@@ -1514,7 +1936,7 @@ $exportButton.Add_Click({
     $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
     $saveFileDialog.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*"
     $saveFileDialog.Title = "Export SlimBrave Settings"
-    
+
     $docsPath = [Environment]::GetFolderPath("MyDocuments")
     try {
         $invokingUser = (Get-CimInstance Win32_ComputerSystem).UserName
@@ -1524,23 +1946,22 @@ $exportButton.Add_Click({
             if (Test-Path $testPath) { $docsPath = $testPath }
         }
     } catch {}
-    
+
     $saveFileDialog.InitialDirectory = $docsPath
     $saveFileDialog.FileName = "SlimBraveSettings.json"
-    
+
     if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         try {
             Get-UIStateSnapshot | ConvertTo-Json -Depth 3 | Out-File -FilePath $saveFileDialog.FileName -Force
             Update-Status "Settings exported successfully."
             Write-Log "Settings exported to $($saveFileDialog.FileName)"
-            [System.Windows.Forms.MessageBox]::Show("Settings exported successfully to:`n$($saveFileDialog.FileName)", "Export Successful", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+            [void][System.Windows.Forms.MessageBox]::Show("Settings exported successfully to:`n$($saveFileDialog.FileName)", "Export Successful", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         } catch {
             Write-Log "Export Failed: $_"
-            [System.Windows.Forms.MessageBox]::Show("Failed to export settings: $_", "Export Failed", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+            [void][System.Windows.Forms.MessageBox]::Show("Failed to export settings: $_", "Export Failed", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
         }
     }
 })
-
 
 function Read-SlimBraveImport ([string]$Path) {
     $stream = [IO.File]::OpenRead($Path)
@@ -1590,13 +2011,23 @@ function Read-SlimBraveImport ([string]$Path) {
             $perms[$prop.Name] = $prop.Value
         }
     }
-    if ($null -ne $obj.SafeBrowsing -and ($obj.SafeBrowsing -isnot [string] -or $obj.SafeBrowsing -cnotin @('On','Off','Enhanced'))) { throw 'Invalid Safe Browsing setting.' }
-    if ($null -ne $obj.DnsMode -and ($obj.DnsMode -isnot [string] -or $obj.DnsMode -cnotin @('Automatic','Off','Secure','Custom'))) { throw 'Invalid DNS mode.' }
+    $sbVal = $obj.SafeBrowsing
+    if ($null -ne $sbVal) {
+        if ($sbVal -isnot [string]) { throw 'Invalid Safe Browsing setting.' }
+        if ([string]::IsNullOrWhiteSpace($sbVal) -or $sbVal -ceq 'Not Set') { $sbVal = $null }
+        elseif ($sbVal -cnotin @('On','Off','Enhanced')) { throw 'Invalid Safe Browsing setting.' }
+    }
+    $dnsVal = $obj.DnsMode
+    if ($null -ne $dnsVal) {
+        if ($dnsVal -isnot [string]) { throw 'Invalid DNS mode.' }
+        if ([string]::IsNullOrWhiteSpace($dnsVal) -or $dnsVal -ceq 'Not Set') { $dnsVal = $null }
+        elseif ($dnsVal -cnotin @('Automatic','Off','Secure','Custom')) { throw 'Invalid DNS mode.' }
+    }
     if ($null -ne $obj.DnsTemplate -and $obj.DnsTemplate -isnot [string]) { throw 'DNS template must be text.' }
-    Assert-DoHTemplate $obj.DnsMode $obj.DnsTemplate
-    if (-not ($keys.Count -or $perms.Count -or $obj.SafeBrowsing -or $obj.DnsMode)) { throw 'No applicable settings; the current selections were preserved.' }
+    Assert-DoHTemplate $dnsVal $obj.DnsTemplate
+    if (-not ($keys.Count -or $perms.Count -or $sbVal -or $dnsVal)) { throw 'No applicable settings; the current selections were preserved.' }
     return [pscustomobject]@{
-        State = [pscustomobject]@{ Features = $keys; Permissions = [pscustomobject]$perms; SafeBrowsing = $obj.SafeBrowsing; DnsMode = $obj.DnsMode; DnsTemplate = $obj.DnsTemplate }
+        State = [pscustomobject]@{ Features = $keys; Permissions = [pscustomobject]$perms; SafeBrowsing = $sbVal; DnsMode = $dnsVal; DnsTemplate = $obj.DnsTemplate }
         Notes = $notes
     }
 }
@@ -1605,7 +2036,7 @@ $importButton.Add_Click({
     $openFileDialog = New-Object System.Windows.Forms.OpenFileDialog
     $openFileDialog.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*"
     $openFileDialog.Title = "Import SlimBrave Settings"
-    
+
     $docsPath = [Environment]::GetFolderPath("MyDocuments")
     try {
         $invokingUser = (Get-CimInstance Win32_ComputerSystem).UserName
@@ -1615,16 +2046,15 @@ $importButton.Add_Click({
             if (Test-Path $testPath) { $docsPath = $testPath }
         }
     } catch {}
-    
+
     $openFileDialog.InitialDirectory = $docsPath
-    
+
     if ($openFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         try {
             $result = Read-SlimBraveImport $openFileDialog.FileName
             $prior = Get-UIStateSnapshot | ConvertTo-Json -Depth 4 | ConvertFrom-Json
             try {
                 Restore-StateToUI $result.State
-                foreach ($cb in $allFeatures) { Update-PresetColor $cb }
             } catch {
                 Restore-StateToUI $prior
                 throw
@@ -1634,11 +2064,11 @@ $importButton.Add_Click({
                 $message += "`n`n" + (($result.Notes | Select-Object -First 5) -join "`n")
                 if ($result.Notes.Count -gt 5) { $message += "`nand $($result.Notes.Count - 5) more." }
             }
-            Update-Status 'Settings imported; review before applying.'
+            Update-Status "Settings staged: $($script:colourLegend). Review before applying."
             [void][System.Windows.Forms.MessageBox]::Show($message, 'Import successful')
         } catch {
             Write-Log "Import Failed: $_"
-            [System.Windows.Forms.MessageBox]::Show("Failed to import settings: $_", "Import Failed", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+            [void][System.Windows.Forms.MessageBox]::Show("Failed to import settings: $_", "Import Failed", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
         }
     }
 })
