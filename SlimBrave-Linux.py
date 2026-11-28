@@ -527,11 +527,20 @@ def main():
         preset_preview = None
         refresh_preset_colors()
 
+    colour_legend = "red = disabled setting, green = enabled setting, blue = unchanged setting"
+
     def check_dirty_state(*args):
         if suspend_dirty_tracking:
             return
         current_json = json.dumps(get_ui_snapshot(), sort_keys=True)
-        set_dirty_state(current_json != baseline_state)
+        dirty = current_json != baseline_state
+        set_dirty_state(dirty)
+        if preset_preview is not None:
+            status_var.set(f"{preset_var.get()} preview: {colour_legend}. Apply to save.")
+        elif dirty:
+            status_var.set(f"Unsaved changes: {colour_legend}. Apply to save.")
+        elif status_var.get().startswith("Unsaved changes:"):
+            status_var.set("No unsaved changes.")
 
     def save_current_state():
         try:
@@ -1210,7 +1219,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
         apply_json_state_to_ui(dict(Features=list(selected.values()), Permissions=cleaned,
                                    SafeBrowsing=sb, DnsMode=mode, DnsTemplate=template))
         refresh_preset_colors()
-        set_status("Settings staged. Review before applying.")
+        set_status(f"Settings staged: {colour_legend}. Review before applying.")
         if notes:
             messagebox.showinfo("Import notes", "\n".join(notes[:5]) +
                                 (f"\nand {len(notes) - 5} more" if len(notes) > 5 else ""))
@@ -1637,7 +1646,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             suspend_dirty_tracking = False
         refresh_preset_colors()
         check_dirty_state()
-        set_status(f"{preset_type} preview: red = disabled setting, green = enabled setting, blue = unchanged setting. Apply to save.")
+        set_status(f"{preset_type} preview: {colour_legend}. Apply to save.")
 
     root.grid_rowconfigure(0, weight=1)
     root.grid_rowconfigure(1, weight=0)
