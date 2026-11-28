@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SlimBrave - Revived - v1.2.0 (Linux)
+# SlimBrave - Revived - v1.2.1 (Linux)
 
 import subprocess
 import sys
@@ -245,7 +245,7 @@ def main():
     }
 
     root = tk.Tk()
-    root.title("SlimBrave - Revived v1.2.0 (Linux)")
+    root.title("SlimBrave - Revived v1.2.1 (Linux)")
     root.geometry("1100x600")
     root.minsize(980, 450)
     root.configure(bg="#191919")
@@ -364,22 +364,20 @@ def main():
                 marker.pack_forget()
                 widget.configure(style="Retained.TCheckbutton" if checked else "Neutral.TCheckbutton")
                 continue
-            retained, seen, selected = preset_preview
-            if checked:
-                seen.add(key)
-            state = ("Retained" if key in retained else "Added") if checked else (
-                "Removed" if key in seen else "Neutral")
+            applied, selected = preset_preview
+            was_enabled = key in applied
+            preset_enabled = key in selected
+            state = ("Retained" if was_enabled else "Added") if checked else (
+                "Removed" if was_enabled or preset_enabled else "Neutral")
             widget.configure(style=f"{state}.TCheckbutton")
-            if state == "Added":
-                reason = "Added by Preset" if key in selected else "Manually Added, Preset Disabled This"
-                color = "#90EE90"
-            elif state == "Removed":
-                reason = "Removed from Preset" if key in selected else "Removed from your Current Configuration"
-                color = "#FF8585"
-            else:
-                reason_tip.on_leave()
-                marker.pack_forget()
-                continue
+            current = "Enabled" if was_enabled else "Disabled"
+            target = "enabled" if preset_enabled else "disabled"
+            action = "Kept" if was_enabled == preset_enabled else "Changed to"
+            reason = f"{current} on your current configuration, {action} {target} by this preset."
+            if checked != preset_enabled:
+                staged = "enabled" if checked else "disabled"
+                reason += f"\nYour staged selection: {staged}."
+            color = {"Retained": "#87CEFA", "Added": "#90EE90", "Removed": "#FF8585", "Neutral": "white"}[state]
             if reason_tip.text != reason:
                 reason_tip.on_leave()
                 reason_tip.text = reason
@@ -1200,6 +1198,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
                 messagebox.showinfo("Apply", "SlimBrave settings cleared successfully!")
 
             set_status("SlimBrave Application Complete!")
+            return True
         except Exception as e:
             write_log(f"Apply failed: {e}")
             progress.finish("Something Went Wrong, Please Read Logs for More Details")
@@ -1556,9 +1555,9 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
         if preset_type not in PRESETS:
             return
         features, permissions, safe_browsing, dns_mode = PRESETS[preset_type]
-        before = {key for key, var in all_feature_vars.items() if var.get()}
+        before = frozenset(json.loads(baseline_state or "{}").get("Features", ()))
         selected = {key for key in features if not (is_origin_only and key in compiled_out_keys)}
-        preset_preview = (before & selected, before | selected, selected)
+        preset_preview = (before, frozenset(selected))
         suspend_dirty_tracking = True
         try:
             for key, var in all_feature_vars.items():
@@ -1606,15 +1605,75 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
 
     tk.Label(inner_top, text="Presets:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(10, 5))
 
-    preset_var = tk.StringVar(value="Maximum Privacy")
+    preset_var = tk.StringVar(value="")
     
-    def on_preset_change(*args):
-        apply_preset(preset_var.get())
-        
-    preset_var.trace_add("write", on_preset_change)
-    
+    active_preset = ""
+    switching_preset = False
+
+    def snapshot_signature(snapshot):
+        return (frozenset(snapshot["Features"]), snapshot["Permissions"],
+                snapshot["SafeBrowsing"], snapshot["DnsMode"], snapshot["DnsTemplate"].strip())
+
+    def matches_any_preset(snapshot):
+        signature = snapshot_signature(snapshot)
+        for features, permissions, safe_browsing, dns_mode in PRESETS.values():
+            enabled = frozenset(k for k in features if not (is_origin_only and k in compiled_out_keys))
+            if signature == (enabled, permissions, safe_browsing, dns_mode,
+                             FAMILY_DOH if dns_mode == "Secure" else ""):
+                return True
+        return False
+
+    def confirm_preset_switch():
+        dialog = tk.Toplevel(root)
+        dialog.title("Unsaved selections")
+        dialog.transient(root)
+        dialog.configure(bg="#232323", padx=20, pady=16)
+        choice = None
+
+        def finish(value):
+            nonlocal choice
+            choice = value
+            dialog.destroy()
+
+        tk.Label(dialog, text="You have unsaved selections that don't match a preset.\n"
+                 "Use Apply Settings to save them before comparing another preset.\n\n"
+                 "Do you want to save your changes now?", justify="left",
+                 bg="#232323", fg="white").pack(anchor="w", pady=(0, 14))
+        buttons = tk.Frame(dialog, bg="#232323")
+        buttons.pack(fill="x")
+        yes = ttk.Button(buttons, text="Yes, Apply My Settings Selections", command=lambda: finish(True))
+        yes.pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="No, Discard Selections", command=lambda: finish(False)).pack(side="left")
+        dialog.protocol("WM_DELETE_WINDOW", lambda: finish(None))
+        dialog.bind("<Escape>", lambda _: finish(None))
+        dialog.wait_visibility()
+        dialog.grab_set()
+        yes.focus_set()
+        root.wait_window(dialog)
+        return choice
+
+    def on_preset_change(_event=None):
+        nonlocal active_preset, switching_preset
+        if switching_preset:
+            return
+        requested = preset_var.get()
+        switching_preset = True
+        try:
+            current = get_ui_snapshot()
+            applied = json.loads(baseline_state) if baseline_state else current
+            if snapshot_signature(current) != snapshot_signature(applied) and not matches_any_preset(current):
+                decision = confirm_preset_switch()
+                if decision is None or (decision and not apply_settings()):
+                    preset_var.set(active_preset)
+                    return
+            apply_preset(requested)
+            active_preset = requested
+        finally:
+            switching_preset = False
+
     preset_cb = ttk.Combobox(inner_top, textvariable=preset_var, values=["Maximum Privacy", "High Security", "Performance Focused", "Strict Parental Controls", "Balanced Privacy", "Developer", "Brave Origin"], state="readonly", width=22, style="Dark.TCombobox")
     preset_cb.pack(side="left", padx=5)
+    preset_cb.bind("<<ComboboxSelected>>", on_preset_change)
     create_tooltip(preset_cb, "Select a preset to automatically configure recommended settings.")
 
     save_status_label = tk.Label(inner_top, textvariable=save_status_var, bg="#191919", fg="#90EE90", font=("sans-serif", 10, "bold"))
