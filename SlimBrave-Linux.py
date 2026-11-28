@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SlimBrave - Revived - v1.2.0 (Linux)
+# SlimBrave - Revived - v1.2.1 (Linux)
 
 import subprocess
 import sys
@@ -245,7 +245,7 @@ def main():
     }
 
     root = tk.Tk()
-    root.title("SlimBrave - Revived v1.2.0 (Linux)")
+    root.title("SlimBrave - Revived v1.2.1 (Linux)")
     root.geometry("1100x600")
     root.minsize(980, 450)
     root.configure(bg="#191919")
@@ -275,7 +275,7 @@ def main():
             self.hide()
 
         def show(self):
-            if self.tooltip_window:
+            if not self.text or self.tooltip_window:
                 return
             x = self.widget.winfo_rootx() + 25
             y = self.widget.winfo_rooty() + 25
@@ -328,6 +328,13 @@ def main():
     )
     style.map("Dark.Vertical.TScrollbar", background=[("active", "#555555")])
 
+    value_colors = {'Neutral': 'white', 'Applied': '#87CEFA', 'Added': '#90EE90', 'Removed': '#FF8585'}
+    for state, color in value_colors.items():
+        name = f"{state}.Dark.TCombobox"
+        style.configure(name, foreground=color)
+        style.map(name, foreground=[("!disabled", color)],
+                  selectforeground=[("!disabled", color)])
+
     button_padding = (15, 8)
     button_styles = {
         "Preset.TButton": "#E65100", "Export.TButton": "#0D47A1", "Import.TButton": "#1976D2",
@@ -351,41 +358,98 @@ def main():
     baseline_state = ""
     all_feature_vars = {}
     feature_widgets = {}
+    value_markers = {}
     preset_preview = None
 
     def refresh_preset_colors(*_):
         if suspend_dirty_tracking:
             return
+        applied = frozenset(json.loads(baseline_state or "{}").get("Features", ()))
         for key, widget in feature_widgets.items():
             widget, marker, reason_tip = widget
             checked = bool(all_feature_vars[key].get())
-            if preset_preview is None:
+            selected = preset_preview[1] if preset_preview is not None else None
+            was_enabled = key in applied
+            preset_enabled = key in selected if selected is not None else was_enabled
+            if selected is None and checked == was_enabled:
                 reason_tip.on_leave()
-                marker.pack_forget()
+                marker.configure(text=" ")
+                reason_tip.text = ""
                 widget.configure(style="Retained.TCheckbutton" if checked else "Neutral.TCheckbutton")
                 continue
-            retained, seen, selected = preset_preview
-            if checked:
-                seen.add(key)
-            state = ("Retained" if key in retained else "Added") if checked else (
-                "Removed" if key in seen else "Neutral")
+            state = ("Retained" if was_enabled else "Added") if checked else (
+                "Removed" if was_enabled or preset_enabled else "Neutral")
             widget.configure(style=f"{state}.TCheckbutton")
-            if state == "Added":
-                reason = "Added by Preset" if key in selected else "Manually Added, Preset Disabled This"
-                color = "#90EE90"
-            elif state == "Removed":
-                reason = "Removed from Preset" if key in selected else "Removed from your Current Configuration"
-                color = "#FF8585"
-            else:
-                reason_tip.on_leave()
-                marker.pack_forget()
-                continue
+            current = "Enabled" if was_enabled else "Disabled"
+            target = "enabled" if preset_enabled else "disabled"
+            action = "Kept" if was_enabled == preset_enabled else "Changed to"
+            reason = f"{current} on your current configuration."
+            if selected is not None:
+                reason = f"{current} on your current configuration, {action} {target} by this preset."
+            if selected is None or checked != preset_enabled:
+                staged = "enabled" if checked else "disabled"
+                reason += f"\nYour unsaved selection: {staged}."
+            color = {"Retained": "#87CEFA", "Added": "#90EE90", "Removed": "#FF8585", "Neutral": "white"}[state]
             if reason_tip.text != reason:
                 reason_tip.on_leave()
                 reason_tip.text = reason
             marker.configure(fg=color)
-            if not marker.winfo_manager():
-                marker.pack(side="left", padx=(4, 0))
+            marker.configure(text="(?)")
+
+        refresh_value_markers()
+
+    def register_value_marker(parent, key, variable, control, label, field=None):
+        marker = tk.Label(parent, text=" ", width=3, bg="#232323", font=("sans-serif", 9))
+        marker.pack(side="right", before=label, padx=(8, 2))
+        value_markers[key] = (marker, create_tooltip(marker, ""), variable, control, label, field)
+        variable.trace_add("write", refresh_value_markers)
+
+    def refresh_value_markers(*_):
+        if suspend_dirty_tracking:
+            return
+        applied = json.loads(baseline_state or "{}")
+        for key, (marker, tip, variable, control, label, field) in value_markers.items():
+            unset = "(Blank)" if field == "DnsTemplate" else "Not Set"
+
+            def normalized(value):
+                return value.strip() or unset
+
+            before = normalized(applied.get(field, "") if field else
+                                applied.get("Permissions", {}).get(key, ""))
+            staged = normalized(variable.get())
+            if before == staged:
+                state = "Neutral" if staged == unset else "Applied"
+            else:
+                state = "Removed" if (staged == unset or (field == "DnsMode" and staged == "Off")) else "Added"
+            color = value_colors[state]
+            label.configure(fg=color)
+            if field == "DnsTemplate":
+                control.configure(fg=color, selectforeground=color)
+            else:
+                control.configure(style=f"{state}.Dark.TCombobox")
+            if preset_preview is None and staged == before:
+                tip.on_leave()
+                marker.configure(text=" ")
+                tip.text = ""
+                continue
+            reason = f"Current configuration: {before}."
+            target = before
+            if preset_preview is not None:
+                _, _, preset = preset_preview
+                _, permissions, safe_browsing, dns_mode = preset
+                target = normalized({"SafeBrowsing": safe_browsing, "DnsMode": dns_mode,
+                                     "DnsTemplate": FAMILY_DOH if dns_mode == "Secure" else ""}[field]
+                                    if field else permissions.get(key, ""))
+                reason = (f"Current configuration: {before}.\n"
+                          + (f"Kept as {target} by this preset." if before == target
+                             else f"Changed to {target} by this preset."))
+            if preset_preview is None or staged != target:
+                reason += f"\nYour unsaved selection: {staged}."
+            if tip.text != reason:
+                tip.on_leave()
+                tip.text = reason
+            marker.configure(fg=color)
+            marker.configure(text="(?)")
 
     all_perm_vars = {}
 
@@ -463,11 +527,20 @@ def main():
         preset_preview = None
         refresh_preset_colors()
 
+    colour_legend = "red = disabled setting, green = enabled setting, blue = unchanged setting"
+
     def check_dirty_state(*args):
         if suspend_dirty_tracking:
             return
         current_json = json.dumps(get_ui_snapshot(), sort_keys=True)
-        set_dirty_state(current_json != baseline_state)
+        dirty = current_json != baseline_state
+        set_dirty_state(dirty)
+        if preset_preview is not None:
+            status_var.set(f"{preset_var.get()} preview: {colour_legend}. Apply to save.")
+        elif dirty:
+            status_var.set(f"Unsaved changes: {colour_legend}. Apply to save.")
+        elif status_var.get().startswith("Unsaved changes:"):
+            status_var.set("No unsaved changes.")
 
     def save_current_state():
         try:
@@ -1146,7 +1219,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
         apply_json_state_to_ui(dict(Features=list(selected.values()), Permissions=cleaned,
                                    SafeBrowsing=sb, DnsMode=mode, DnsTemplate=template))
         refresh_preset_colors()
-        set_status("Settings staged. Review before applying.")
+        set_status(f"Settings staged: {colour_legend}. Review before applying.")
         if notes:
             messagebox.showinfo("Import notes", "\n".join(notes[:5]) +
                                 (f"\nand {len(notes) - 5} more" if len(notes) > 5 else ""))
@@ -1200,6 +1273,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
                 messagebox.showinfo("Apply", "SlimBrave settings cleared successfully!")
 
             set_status("SlimBrave Application Complete!")
+            return True
         except Exception as e:
             write_log(f"Apply failed: {e}")
             progress.finish("Something Went Wrong, Please Read Logs for More Details")
@@ -1556,9 +1630,9 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
         if preset_type not in PRESETS:
             return
         features, permissions, safe_browsing, dns_mode = PRESETS[preset_type]
-        before = {key for key, var in all_feature_vars.items() if var.get()}
+        before = frozenset(json.loads(baseline_state or "{}").get("Features", ()))
         selected = {key for key in features if not (is_origin_only and key in compiled_out_keys)}
-        preset_preview = (before & selected, before | selected, selected)
+        preset_preview = (before, frozenset(selected), PRESETS[preset_type])
         suspend_dirty_tracking = True
         try:
             for key, var in all_feature_vars.items():
@@ -1572,7 +1646,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             suspend_dirty_tracking = False
         refresh_preset_colors()
         check_dirty_state()
-        set_status(f"{preset_type} preview: green = added, blue = kept, red = unticked. Apply to save.")
+        set_status(f"{preset_type} preview: {colour_legend}. Apply to save.")
 
     root.grid_rowconfigure(0, weight=1)
     root.grid_rowconfigure(1, weight=0)
@@ -1606,15 +1680,75 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
 
     tk.Label(inner_top, text="Presets:", font=("sans-serif", 12, "bold"), fg="#87CEFA", bg="#191919").pack(side="left", padx=(10, 5))
 
-    preset_var = tk.StringVar(value="Maximum Privacy")
+    preset_var = tk.StringVar(value="")
     
-    def on_preset_change(*args):
-        apply_preset(preset_var.get())
-        
-    preset_var.trace_add("write", on_preset_change)
-    
+    active_preset = ""
+    switching_preset = False
+
+    def snapshot_signature(snapshot):
+        return (frozenset(snapshot["Features"]), snapshot["Permissions"],
+                snapshot["SafeBrowsing"], snapshot["DnsMode"], snapshot["DnsTemplate"].strip())
+
+    def matches_any_preset(snapshot):
+        signature = snapshot_signature(snapshot)
+        for features, permissions, safe_browsing, dns_mode in PRESETS.values():
+            enabled = frozenset(k for k in features if not (is_origin_only and k in compiled_out_keys))
+            if signature == (enabled, permissions, safe_browsing, dns_mode,
+                             FAMILY_DOH if dns_mode == "Secure" else ""):
+                return True
+        return False
+
+    def confirm_preset_switch():
+        dialog = tk.Toplevel(root)
+        dialog.title("Unsaved selections")
+        dialog.transient(root)
+        dialog.configure(bg="#232323", padx=20, pady=16)
+        choice = None
+
+        def finish(value):
+            nonlocal choice
+            choice = value
+            dialog.destroy()
+
+        tk.Label(dialog, text="You have unsaved selections that don't match a preset.\n"
+                 "Use Apply Settings to save them before comparing another preset.\n\n"
+                 "Do you want to save your changes now?", justify="left",
+                 bg="#232323", fg="white").pack(anchor="w", pady=(0, 14))
+        buttons = tk.Frame(dialog, bg="#232323")
+        buttons.pack(fill="x")
+        yes = ttk.Button(buttons, text="Yes, Apply My Settings Selections", command=lambda: finish(True))
+        yes.pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="No, Discard Selections", command=lambda: finish(False)).pack(side="left")
+        dialog.protocol("WM_DELETE_WINDOW", lambda: finish(None))
+        dialog.bind("<Escape>", lambda _: finish(None))
+        dialog.wait_visibility()
+        dialog.grab_set()
+        yes.focus_set()
+        root.wait_window(dialog)
+        return choice
+
+    def on_preset_change(_event=None):
+        nonlocal active_preset, switching_preset
+        if switching_preset:
+            return
+        requested = preset_var.get()
+        switching_preset = True
+        try:
+            current = get_ui_snapshot()
+            applied = json.loads(baseline_state) if baseline_state else current
+            if snapshot_signature(current) != snapshot_signature(applied) and not matches_any_preset(current):
+                decision = confirm_preset_switch()
+                if decision is None or (decision and not apply_settings()):
+                    preset_var.set(active_preset)
+                    return
+            apply_preset(requested)
+            active_preset = requested
+        finally:
+            switching_preset = False
+
     preset_cb = ttk.Combobox(inner_top, textvariable=preset_var, values=["Maximum Privacy", "High Security", "Performance Focused", "Strict Parental Controls", "Balanced Privacy", "Developer", "Brave Origin"], state="readonly", width=22, style="Dark.TCombobox")
     preset_cb.pack(side="left", padx=5)
+    preset_cb.bind("<<ComboboxSelected>>", on_preset_change)
     create_tooltip(preset_cb, "Select a preset to automatically configure recommended settings.")
 
     save_status_label = tk.Label(inner_top, textvariable=save_status_var, bg="#191919", fg="#90EE90", font=("sans-serif", 10, "bold"))
@@ -1718,8 +1852,9 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             row.pack(anchor="w", padx=16, pady=1)
             cb = ttk.Checkbutton(row, text=feat["Name"], variable=var)
             cb.pack(side="left")
-            marker = tk.Label(row, text="(?)", bg="#232323", padx=0, pady=0,
+            marker = tk.Label(row, text=" ", width=3, bg="#232323", padx=0, pady=0,
                               font=("sans-serif", 9))
+            marker.pack(side="right", before=cb, padx=(4, 0))
             feature_widgets[feat["Key"]] = (cb, marker, create_tooltip(marker, ""))
             var.trace_add("write", refresh_preset_colors)
             create_tooltip(cb, preset_tooltip(feat["ToolTip"], feat["Key"]))
@@ -1756,6 +1891,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
         var.trace_add("write", check_dirty_state)
         cb = ttk.Combobox(frame, textvariable=var, values=perm["Options"], state="readonly", width=10, style="Dark.TCombobox")
         cb.pack(side="right")
+        register_value_marker(frame, perm["Key"], var, cb, lbl)
         create_tooltip(cb, preset_tooltip(perm["ToolTip"], perm["Key"], permission=True))
 
     spacer = tk.Frame(right_panel, bg="#232323", height=8)
@@ -1769,6 +1905,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
     sb_var.trace_add("write", check_dirty_state)
     sb_cb = ttk.Combobox(sb_f, textvariable=sb_var, values=["On", "Off"], state="readonly", width=10, style="Dark.TCombobox")
     sb_cb.pack(side="left", padx=8)
+    register_value_marker(sb_f, "SafeBrowsing", sb_var, sb_cb, sb_lbl, "SafeBrowsing")
     sb_tt = preset_tooltip("On uses Standard Safe Browsing. Off removes phishing and malware warnings. Not Set leaves the browser default.", "SafeBrowsing")
     create_tooltip(sb_lbl, sb_tt)
     create_tooltip(sb_cb, sb_tt)
@@ -1781,6 +1918,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
     dns_var.trace_add("write", check_dirty_state)
     dns_cb = ttk.Combobox(dns_f, textvariable=dns_var, values=["Automatic", "Off", "Secure", "Custom"], state="readonly", width=10, style="Dark.TCombobox")
     dns_cb.pack(side="left", padx=8)
+    register_value_marker(dns_f, "DnsMode", dns_var, dns_cb, dns_lbl, "DnsMode")
     dns_tt = preset_tooltip("Automatic can fall back to unencrypted DNS. Secure requires a trusted DoH endpoint. Off disables browser DoH, not system DNS encryption.", "DnsMode")
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
@@ -1793,6 +1931,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
     dns_tpl_var.trace_add("write", check_dirty_state)
     dns_tpl_entry = tk.Entry(dns_tpl_f, textvariable=dns_tpl_var, bg="#161616", fg="white", insertbackground="white", relief="flat")
     dns_tpl_entry.pack(side="left", fill="x", expand=True, padx=8)
+    register_value_marker(dns_tpl_f, "DnsTemplate", dns_tpl_var, dns_tpl_entry, dns_tpl_lbl, "DnsTemplate")
     dns_tpl_tt = "Specifies the DoH resolver URL template when 'Custom' or 'Secure' is selected.\n\nSuggested Settings for Privacy: (Blank) | Security: (Blank)"
     create_tooltip(dns_tpl_entry, dns_tpl_tt)
 
