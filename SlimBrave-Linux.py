@@ -275,7 +275,7 @@ def main():
             self.hide()
 
         def show(self):
-            if self.tooltip_window:
+            if not self.text or self.tooltip_window:
                 return
             x = self.widget.winfo_rootx() + 25
             y = self.widget.winfo_rooty() + 25
@@ -373,7 +373,8 @@ def main():
             preset_enabled = key in selected if selected is not None else was_enabled
             if selected is None and checked == was_enabled:
                 reason_tip.on_leave()
-                marker.pack_forget()
+                marker.configure(text=" ")
+                reason_tip.text = ""
                 widget.configure(style="Retained.TCheckbutton" if checked else "Neutral.TCheckbutton")
                 continue
             state = ("Retained" if was_enabled else "Added") if checked else (
@@ -393,13 +394,13 @@ def main():
                 reason_tip.on_leave()
                 reason_tip.text = reason
             marker.configure(fg=color)
-            if not marker.winfo_manager():
-                marker.pack(side="left", padx=(4, 0))
+            marker.configure(text="(?)")
 
         refresh_value_markers()
 
     def register_value_marker(parent, key, variable, control, label, field=None):
-        marker = tk.Label(parent, text="(?)", bg="#232323", font=("sans-serif", 9))
+        marker = tk.Label(parent, text=" ", width=3, bg="#232323", font=("sans-serif", 9))
+        marker.pack(side="right", before=label, padx=(8, 2))
         value_markers[key] = (marker, create_tooltip(marker, ""), variable, control, label, field)
         variable.trace_add("write", refresh_value_markers)
 
@@ -419,7 +420,7 @@ def main():
             if before == staged:
                 state = "Neutral" if staged == unset else "Applied"
             else:
-                state = "Removed" if staged == unset else "Added"
+                state = "Removed" if (staged == unset or (field == "DnsMode" and staged == "Off")) else "Added"
             color = value_colors[state]
             label.configure(fg=color)
             if field == "DnsTemplate":
@@ -428,7 +429,8 @@ def main():
                 control.configure(style=f"{state}.Dark.TCombobox")
             if preset_preview is None and staged == before:
                 tip.on_leave()
-                marker.pack_forget()
+                marker.configure(text=" ")
+                tip.text = ""
                 continue
             reason = f"Current configuration: {before}."
             target = before
@@ -447,8 +449,7 @@ def main():
                 tip.on_leave()
                 tip.text = reason
             marker.configure(fg=color)
-            if not marker.winfo_manager():
-                marker.pack(side="right", padx=(10, 2))
+            marker.configure(text="(?)")
 
     all_perm_vars = {}
 
@@ -1842,8 +1843,9 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             row.pack(anchor="w", padx=16, pady=1)
             cb = ttk.Checkbutton(row, text=feat["Name"], variable=var)
             cb.pack(side="left")
-            marker = tk.Label(row, text="(?)", bg="#232323", padx=0, pady=0,
+            marker = tk.Label(row, text=" ", width=3, bg="#232323", padx=0, pady=0,
                               font=("sans-serif", 9))
+            marker.pack(side="right", before=cb, padx=(4, 0))
             feature_widgets[feat["Key"]] = (cb, marker, create_tooltip(marker, ""))
             var.trace_add("write", refresh_preset_colors)
             create_tooltip(cb, preset_tooltip(feat["ToolTip"], feat["Key"]))
