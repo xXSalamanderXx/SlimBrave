@@ -432,44 +432,78 @@ function Show-PresetSwitchWarning {
     $dlg.Text = "Unsaved Selections"
     $dlg.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
     $dlg.ForeColor = [System.Drawing.Color]::White
-    $dlg.Size = New-Object System.Drawing.Size(510, 200)
     $dlg.StartPosition = "CenterParent"
     $dlg.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $dlg.MaximizeBox = $false
     $dlg.MinimizeBox = $false
     $dlg.KeyPreview = $true
 
+    $msgFont = New-Object System.Drawing.Font("Microsoft Sans Serif", 9.5, [System.Drawing.FontStyle]::Regular)
+    $btnFont = New-Object System.Drawing.Font("Microsoft Sans Serif", 9, [System.Drawing.FontStyle]::Bold)
+
+    $applyText = "Yes, Apply My Settings Selections"
+    $discardText = "No, Discard Selections"
+    $applyMetrics = [System.Windows.Forms.TextRenderer]::MeasureText($applyText, $btnFont)
+    $discardMetrics = [System.Windows.Forms.TextRenderer]::MeasureText($discardText, $btnFont)
+
+    $btnApplyWidth = [Math]::Max(265, $applyMetrics.Width + 32)
+    $btnDiscardWidth = [Math]::Max(200, $discardMetrics.Width + 32)
+    $btnHeight = [Math]::Max(40, $applyMetrics.Height + 20)
+    $btnGap = 14
+    $padX = 24
+    $padY = 22
+
+    $contentWidth = [Math]::Max(500, ($btnApplyWidth + $btnGap + $btnDiscardWidth))
+
     $msgLabel = New-Object System.Windows.Forms.Label
-    $msgLabel.Text = "You have unsaved selections that don't match a preset.`nUse `"Apply Settings`" to save them before comparing another preset.`n`nDo you want to save your changes now?"
-    $msgLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9.5, [System.Drawing.FontStyle]::Regular)
+    $msgLabel.Text = "You have unsaved selections that don't match a preset.`r`nUse `"Apply Settings`" to save them before comparing another preset.`r`n`r`nDo you want to save your changes now?"
+    $msgLabel.Font = $msgFont
     $msgLabel.ForeColor = [System.Drawing.Color]::White
-    $msgLabel.Location = New-Object System.Drawing.Point(20, 18)
-    $msgLabel.Size = New-Object System.Drawing.Size(455, 80)
+    $msgLabel.AutoSize = $false
+    $msgLabel.Location = New-Object System.Drawing.Point($padX, $padY)
+
+    $measuredGdi = [System.Windows.Forms.TextRenderer]::MeasureText(
+        $msgLabel.Text,
+        $msgFont,
+        (New-Object System.Drawing.Size($contentWidth, 0)),
+        ([System.Windows.Forms.TextFormatFlags]::WordBreak -bor [System.Windows.Forms.TextFormatFlags]::TextBoxControl)
+    )
+    $prefSize = $msgLabel.GetPreferredSize((New-Object System.Drawing.Size($contentWidth, 0)))
+    $labelHeight = [Math]::Max(105, ([Math]::Max($measuredGdi.Height, $prefSize.Height) + 20))
+    $msgLabel.Size = New-Object System.Drawing.Size($contentWidth, $labelHeight)
     [void]$dlg.Controls.Add($msgLabel)
 
+    $btnY = $msgLabel.Bottom + 18
+
     $btnApply = New-Object System.Windows.Forms.Button
-    $btnApply.Text = "Yes, Apply My Settings Selections"
-    $btnApply.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9, [System.Drawing.FontStyle]::Bold)
-    $btnApply.Location = New-Object System.Drawing.Point(20, 112)
-    $btnApply.Size = New-Object System.Drawing.Size(255, 36)
+    $btnApply.Text = $applyText
+    $btnApply.Font = $btnFont
+    $btnApply.Location = New-Object System.Drawing.Point($padX, $btnY)
+    $btnApply.Size = New-Object System.Drawing.Size($btnApplyWidth, $btnHeight)
     $btnApply.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $btnApply.FlatAppearance.BorderSize = 0
     $btnApply.BackColor = [System.Drawing.Color]::FromArgb(255, 46, 125, 50)
     $btnApply.ForeColor = [System.Drawing.Color]::White
     $btnApply.DialogResult = [System.Windows.Forms.DialogResult]::Yes
+    $btnApply.TabIndex = 0
     [void]$dlg.Controls.Add($btnApply)
 
     $btnDiscard = New-Object System.Windows.Forms.Button
-    $btnDiscard.Text = "No, Discard Selections"
-    $btnDiscard.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9, [System.Drawing.FontStyle]::Bold)
-    $btnDiscard.Location = New-Object System.Drawing.Point(287, 112)
-    $btnDiscard.Size = New-Object System.Drawing.Size(188, 36)
+    $btnDiscard.Text = $discardText
+    $btnDiscard.Font = $btnFont
+    $btnDiscard.Location = New-Object System.Drawing.Point(($btnApply.Right + $btnGap), $btnY)
+    $btnDiscard.Size = New-Object System.Drawing.Size($btnDiscardWidth, $btnHeight)
     $btnDiscard.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $btnDiscard.FlatAppearance.BorderSize = 0
     $btnDiscard.BackColor = [System.Drawing.Color]::FromArgb(255, 198, 40, 40)
     $btnDiscard.ForeColor = [System.Drawing.Color]::White
     $btnDiscard.DialogResult = [System.Windows.Forms.DialogResult]::No
+    $btnDiscard.TabIndex = 1
     [void]$dlg.Controls.Add($btnDiscard)
+
+    $clientWidth = $contentWidth + ($padX * 2)
+    $clientHeight = $btnApply.Bottom + $padY
+    $dlg.ClientSize = New-Object System.Drawing.Size($clientWidth, $clientHeight)
 
     $dlg.AcceptButton = $btnApply
     $dlg.Add_KeyDown({
@@ -481,6 +515,8 @@ function Show-PresetSwitchWarning {
 
     $res = $dlg.ShowDialog($form)
     $dlg.Dispose()
+    $msgFont.Dispose()
+    $btnFont.Dispose()
     if ($res -eq [System.Windows.Forms.DialogResult]::Yes) { return 'Apply' }
     if ($res -eq [System.Windows.Forms.DialogResult]::No) { return 'Discard' }
     return 'Cancel'
