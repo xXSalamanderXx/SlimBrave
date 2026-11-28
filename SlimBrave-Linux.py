@@ -351,6 +351,7 @@ def main():
     baseline_state = ""
     all_feature_vars = {}
     feature_widgets = {}
+    value_markers = {}
     preset_preview = None
 
     def refresh_preset_colors(*_):
@@ -364,7 +365,7 @@ def main():
                 marker.pack_forget()
                 widget.configure(style="Retained.TCheckbutton" if checked else "Neutral.TCheckbutton")
                 continue
-            applied, selected = preset_preview
+            applied, selected, _ = preset_preview
             was_enabled = key in applied
             preset_enabled = key in selected
             state = ("Retained" if was_enabled else "Added") if checked else (
@@ -384,6 +385,48 @@ def main():
             marker.configure(fg=color)
             if not marker.winfo_manager():
                 marker.pack(side="left", padx=(4, 0))
+
+        refresh_value_markers()
+
+    def register_value_marker(parent, key, variable, field=None):
+        marker = tk.Label(parent, text="(?)", bg="#232323", font=("sans-serif", 9))
+        value_markers[key] = (marker, create_tooltip(marker, ""), variable, field)
+        variable.trace_add("write", refresh_value_markers)
+
+    def refresh_value_markers(*_):
+        if suspend_dirty_tracking:
+            return
+        applied = json.loads(baseline_state or "{}")
+        for key, (marker, tip, variable, field) in value_markers.items():
+            if preset_preview is None:
+                tip.on_leave()
+                marker.pack_forget()
+                continue
+            _, _, preset = preset_preview
+            features, permissions, safe_browsing, dns_mode = preset
+            if field:
+                target = {"SafeBrowsing": safe_browsing, "DnsMode": dns_mode,
+                          "DnsTemplate": FAMILY_DOH if dns_mode == "Secure" else ""}[field]
+                before = applied.get(field, "")
+            else:
+                before = applied.get("Permissions", {}).get(key, "Not Set")
+                target = permissions.get(key, "Not Set")
+            staged = variable.get()
+            if field == "DnsTemplate":
+                before, target, staged = (value.strip() or "(Blank)" for value in (before, target, staged))
+            else:
+                before, target, staged = (value or "Not Set" for value in (before, target, staged))
+            reason = (f"Current configuration: {before}.\n"
+                      + (f"Kept as {target} by this preset." if before == target
+                         else f"Changed to {target} by this preset."))
+            if staged != target:
+                reason += f"\nYour staged selection: {staged}."
+            if tip.text != reason:
+                tip.on_leave()
+                tip.text = reason
+            marker.configure(fg="#87CEFA" if before == target else "#90EE90")
+            if not marker.winfo_manager():
+                marker.pack(side="right", padx=(3, 0))
 
     all_perm_vars = {}
 
@@ -1557,7 +1600,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
         features, permissions, safe_browsing, dns_mode = PRESETS[preset_type]
         before = frozenset(json.loads(baseline_state or "{}").get("Features", ()))
         selected = {key for key in features if not (is_origin_only and key in compiled_out_keys)}
-        preset_preview = (before, frozenset(selected))
+        preset_preview = (before, frozenset(selected), PRESETS[preset_type])
         suspend_dirty_tracking = True
         try:
             for key, var in all_feature_vars.items():
@@ -1815,6 +1858,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
         var.trace_add("write", check_dirty_state)
         cb = ttk.Combobox(frame, textvariable=var, values=perm["Options"], state="readonly", width=10, style="Dark.TCombobox")
         cb.pack(side="right")
+        register_value_marker(frame, perm["Key"], var)
         create_tooltip(cb, preset_tooltip(perm["ToolTip"], perm["Key"], permission=True))
 
     spacer = tk.Frame(right_panel, bg="#232323", height=8)
@@ -1828,6 +1872,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
     sb_var.trace_add("write", check_dirty_state)
     sb_cb = ttk.Combobox(sb_f, textvariable=sb_var, values=["On", "Off"], state="readonly", width=10, style="Dark.TCombobox")
     sb_cb.pack(side="left", padx=8)
+    register_value_marker(sb_f, "SafeBrowsing", sb_var, "SafeBrowsing")
     sb_tt = preset_tooltip("On uses Standard Safe Browsing. Off removes phishing and malware warnings. Not Set leaves the browser default.", "SafeBrowsing")
     create_tooltip(sb_lbl, sb_tt)
     create_tooltip(sb_cb, sb_tt)
@@ -1840,6 +1885,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
     dns_var.trace_add("write", check_dirty_state)
     dns_cb = ttk.Combobox(dns_f, textvariable=dns_var, values=["Automatic", "Off", "Secure", "Custom"], state="readonly", width=10, style="Dark.TCombobox")
     dns_cb.pack(side="left", padx=8)
+    register_value_marker(dns_f, "DnsMode", dns_var, "DnsMode")
     dns_tt = preset_tooltip("Automatic can fall back to unencrypted DNS. Secure requires a trusted DoH endpoint. Off disables browser DoH, not system DNS encryption.", "DnsMode")
     create_tooltip(dns_lbl, dns_tt)
     create_tooltip(dns_cb, dns_tt)
@@ -1852,6 +1898,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
     dns_tpl_var.trace_add("write", check_dirty_state)
     dns_tpl_entry = tk.Entry(dns_tpl_f, textvariable=dns_tpl_var, bg="#161616", fg="white", insertbackground="white", relief="flat")
     dns_tpl_entry.pack(side="left", fill="x", expand=True, padx=8)
+    register_value_marker(dns_tpl_f, "DnsTemplate", dns_tpl_var, "DnsTemplate")
     dns_tpl_tt = "Specifies the DoH resolver URL template when 'Custom' or 'Secure' is selected.\n\nSuggested Settings for Privacy: (Blank) | Security: (Blank)"
     create_tooltip(dns_tpl_entry, dns_tpl_tt)
 
