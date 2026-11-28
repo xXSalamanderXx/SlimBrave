@@ -1637,7 +1637,7 @@ trap '/usr/bin/rm -f -- "$tmp"' EXIT
             suspend_dirty_tracking = False
         refresh_preset_colors()
         check_dirty_state()
-        set_status(f"{preset_type} preview: green = added, blue = kept, red = unticked. Apply to save.")
+        set_status(f"{preset_type} preview: red = disabled setting, green = enabled setting, blue = unchanged setting. Apply to save.")
 
     root.grid_rowconfigure(0, weight=1)
     root.grid_rowconfigure(1, weight=0)
