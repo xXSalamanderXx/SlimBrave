@@ -364,27 +364,30 @@ def main():
     def refresh_preset_colors(*_):
         if suspend_dirty_tracking:
             return
+        applied = frozenset(json.loads(baseline_state or "{}").get("Features", ()))
         for key, widget in feature_widgets.items():
             widget, marker, reason_tip = widget
             checked = bool(all_feature_vars[key].get())
-            if preset_preview is None:
+            selected = preset_preview[1] if preset_preview is not None else None
+            was_enabled = key in applied
+            preset_enabled = key in selected if selected is not None else was_enabled
+            if selected is None and checked == was_enabled:
                 reason_tip.on_leave()
                 marker.pack_forget()
                 widget.configure(style="Retained.TCheckbutton" if checked else "Neutral.TCheckbutton")
                 continue
-            applied, selected, _ = preset_preview
-            was_enabled = key in applied
-            preset_enabled = key in selected
             state = ("Retained" if was_enabled else "Added") if checked else (
                 "Removed" if was_enabled or preset_enabled else "Neutral")
             widget.configure(style=f"{state}.TCheckbutton")
             current = "Enabled" if was_enabled else "Disabled"
             target = "enabled" if preset_enabled else "disabled"
             action = "Kept" if was_enabled == preset_enabled else "Changed to"
-            reason = f"{current} on your current configuration, {action} {target} by this preset."
-            if checked != preset_enabled:
+            reason = f"{current} on your current configuration."
+            if selected is not None:
+                reason = f"{current} on your current configuration, {action} {target} by this preset."
+            if selected is None or checked != preset_enabled:
                 staged = "enabled" if checked else "disabled"
-                reason += f"\nYour staged selection: {staged}."
+                reason += f"\nYour unsaved selection: {staged}."
             color = {"Retained": "#87CEFA", "Added": "#90EE90", "Removed": "#FF8585", "Neutral": "white"}[state]
             if reason_tip.text != reason:
                 reason_tip.on_leave()
@@ -423,20 +426,23 @@ def main():
                 control.configure(fg=color, selectforeground=color)
             else:
                 control.configure(style=f"{state}.Dark.TCombobox")
-            if preset_preview is None:
+            if preset_preview is None and staged == before:
                 tip.on_leave()
                 marker.pack_forget()
                 continue
-            _, _, preset = preset_preview
-            _, permissions, safe_browsing, dns_mode = preset
-            target = normalized({"SafeBrowsing": safe_browsing, "DnsMode": dns_mode,
-                                 "DnsTemplate": FAMILY_DOH if dns_mode == "Secure" else ""}[field]
-                                if field else permissions.get(key, ""))
-            reason = (f"Current configuration: {before}.\n"
-                      + (f"Kept as {target} by this preset." if before == target
-                         else f"Changed to {target} by this preset."))
-            if staged != target:
-                reason += f"\nYour staged selection: {staged}."
+            reason = f"Current configuration: {before}."
+            target = before
+            if preset_preview is not None:
+                _, _, preset = preset_preview
+                _, permissions, safe_browsing, dns_mode = preset
+                target = normalized({"SafeBrowsing": safe_browsing, "DnsMode": dns_mode,
+                                     "DnsTemplate": FAMILY_DOH if dns_mode == "Secure" else ""}[field]
+                                    if field else permissions.get(key, ""))
+                reason = (f"Current configuration: {before}.\n"
+                          + (f"Kept as {target} by this preset." if before == target
+                             else f"Changed to {target} by this preset."))
+            if preset_preview is None or staged != target:
+                reason += f"\nYour unsaved selection: {staged}."
             if tip.text != reason:
                 tip.on_leave()
                 tip.text = reason
